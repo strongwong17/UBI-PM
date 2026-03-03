@@ -41,10 +41,11 @@ EXPOSE 3000
 
 CMD ["node", "server.js"]
 
-# ── Stage 4: Migration runner (used for db commands) ───
+# ── Stage 4: Migration runner (used for db commands + seed) ─
 FROM node:22-alpine AS migrator
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=builder /app/src/generated ./src/generated
 COPY prisma ./prisma
 COPY prisma.config.ts ./prisma.config.ts
 COPY package.json ./
