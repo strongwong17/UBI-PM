@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+.env*
+*.md
+deploy/
+uploads/
+prisma/dev.db
+.DS_Store
+.claude/
+CLAUDE.md
