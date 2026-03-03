@@ -1,0 +1,342 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── AUTH & USERS ───────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("VIEWER") // ADMIN, MANAGER, VIEWER
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  estimates              Estimate[]
+  assignedProjects       Project[]          @relation("ProjectAssignee")
+  internalCompletions    ProjectCompletion[] @relation("CompletionCompletedBy")
+  activityLogs           ActivityLog[]
+}
+
+// ─── CLIENTS ────────────────────────────────────────────
+
+model Client {
+  id             String   @id @default(cuid())
+  company        String
+  industry       String?
+  email          String?
+  phone          String?
+  wechatId       String?
+  notes          String?
+  billingName    String?
+  billingAddress String?
+  billingEmail   String?
+  billingPhone   String?
+  taxId          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  contacts ClientContact[]
+  projects Project[]
+}
+
+model ClientContact {
+  id        String   @id @default(cuid())
+  name      String
+  email     String?
+  phone     String?
+  title     String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clientId              String
+  client                Client    @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  primaryContactProjects Project[] @relation("ProjectPrimaryContact")
+}
+
+// ─── PROJECTS ───────────────────────────────────────────
+
+model Project {
+  id             String    @id @default(cuid())
+  projectNumber  String    @unique // PRJ-2026-001
+  title          String
+  status         String    @default("INQUIRY_RECEIVED")
+  // INQUIRY_RECEIVED, ESTIMATE_SENT, APPROVED, IN_PROGRESS, COMPLETED, INVOICED, PAID, CLOSED
+  executionPhase String?   // RECRUITMENT, FIELDWORK, ANALYSIS, REPORTING
+  startDate      DateTime?
+  endDate        DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  clientId         String
+  client           Client         @relation(fields: [clientId], references: [id])
+  primaryContactId String?
+  primaryContact   ClientContact? @relation("ProjectPrimaryContact", fields: [primaryContactId], references: [id])
+  assignedToId     String?
+  assignedTo       User?          @relation("ProjectAssignee", fields: [assignedToId], references: [id])
+
+  inquiry      Inquiry?
+  estimates    Estimate[]
+  invoices     Invoice[]
+  completion   ProjectCompletion?
+  attachments  Attachment[]
+  activityLogs ActivityLog[]
+}
+
+// ─── INQUIRY (child of Project) ─────────────────────────
+
+model Inquiry {
+  id                String    @id @default(cuid())
+  background        String?
+  objectives        String?
+  methodology       String?
+  targetAudience    String?
+  screeningCriteria String?
+  participantCount  Int?
+  segments          String?
+  scope             String?
+  timeline          String?
+  desiredStartDate  DateTime?
+  desiredEndDate    DateTime?
+  indicativeBudget  Float?
+  currency          String    @default("USD")
+  source            String    @default("OTHER") // WECHAT, EMAIL, LARK, OTHER
+  sourceDetail      String?
+  rawContent        String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  projectId      String                 @unique
+  project        Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  serviceModules InquiryServiceModule[]
+}
+
+model InquiryServiceModule {
+  id         String  @id @default(cuid())
+  moduleType String
+  // RECRUITMENT | MODERATION | SIMULTANEOUS_TRANSLATION | PROJECT_MANAGEMENT | INCENTIVES | VENUE | REPORTING | LOGISTICS
+  quantity   Float?
+  unit       String?
+  unitPrice  Float?
+  notes      String?
+  sortOrder  Int     @default(0)
+
+  inquiryId String
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+}
+
+// ─── ESTIMATES ──────────────────────────────────────────
+
+model Estimate {
+  id              String    @id @default(cuid())
+  estimateNumber  String    @unique
+  title           String
+  label           String?
+  projectName     String?
+  address         String?
+  version         Int       @default(1)
+  status          String    @default("DRAFT") // DRAFT, SENT, APPROVED, REJECTED
+  isApproved      Boolean   @default(false)
+  pricingModel    String    @default("MIXED") // HOURLY, FIXED_PHASE, DELIVERABLE, MIXED
+  currency        String    @default("USD")
+  taxRate         Float     @default(0)
+  discount        Float     @default(0)
+  notes           String?
+  clientNotes     String?
+  validUntil      DateTime?
+  deletedAt       DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id])
+  createdById     String
+  createdBy       User      @relation(fields: [createdById], references: [id])
+  duplicatedFromId String?
+  duplicatedFrom  Estimate? @relation("EstimateDuplicate", fields: [duplicatedFromId], references: [id], onDelete: SetNull)
+  copies          Estimate[] @relation("EstimateDuplicate")
+
+  phases   EstimatePhase[]
+  invoices Invoice[]
+}
+
+model EstimatePhase {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  sortOrder   Int     @default(0)
+
+  estimateId String
+  estimate   Estimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+
+  lineItems EstimateLineItem[]
+}
+
+model EstimateLineItem {
+  id                String  @id @default(cuid())
+  description       String
+  unit              String  @default("hours")
+  quantity          Float   @default(1)
+  unitPrice         Float
+  sortOrder         Int     @default(0)
+  notes             String?
+  serviceModuleType String?
+
+  percentageBasis    String?  // null = fixed | "SUBTOTAL" | "PHASE" | "LINE_ITEM"
+  percentageRate     Float?   // e.g. 15.0 for 15%
+  basisPhaseName     String?  // phase name when percentageBasis = "PHASE"
+  basisLineItemDesc  String?  // line item description when percentageBasis = "LINE_ITEM"
+
+  phaseId String
+  phase   EstimatePhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+}
+
+// ─── ESTIMATE TEMPLATES ─────────────────────────────────
+
+model EstimateTemplate {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  pricingModel String   @default("MIXED")
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  phases TemplatePhase[]
+}
+
+model TemplatePhase {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  sortOrder   Int     @default(0)
+
+  templateId String
+  template   EstimateTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+
+  lineItems TemplateLineItem[]
+}
+
+model TemplateLineItem {
+  id              String @id @default(cuid())
+  description     String
+  unit            String @default("hours")
+  defaultQuantity Float  @default(1)
+  defaultPrice    Float
+  sortOrder       Int    @default(0)
+
+  phaseId String
+  phase   TemplatePhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+}
+
+// ─── PROJECT COMPLETION ─────────────────────────────────
+
+model ProjectCompletion {
+  id                     String    @id @default(cuid())
+  internalCompleted      Boolean   @default(false)
+  internalCompletedAt    DateTime?
+  internalNotes          String?
+  clientAcknowledged     Boolean   @default(false)
+  clientAcknowledgedAt   DateTime?
+  clientAcknowledgedBy   String?
+  clientAcknowledgeNotes String?
+  deliverablesNotes      String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  projectId             String  @unique
+  project               Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  internalCompletedById String?
+  internalCompletedBy   User?   @relation("CompletionCompletedBy", fields: [internalCompletedById], references: [id])
+}
+
+// ─── ATTACHMENTS ────────────────────────────────────────
+
+model Attachment {
+  id         String   @id @default(cuid())
+  filename   String
+  storedName String
+  mimeType   String
+  size       Int
+  createdAt  DateTime @default(now())
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+// ─── BUSINESS PROFILE ───────────────────────────────────
+
+model BusinessProfile {
+  id        String   @id @default("default")
+  name      String   @default("UBInsights LLC")
+  address   String?
+  email     String?
+  phone     String?
+  tagline   String?
+  updatedAt DateTime @updatedAt
+}
+
+// ─── INVOICES ───────────────────────────────────────────
+
+model Invoice {
+  id            String    @id @default(cuid())
+  invoiceNumber String    @unique
+  status        String    @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE
+  issuedDate    DateTime?
+  dueDate       DateTime?
+  paidDate      DateTime?
+  subtotal      Float     @default(0)
+  taxRate       Float     @default(0)
+  tax           Float     @default(0)
+  total         Float     @default(0)
+  currency      String    @default("USD")
+  notes         String?
+  contactEmail  String?
+  deletedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  projectId  String
+  project    Project  @relation(fields: [projectId], references: [id])
+  estimateId String?
+  estimate   Estimate? @relation(fields: [estimateId], references: [id], onDelete: SetNull)
+
+  lineItems InvoiceLineItem[]
+}
+
+model InvoiceLineItem {
+  id          String @id @default(cuid())
+  description String
+  quantity    Float
+  unitPrice   Float
+  total       Float
+  sortOrder   Int    @default(0)
+
+  invoiceId String
+  invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+}
+
+// ─── ACTIVITY LOG ──────────────────────────────────────
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  action      String   // CREATE, UPDATE, DELETE, STATUS_CHANGE, APPROVE, DUPLICATE, GENERATE, RESTORE
+  entityType  String   // PROJECT, ESTIMATE, INVOICE, CLIENT, INQUIRY, ATTACHMENT
+  entityId    String
+  entityLabel String?  // e.g. "PRJ-2026-001", "EST-2026-0003"
+  description String   // "Changed estimate status from DRAFT to SENT"
+  metadata    String?  // JSON for before/after on key fields
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+}
