@@ -3,7 +3,14 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 
 export async function middleware(req: NextRequest) {
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+  const token = await getToken({
+    req,
+    secret: process.env.AUTH_SECRET,
+    cookieName:
+      req.nextUrl.protocol === "https:"
+        ? "__Secure-authjs.session-token"
+        : "authjs.session-token",
+  });
   const isLoggedIn = !!token;
   const isLoginPage = req.nextUrl.pathname === "/login";
   const isRegisterPage = req.nextUrl.pathname === "/register";
