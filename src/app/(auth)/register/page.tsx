@@ -58,7 +58,7 @@ export default function RegisterPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Create Account</CardTitle>
           <CardDescription>
-            Register with your @ubinsights.com email
+            Register with your company email
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -84,7 +84,7 @@ export default function RegisterPage() {
                 id="email"
                 name="email"
                 type="email"
-                placeholder="you@ubinsights.com"
+                placeholder="Enter your email address"
                 required
               />
             </div>

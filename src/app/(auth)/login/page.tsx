@@ -58,7 +58,7 @@ function LoginForm() {
           id="email"
           name="email"
           type="email"
-          placeholder="you@ubinsights.com"
+          placeholder="Enter your email address"
           required
         />
       </div>
