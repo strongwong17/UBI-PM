@@ -6,6 +6,7 @@ export async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.AUTH_SECRET });
   const isLoggedIn = !!token;
   const isLoginPage = req.nextUrl.pathname === "/login";
+  const isRegisterPage = req.nextUrl.pathname === "/register";
   const isSharePage = req.nextUrl.pathname.startsWith("/share/");
   const isApiAuth = req.nextUrl.pathname.startsWith("/api/auth");
   const isApiShare = req.nextUrl.pathname.startsWith("/api/share");
@@ -16,12 +17,12 @@ export async function middleware(req: NextRequest) {
   }
 
   // Redirect to login if not authenticated
-  if (!isLoggedIn && !isLoginPage) {
+  if (!isLoggedIn && !isLoginPage && !isRegisterPage) {
     return NextResponse.redirect(new URL("/login", req.nextUrl));
   }
 
   // Redirect to dashboard if already logged in
-  if (isLoggedIn && isLoginPage) {
+  if (isLoggedIn && (isLoginPage || isRegisterPage)) {
     return NextResponse.redirect(new URL("/", req.nextUrl));
   }
 

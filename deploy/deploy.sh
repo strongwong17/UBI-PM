@@ -100,8 +100,14 @@ if [[ -n "$DOMAIN" ]]; then
     ssh "${SSH_TARGET}" "sudo tee /etc/nginx/sites-available/ubinsights-pmt > /dev/null"
 
   ssh "${SSH_TARGET}" "sudo ln -sf /etc/nginx/sites-available/ubinsights-pmt /etc/nginx/sites-enabled/ubinsights-pmt"
-  ssh "${SSH_TARGET}" "sudo rm -f /etc/nginx/sites-enabled/default"
-  ssh "${SSH_TARGET}" "sudo nginx -t && sudo systemctl reload nginx"
+  # Validate config before reloading — abort on error to avoid breaking other sites
+  ssh "${SSH_TARGET}" "sudo nginx -t"
+  if [[ $? -ne 0 ]]; then
+    echo "  ERROR: nginx config test failed — skipping reload"
+    echo "  Fix the config on the server and re-run deploy, or reload manually"
+    exit 1
+  fi
+  ssh "${SSH_TARGET}" "sudo systemctl reload nginx"
   echo "  Nginx configured for ${DOMAIN}"
 fi
 

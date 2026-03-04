@@ -23,12 +23,12 @@ async function main() {
 
   // Users
   const admin = await prisma.user.upsert({
-    where: { email: "admin@company.com" },
+    where: { email: "yushi@ubinsights.com" },
     update: {},
     create: {
-      email: "admin@company.com",
-      name: "Admin",
-      passwordHash: hashSync("admin123", 10),
+      email: "yushi@ubinsights.com",
+      name: "Yushi",
+      passwordHash: hashSync("ubi12345", 10),
       role: "ADMIN",
     },
   });
@@ -296,7 +296,7 @@ async function main() {
   console.log("Created estimate:", estimate.title);
 
   console.log("\nSeed completed successfully!");
-  console.log("Login: admin@company.com / admin123");
+  console.log("Login: yushi@ubinsights.com / ubi12345");
 }
 
 main()

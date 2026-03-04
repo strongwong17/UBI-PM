@@ -105,8 +105,13 @@ echo "[9/9] Configuring firewall..."
 if command -v ufw &>/dev/null; then
   ufw allow OpenSSH
   ufw allow 'Nginx Full'
-  ufw --force enable
-  echo "  UFW configured"
+  if ufw status | grep -q "Status: active"; then
+    ufw reload
+    echo "  UFW rules updated (already active)"
+  else
+    echo "  UFW is inactive — rules added but not enabled"
+    echo "  To enable: sudo ufw --force enable"
+  fi
 else
   echo "  UFW not found — GCP firewall rules should handle port 80/443"
 fi
