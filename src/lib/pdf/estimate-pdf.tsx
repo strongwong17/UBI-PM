@@ -1,8 +1,11 @@
 import { Document, Page, View, Text, StyleSheet } from "@react-pdf/renderer";
+import { registerFonts } from "./register-fonts";
+
+registerFonts();
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: "Helvetica",
+    fontFamily: "NotoSansSC",
     fontSize: 10,
     padding: 40,
     color: "#1a1a1a",
@@ -16,7 +19,7 @@ const styles = StyleSheet.create({
   },
   companyName: {
     fontSize: 20,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     color: "#111827",
   },
   companyDetail: {
@@ -29,7 +32,7 @@ const styles = StyleSheet.create({
   },
   docTitleText: {
     fontSize: 18,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     color: "#374151",
   },
   docMeta: {
@@ -40,7 +43,7 @@ const styles = StyleSheet.create({
   },
   docNumber: {
     fontSize: 11,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     color: "#111827",
     marginTop: 4,
     textAlign: "right",
@@ -60,11 +63,11 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 3,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
   },
   clientName: {
     fontSize: 12,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     color: "#111827",
   },
   clientSub: {
@@ -83,12 +86,12 @@ const styles = StyleSheet.create({
   },
   phaseName: {
     fontSize: 10,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     color: "#ffffff",
   },
   phaseTotal: {
     fontSize: 10,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     color: "#ffffff",
   },
   // Table
@@ -119,14 +122,14 @@ const styles = StyleSheet.create({
   colTotal: { flex: 1.5, textAlign: "right" },
   headerCell: {
     fontSize: 8,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     color: "#374151",
     textTransform: "uppercase",
     letterSpacing: 0.3,
   },
   cellText: { fontSize: 9, color: "#374151" },
   cellNote: { fontSize: 8, color: "#9ca3af", marginTop: 2 },
-  cellBold: { fontSize: 9, fontFamily: "Helvetica-Bold", color: "#111827" },
+  cellBold: { fontSize: 9, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#111827" },
   // Totals
   totalsSection: {
     marginTop: 24,
@@ -155,8 +158,8 @@ const styles = StyleSheet.create({
     padding: "10 12",
     backgroundColor: "#1f2937",
   },
-  totalsFinalLabel: { fontSize: 11, fontFamily: "Helvetica-Bold", color: "#ffffff" },
-  totalsFinalValue: { fontSize: 11, fontFamily: "Helvetica-Bold", color: "#ffffff" },
+  totalsFinalLabel: { fontSize: 11, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#ffffff" },
+  totalsFinalValue: { fontSize: 11, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#ffffff" },
   // Wiring
   wiringSection: {
     marginTop: 24,
@@ -176,7 +179,7 @@ const styles = StyleSheet.create({
   },
   wiringBoxTitle: {
     fontSize: 9,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     color: "#ffffff",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -190,7 +193,7 @@ const styles = StyleSheet.create({
   wiringLabel: {
     fontSize: 8,
     color: "#6b7280",
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     width: 100,
   },
   wiringValue: {
@@ -207,7 +210,7 @@ const styles = StyleSheet.create({
   },
   notesTitle: {
     fontSize: 9,
-    fontFamily: "Helvetica-Bold",
+    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     color: "#374151",
     textTransform: "uppercase",
     letterSpacing: 0.5,
