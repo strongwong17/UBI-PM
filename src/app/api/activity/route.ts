@@ -1,8 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { logActivity } from "@/lib/activity-log";
 
 const PAGE_SIZE = 20;
+
+export async function POST(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const body = await request.json();
+    const { action, entityType, entityId, entityLabel, description, metadata } = body;
+
+    if (!action || !entityType || !entityId || !description) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    await logActivity({
+      action,
+      entityType,
+      entityId,
+      entityLabel: entityLabel || undefined,
+      description,
+      metadata: metadata || undefined,
+      userId: (session.user as any).id,
+    });
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Failed to log activity:", error);
+    return NextResponse.json({ error: "Failed to log activity" }, { status: 500 });
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {

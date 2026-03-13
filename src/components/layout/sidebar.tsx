@@ -12,6 +12,8 @@ import {
   Layers,
   LogOut,
   History,
+  ScrollText,
+  FileText,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -28,11 +30,13 @@ const navItems = [
   { href: "/projects", label: "Projects", icon: FolderKanban, roles: ["ADMIN", "MANAGER", "VIEWER"] },
   { href: "/invoices", label: "Invoices", icon: Receipt, roles: ["ADMIN", "MANAGER", "VIEWER"] },
   { href: "/clients", label: "Clients", icon: Users, roles: ["ADMIN", "MANAGER", "VIEWER"] },
+  { href: "/contracts", label: "Contracts", icon: ScrollText, roles: ["ADMIN", "MANAGER", "VIEWER"] },
   { href: "/activity", label: "Activity", icon: History, roles: ["ADMIN", "MANAGER"] },
 ];
 
 const adminItems = [
-  { href: "/templates", label: "Templates", icon: Layers, roles: ["ADMIN"] },
+  { href: "/templates", label: "Est. Templates", icon: Layers, roles: ["ADMIN"] },
+  { href: "/contract-templates", label: "Contract Templates", icon: FileText, roles: ["ADMIN", "MANAGER"] },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["ADMIN"] },
 ];
 

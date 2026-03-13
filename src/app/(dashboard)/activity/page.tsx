@@ -10,7 +10,7 @@ import { RestoreButton } from "@/components/activity/restore-button";
 
 const PAGE_SIZE = 20;
 
-const ENTITY_TYPES = ["PROJECT", "ESTIMATE", "INVOICE", "CLIENT", "INQUIRY", "ATTACHMENT", "TEMPLATE"];
+const ENTITY_TYPES = ["PROJECT", "ESTIMATE", "INVOICE", "CLIENT", "CONTRACT", "INQUIRY", "ATTACHMENT", "TEMPLATE"];
 const ACTION_TYPES = ["CREATE", "UPDATE", "DELETE", "STATUS_CHANGE", "APPROVE", "DUPLICATE", "GENERATE", "RESTORE"];
 
 function actionColor(action: string) {
@@ -33,6 +33,7 @@ function entityLink(entityType: string, entityId: string, projectId: string | nu
     case "ESTIMATE": return `/estimates/${entityId}`;
     case "INVOICE": return `/invoices/${entityId}`;
     case "CLIENT": return `/clients/${entityId}`;
+    case "CONTRACT": return `/contracts/${entityId}`;
     case "INQUIRY": return projectId ? `/projects/${projectId}?tab=brief` : null;
     case "ATTACHMENT": return projectId ? `/projects/${projectId}` : null;
     default: return null;

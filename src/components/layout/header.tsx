@@ -7,10 +7,11 @@ const routeTitles: Record<string, string> = {
   "/inquiries": "Inquiries",
   "/estimates": "Estimates",
   "/contracts": "Contracts",
+  "/contract-templates": "Contract Templates",
   "/projects": "Projects",
   "/invoices": "Invoices",
   "/clients": "Clients",
-  "/templates": "Templates",
+  "/templates": "Estimate Templates",
   "/settings": "Settings",
 };
 
