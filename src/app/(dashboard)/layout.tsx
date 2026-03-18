@@ -1,7 +1,6 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/layout/sidebar";
-import { Header } from "@/components/layout/header";
 import { Toaster } from "@/components/ui/sonner";
 import ContractStoreInitializer from "@/components/contracts/store-initializer";
 
@@ -23,10 +22,11 @@ export default async function DashboardLayout({
         userName={session.user.name || "User"}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header />
-        <main className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          <ContractStoreInitializer />
-          {children}
+        <main className="flex-1 overflow-y-auto bg-[#f8f9fa]">
+          <div className="max-w-7xl mx-auto px-8 py-8">
+            <ContractStoreInitializer />
+            {children}
+          </div>
         </main>
       </div>
       <Toaster />

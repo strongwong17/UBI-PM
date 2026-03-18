@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
@@ -8,10 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (isAuthError(authResult)) return authResult;
 
     const { id } = await params;
 
@@ -32,10 +30,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
     const body = await request.json();
@@ -53,8 +50,6 @@ export async function PATCH(
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
-
-    const userId = (session.user as any).id;
     const existing = await prisma.projectCompletion.findUnique({ where: { projectId: id } });
 
     const updateData: Record<string, unknown> = {};

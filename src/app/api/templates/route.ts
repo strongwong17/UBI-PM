@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (isAuthError(authResult)) return authResult;
 
     const templates = await prisma.estimateTemplate.findMany({
       where: { isActive: true },
@@ -34,10 +32,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const body = await request.json();
     const { name, description, pricingModel, phases } = body;
@@ -113,7 +110,7 @@ export async function POST(request: NextRequest) {
       entityId: template.id,
       entityLabel: template.name,
       description: `Created template ${template.name}`,
-      userId: (session.user as any).id,
+      userId,
     });
 
     return NextResponse.json(template, { status: 201 });

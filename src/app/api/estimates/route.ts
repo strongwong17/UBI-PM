@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { generateEstimateNumber } from "@/lib/generate-number";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (isAuthError(authResult)) return authResult;
 
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get("projectId");
@@ -43,10 +41,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const body = await request.json();
     const {
@@ -102,7 +99,7 @@ export async function POST(request: NextRequest) {
         notes: notes?.trim() || null,
         clientNotes: clientNotes?.trim() || null,
         validUntil: validUntil ? new Date(validUntil) : null,
-        createdById: (session.user as any).id,
+        createdById: userId,
         phases:
           phases && phases.length > 0
             ? {
@@ -162,13 +159,21 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Auto-advance project status to ESTIMATE_SENT if still at INQUIRY_RECEIVED
+    if (project.status === "INQUIRY_RECEIVED") {
+      await prisma.project.update({
+        where: { id: projectId },
+        data: { status: "ESTIMATE_SENT" },
+      });
+    }
+
     await logActivity({
       action: "CREATE",
       entityType: "ESTIMATE",
       entityId: estimate.id,
       entityLabel: estimate.estimateNumber,
       description: `Created estimate ${estimate.estimateNumber}`,
-      userId: (session.user as any).id,
+      userId,
       projectId,
     });
 

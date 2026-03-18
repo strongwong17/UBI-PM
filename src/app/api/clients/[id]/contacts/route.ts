@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(
@@ -7,10 +7,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
 
     const { id } = await params;
 

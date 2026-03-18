@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Paperclip, Download, X, Loader2, FileText, FileImage, FileArchive, File } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface AttachmentItem {
   id: string;
@@ -155,19 +166,36 @@ export function ProjectAttachments({ projectId, attachments }: ProjectAttachment
                     <Download className="h-3.5 w-3.5" />
                   </Button>
                 </a>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-7 w-7 text-gray-400 hover:text-red-500"
-                  onClick={() => handleDelete(att.id, att.filename)}
-                  disabled={deletingId === att.id}
-                >
-                  {deletingId === att.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <X className="h-3.5 w-3.5" />
-                  )}
-                </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-gray-400 hover:text-red-500"
+                      disabled={deletingId === att.id}
+                    >
+                      {deletingId === att.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <X className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Delete attachment?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This will permanently remove &quot;{att.filename}&quot;.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleDelete(att.id, att.filename)}>
+                        Delete
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
           ))}

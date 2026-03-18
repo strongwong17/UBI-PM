@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
@@ -8,10 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (isAuthError(authResult)) return authResult;
 
     const { id } = await params;
 
@@ -41,10 +39,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
 
@@ -123,7 +120,7 @@ export async function PUT(
       entityId: id,
       entityLabel: template.name,
       description: `Updated template ${template.name}`,
-      userId: (session.user as any).id,
+      userId,
     });
 
     return NextResponse.json(template);
@@ -138,10 +135,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
 
@@ -158,7 +154,7 @@ export async function DELETE(
       entityId: id,
       entityLabel: existing.name,
       description: `Deleted template ${existing.name}`,
-      userId: (session.user as any).id,
+      userId,
     });
 
     return NextResponse.json({ message: "Template deleted" });

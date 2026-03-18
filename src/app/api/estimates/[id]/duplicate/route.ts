@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { generateEstimateNumber } from "@/lib/generate-number";
@@ -9,10 +9,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
 
@@ -56,7 +55,7 @@ export async function POST(
         clientNotes: original.clientNotes,
         validUntil: original.validUntil,
         projectId: original.projectId,
-        createdById: (session.user as any).id,
+        createdById: userId,
         duplicatedFromId: original.id,
         phases: {
           create: original.phases.map((phase) => ({
@@ -97,7 +96,7 @@ export async function POST(
       entityId: duplicate.id,
       entityLabel: duplicate.estimateNumber,
       description: `Duplicated estimate → ${duplicate.estimateNumber}`,
-      userId: (session.user as any).id,
+      userId,
       projectId: duplicate.projectId,
     });
 

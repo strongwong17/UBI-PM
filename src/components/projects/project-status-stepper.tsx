@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -23,12 +23,17 @@ interface ProjectStatusStepperProps {
 export function ProjectStatusStepper({ projectId, currentStatus }: ProjectStatusStepperProps) {
   const [status, setStatus] = useState(currentStatus);
   const [updating, setUpdating] = useState(false);
+  const [confirmTarget, setConfirmTarget] = useState<string | null>(null);
+
+  useEffect(() => {
+    setStatus(currentStatus);
+  }, [currentStatus]);
 
   const currentIndex = STATUSES.findIndex((s) => s.value === status);
 
-  async function handleClick(value: string) {
-    if (value === status || updating) return;
+  async function doUpdate(value: string) {
     setUpdating(true);
+    setConfirmTarget(null);
     try {
       const res = await fetch(`/api/projects/${projectId}`, {
         method: "PATCH",
@@ -45,8 +50,19 @@ export function ProjectStatusStepper({ projectId, currentStatus }: ProjectStatus
     }
   }
 
+  function handleClick(value: string) {
+    if (value === status || updating) return;
+    const targetIndex = STATUSES.findIndex((s) => s.value === value);
+    // Backward jump → ask for confirmation
+    if (targetIndex < currentIndex) {
+      setConfirmTarget(value);
+    } else {
+      doUpdate(value);
+    }
+  }
+
   return (
-    <div className="w-full">
+    <div className="w-full space-y-2">
       <div className="flex items-center w-full overflow-x-auto">
         {STATUSES.map((step, index) => {
           const isCompleted = index < currentIndex;
@@ -95,6 +111,27 @@ export function ProjectStatusStepper({ projectId, currentStatus }: ProjectStatus
           );
         })}
       </div>
+
+      {/* Backward jump confirmation */}
+      {confirmTarget && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 text-sm">
+          <span className="text-amber-800">
+            Move status back to <strong>{STATUSES.find((s) => s.value === confirmTarget)?.label}</strong>?
+          </span>
+          <button
+            onClick={() => doUpdate(confirmTarget)}
+            className="px-3 py-1 bg-amber-600 text-white rounded-md text-xs font-medium hover:bg-amber-700"
+          >
+            Confirm
+          </button>
+          <button
+            onClick={() => setConfirmTarget(null)}
+            className="px-3 py-1 bg-white border border-gray-300 rounded-md text-xs font-medium hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
     </div>
   );
 }

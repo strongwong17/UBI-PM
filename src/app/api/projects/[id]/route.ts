@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unlink } from "fs/promises";
 import path from "path";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
@@ -12,10 +12,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (isAuthError(authResult)) return authResult;
 
     const { id } = await params;
 
@@ -54,10 +52,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
     const body = await request.json();
@@ -68,6 +65,12 @@ export async function PATCH(
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
 
+    // Auto-set startDate when transitioning to IN_PROGRESS
+    const autoStartDate =
+      status === "IN_PROGRESS" && existing.status !== "IN_PROGRESS" && !existing.startDate && startDate === undefined
+        ? new Date()
+        : undefined;
+
     const project = await prisma.project.update({
       where: { id },
       data: {
@@ -77,6 +80,7 @@ export async function PATCH(
         ...(primaryContactId !== undefined && { primaryContactId }),
         ...(assignedToId !== undefined && { assignedToId }),
         ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
+        ...(autoStartDate && { startDate: autoStartDate }),
         ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
         ...(notes !== undefined && { notes }),
       },
@@ -86,8 +90,6 @@ export async function PATCH(
         assignedTo: { select: { name: true } },
       },
     });
-
-    const userId = (session.user as any).id;
     if (status && status !== existing.status) {
       await logActivity({
         action: "STATUS_CHANGE",
@@ -123,13 +125,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    if ((session.user as { role?: string }).role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const authResult = await requireAuth(["ADMIN"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
 
@@ -173,7 +171,7 @@ export async function DELETE(
       entityId: id,
       entityLabel: existing.projectNumber,
       description: `Deleted project ${existing.projectNumber}`,
-      userId: (session.user as any).id,
+      userId,
     });
 
     return NextResponse.json({ message: "Project deleted" });

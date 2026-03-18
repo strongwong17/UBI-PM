@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
@@ -10,10 +10,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
     const body = await request.json();
@@ -63,7 +62,7 @@ export async function PATCH(
       entityLabel: existing.estimateNumber,
       description: `Changed estimate status from ${existing.status} to ${status}`,
       metadata: { from: existing.status, to: status },
-      userId: (session.user as any).id,
+      userId,
       projectId: existing.projectId,
     });
 

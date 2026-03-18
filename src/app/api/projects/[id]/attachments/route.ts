@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import path from "path";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
@@ -12,10 +12,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
 
@@ -30,7 +29,29 @@ export async function POST(
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    const ext = path.extname(file.name);
+    // Validate file size (max 50MB)
+    const MAX_SIZE = 50 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      return NextResponse.json({ error: "File too large (max 50MB)" }, { status: 413 });
+    }
+
+    // Validate MIME type
+    const ALLOWED_TYPES = [
+      "application/pdf",
+      "image/jpeg", "image/png", "image/gif", "image/webp",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "text/plain", "text/csv",
+      "application/zip",
+    ];
+    if (file.type && !ALLOWED_TYPES.includes(file.type)) {
+      return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
+    }
+
+    const ext = path.extname(file.name).toLowerCase();
     const storedName = `${crypto.randomUUID()}${ext}`;
 
     await mkdir(UPLOAD_DIR, { recursive: true });
@@ -53,7 +74,7 @@ export async function POST(
       entityId: attachment.id,
       entityLabel: attachment.filename,
       description: `Uploaded attachment ${attachment.filename}`,
-      userId: (session.user as any).id,
+      userId,
       projectId: id,
     });
 

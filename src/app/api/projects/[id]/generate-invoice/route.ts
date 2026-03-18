@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { generateInvoiceNumber } from "@/lib/generate-number";
@@ -9,10 +9,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
     const body = await request.json();
@@ -89,6 +88,7 @@ export async function POST(
           subtotal,
           taxRate,
           tax,
+          discount,
           total,
           projectId: id,
           estimateId: estimate.id,
@@ -100,14 +100,7 @@ export async function POST(
         },
       });
 
-      // Set project status to INVOICED if not already past that
-      const project = await tx.project.findUnique({ where: { id }, select: { status: true } });
-      if (project && !["INVOICED", "PAID", "CLOSED"].includes(project.status)) {
-        await tx.project.update({
-          where: { id },
-          data: { status: "INVOICED" },
-        });
-      }
+      // Don't auto-set INVOICED here — that happens when invoice status is set to SENT
 
       return inv;
     });
@@ -118,7 +111,7 @@ export async function POST(
       entityId: invoice.id,
       entityLabel: invoice.invoiceNumber,
       description: `Generated invoice ${invoice.invoiceNumber} from estimate ${estimate.estimateNumber}`,
-      userId: (session.user as any).id,
+      userId,
       projectId: id,
     });
 

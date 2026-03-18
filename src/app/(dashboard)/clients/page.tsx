@@ -1,17 +1,9 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, ArrowRight, FolderKanban } from "lucide-react";
 
 export default async function ClientsPage() {
   const clients = await prisma.client.findMany({
@@ -27,98 +19,95 @@ export default async function ClientsPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-          <p className="text-gray-500 mt-1">
-            Manage your clients and their contacts
-          </p>
+          <p className="text-sm text-gray-500 mt-0.5">Manage your clients and their contacts</p>
         </div>
-        <Link href="/clients/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
+        <Button asChild size="sm">
+          <Link href="/clients/new">
+            <Plus className="h-4 w-4 mr-1.5" />
             New Client
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            All Clients
-            <Badge variant="secondary" className="ml-2">
-              {clients.length}
-            </Badge>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {clients.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium">No clients yet</p>
-              <p className="mt-1">Get started by adding your first client.</p>
-              <Link href="/clients/new" className="mt-4 inline-block">
-                <Button variant="outline">
-                  <Plus className="h-4 w-4 mr-2" />
+      {/* Results */}
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            All clients
+            <Badge variant="secondary" className="text-xs">{clients.length}</Badge>
+          </h2>
+        </div>
+
+        {clients.length === 0 ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Users className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+              <p className="font-medium text-gray-500">No clients yet</p>
+              <p className="text-sm text-gray-400 mt-1">Get started by adding your first client</p>
+              <Button asChild className="mt-4" size="sm" variant="outline">
+                <Link href="/clients/new">
+                  <Plus className="h-4 w-4 mr-1.5" />
                   Add Client
-                </Button>
-              </Link>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Company</TableHead>
-                  <TableHead>Industry</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Phone</TableHead>
-                  <TableHead className="text-center">Contacts</TableHead>
-                  <TableHead className="text-center">Projects</TableHead>
-                  <TableHead>Created</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clients.map((client) => (
-                  <TableRow key={client.id}>
-                    <TableCell>
-                      <Link
-                        href={`/clients/${client.id}`}
-                        className="font-medium text-blue-600 hover:text-blue-800 hover:underline"
-                      >
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-1.5">
+            {clients.map((client) => (
+              <Link key={client.id} href={`/clients/${client.id}`} className="block group">
+                <div className="flex items-center justify-between px-4 py-3 rounded-lg border border-transparent hover:border-gray-200 hover:bg-gray-50/80 transition-all duration-150">
+                  {/* Left */}
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="h-9 w-9 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
+                      <span className="text-sm font-semibold text-gray-500">
+                        {client.company.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-sm font-medium text-gray-900 truncate block">
                         {client.company}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-gray-600">
-                      {client.industry || "-"}
-                    </TableCell>
-                    <TableCell className="text-gray-600">
-                      {client.email || "-"}
-                    </TableCell>
-                    <TableCell className="text-gray-600">
-                      {client.phone || "-"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary">
-                        {client._count.contacts}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <Badge variant="secondary">
-                        {client._count.projects}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-gray-500 text-sm">
+                      </span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        {client.industry && (
+                          <>
+                            <span className="text-xs text-gray-400">{client.industry}</span>
+                            <span className="text-gray-300">·</span>
+                          </>
+                        )}
+                        {client.email && (
+                          <span className="text-xs text-gray-400 truncate">{client.email}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right */}
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="flex items-center gap-1.5">
+                      <FolderKanban className="h-3 w-3 text-gray-400" />
+                      <span className="text-xs text-gray-500 tabular-nums">{client._count.projects}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Users className="h-3 w-3 text-gray-400" />
+                      <span className="text-xs text-gray-500 tabular-nums">{client._count.contacts}</span>
+                    </div>
+                    <span className="text-xs text-gray-400 w-16 text-right">
                       {new Date(client.createdAt).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                    </span>
+                    <ArrowRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

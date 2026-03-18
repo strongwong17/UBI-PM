@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
@@ -7,10 +7,9 @@ const PAGE_SIZE = 20;
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const body = await request.json();
     const { action, entityType, entityId, entityLabel, description, metadata } = body;
@@ -26,7 +25,7 @@ export async function POST(request: NextRequest) {
       entityLabel: entityLabel || undefined,
       description,
       metadata: metadata || undefined,
-      userId: (session.user as any).id,
+      userId,
     });
 
     return NextResponse.json({ success: true });
@@ -38,15 +37,8 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const role = (session.user as any).role;
-    if (role !== "ADMIN" && role !== "MANAGER") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
 
     const { searchParams } = new URL(request.url);
     const entityType = searchParams.get("entityType");

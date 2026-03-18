@@ -82,7 +82,7 @@ export default async function ClientDetailPage({
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{client.company}</h1>
             {client.industry && (
-              <p className="text-gray-500 mt-1 flex items-center gap-1">
+              <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1">
                 <Building2 className="h-4 w-4" />
                 {client.industry}
               </p>

@@ -223,7 +223,9 @@ export interface InvoicePDFData {
   subtotal: number;
   taxRate: number;
   tax: number;
+  discount: number;
   total: number;
+  exchangeRate: number | null;
   notes: string | null;
   contactEmail: string | null;
   project: {
@@ -348,10 +350,22 @@ export function InvoicePDF({
               <Text style={styles.totalsLabel}>Subtotal</Text>
               <Text style={styles.totalsValue}>{fmt(invoice.subtotal, currency)}</Text>
             </View>
+            {invoice.discount > 0 && (
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>Discount</Text>
+                <Text style={[styles.totalsValue, { color: "#dc2626" }]}>-{fmt(invoice.discount, currency)}</Text>
+              </View>
+            )}
             {invoice.taxRate > 0 && (
               <View style={styles.totalsRow}>
                 <Text style={styles.totalsLabel}>Tax ({invoice.taxRate}%)</Text>
                 <Text style={styles.totalsValue}>{fmt(invoice.tax, currency)}</Text>
+              </View>
+            )}
+            {invoice.exchangeRate && (
+              <View style={styles.totalsRow}>
+                <Text style={styles.totalsLabel}>Exchange Rate</Text>
+                <Text style={styles.totalsValue}>1 USD = {invoice.exchangeRate} CNY</Text>
               </View>
             )}
             <View style={styles.totalsFinalRow}>

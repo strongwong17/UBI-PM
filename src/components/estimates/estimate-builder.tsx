@@ -714,51 +714,129 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                     const computedTotal = resolveItemTotal(item, phases);
 
                     return (
-                      <div key={item._key} className="grid grid-cols-12 gap-2 items-center">
-                        {/* Description */}
-                        <div className="col-span-4">
-                          <Input
-                            value={item.description}
-                            onChange={(e) =>
-                              updateLineItem(phase._key, item._key, "description", e.target.value)
-                            }
-                            placeholder="Line item description"
-                            className="text-sm"
-                          />
-                        </div>
-
-                        {/* Unit Select — always shown; "% of..." enables percentage mode */}
-                        <div className="col-span-2">
-                          <Select
-                            value={isPercent ? "% of..." : item.unit}
-                            onValueChange={(v) => {
-                              if (v === "% of...") {
-                                enablePercentageMode(phase._key, item._key);
-                              } else {
-                                disablePercentageMode(phase._key, item._key);
-                                updateLineItem(phase._key, item._key, "unit", v);
+                      <div key={item._key} className="space-y-1">
+                        <div className="grid grid-cols-12 gap-2 items-center">
+                          {/* Description */}
+                          <div className="col-span-4">
+                            <Input
+                              value={item.description}
+                              onChange={(e) =>
+                                updateLineItem(phase._key, item._key, "description", e.target.value)
                               }
-                            }}
-                          >
-                            <SelectTrigger className="text-sm">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="hours">hours</SelectItem>
-                              <SelectItem value="days">days</SelectItem>
-                              <SelectItem value="sessions">sessions</SelectItem>
-                              <SelectItem value="pieces">pieces</SelectItem>
-                              <SelectItem value="participants">participants</SelectItem>
-                              <SelectItem value="units">units</SelectItem>
-                              <SelectItem value="lump sum">lump sum</SelectItem>
-                              <SelectItem value="% of...">% of...</SelectItem>
-                            </SelectContent>
-                          </Select>
+                              placeholder="Line item description"
+                              className="text-sm"
+                            />
+                          </div>
+
+                          {/* Unit Select — always shown; "% of..." enables percentage mode */}
+                          <div className="col-span-2">
+                            <Select
+                              value={isPercent ? "% of..." : item.unit}
+                              onValueChange={(v) => {
+                                if (v === "% of...") {
+                                  enablePercentageMode(phase._key, item._key);
+                                } else {
+                                  disablePercentageMode(phase._key, item._key);
+                                  updateLineItem(phase._key, item._key, "unit", v);
+                                }
+                              }}
+                            >
+                              <SelectTrigger className="text-sm">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="hours">hours</SelectItem>
+                                <SelectItem value="days">days</SelectItem>
+                                <SelectItem value="sessions">sessions</SelectItem>
+                                <SelectItem value="pieces">pieces</SelectItem>
+                                <SelectItem value="participants">participants</SelectItem>
+                                <SelectItem value="units">units</SelectItem>
+                                <SelectItem value="lump sum">lump sum</SelectItem>
+                                <SelectItem value="% of...">% of...</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          {isPercent ? (
+                            <>
+                              {/* Qty + Unit Price columns empty for alignment */}
+                              <div className="col-span-4" />
+
+                              {/* Computed total — same position as normal total */}
+                              <div className="col-span-1 text-right">
+                                <span className="text-sm font-medium text-blue-700">
+                                  {fmt(computedTotal)}
+                                </span>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {/* Qty */}
+                              <div className="col-span-2">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.5"
+                                  value={item.quantity}
+                                  onChange={(e) =>
+                                    updateLineItem(
+                                      phase._key,
+                                      item._key,
+                                      "quantity",
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                  className="text-sm"
+                                />
+                              </div>
+
+                              {/* Unit price */}
+                              <div className="col-span-2">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={item.unitPrice}
+                                  onChange={(e) =>
+                                    updateLineItem(
+                                      phase._key,
+                                      item._key,
+                                      "unitPrice",
+                                      parseFloat(e.target.value) || 0
+                                    )
+                                  }
+                                  className="text-sm"
+                                />
+                              </div>
+
+                              {/* Total */}
+                              <div className="col-span-1 text-right">
+                                <span className="text-sm font-medium text-gray-700">
+                                  {fmt(item.quantity * item.unitPrice)}
+                                </span>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Actions: delete only */}
+                          <div className="col-span-1 flex justify-end">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeLineItem(phase._key, item._key)}
+                              className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
+                              disabled={phase.lineItems.length === 1}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
 
-                        {isPercent ? (
-                          <>
-                            {/* Rate input in Qty column */}
+                        {/* Percentage controls — second row, indented under description */}
+                        {isPercent && (
+                          <div className="grid grid-cols-12 gap-2 items-center">
+                            <div className="col-span-4" />
                             <div className="col-span-2 flex items-center gap-1">
                               <Input
                                 type="number"
@@ -775,12 +853,11 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                                   )
                                 }
                                 className="text-sm"
+                                placeholder="Rate"
                               />
                               <span className="text-xs text-gray-400 shrink-0">%</span>
                             </div>
-
-                            {/* Basis selector — subtotal, phases, or individual line items */}
-                            <div className="col-span-2">
+                            <div className="col-span-3">
                               <Select
                                 value={
                                   item.percentageBasis === "SUBTOTAL"
@@ -802,7 +879,6 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                                               }
                                               if (v.startsWith("ITEM:")) {
                                                 const targetKey = v.replace(/^ITEM:/, "");
-                                                // find the target line item's description for persistence
                                                 let desc = "";
                                                 for (const ph of prev) {
                                                   const found = ph.lineItems.find((x) => x._key === targetKey);
@@ -810,7 +886,6 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                                                 }
                                                 return { ...li, percentageBasis: "LINE_ITEM" as const, basisPhaseName: "", basisLineItemKey: targetKey, basisLineItemDesc: desc };
                                               }
-                                              // PHASE:
                                               const phaseName = v.replace(/^PHASE:/, "");
                                               return { ...li, percentageBasis: "PHASE" as const, basisPhaseName: phaseName, basisLineItemKey: "", basisLineItemDesc: "" };
                                             }),
@@ -832,7 +907,6 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                                         Phase: {p.name}
                                       </SelectItem>
                                     ))}
-                                  {/* Individual line items from all phases */}
                                   {phases.flatMap((p) =>
                                     p.lineItems
                                       .filter((li) => li._key !== item._key && li.description.trim() !== "" && !li.percentageBasis)
@@ -845,76 +919,9 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                                 </SelectContent>
                               </Select>
                             </div>
-
-                            {/* Computed total */}
-                            <div className="col-span-1 text-right">
-                              <span className="text-sm font-medium text-blue-700">
-                                {fmt(computedTotal)}
-                              </span>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            {/* Qty */}
-                            <div className="col-span-2">
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.5"
-                                value={item.quantity}
-                                onChange={(e) =>
-                                  updateLineItem(
-                                    phase._key,
-                                    item._key,
-                                    "quantity",
-                                    parseFloat(e.target.value) || 0
-                                  )
-                                }
-                                className="text-sm"
-                              />
-                            </div>
-
-                            {/* Unit price */}
-                            <div className="col-span-2">
-                              <Input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={item.unitPrice}
-                                onChange={(e) =>
-                                  updateLineItem(
-                                    phase._key,
-                                    item._key,
-                                    "unitPrice",
-                                    parseFloat(e.target.value) || 0
-                                  )
-                                }
-                                className="text-sm"
-                              />
-                            </div>
-
-                            {/* Total */}
-                            <div className="col-span-1 text-right">
-                              <span className="text-sm font-medium text-gray-700">
-                                {fmt(item.quantity * item.unitPrice)}
-                              </span>
-                            </div>
-                          </>
+                            <div className="col-span-3" />
+                          </div>
                         )}
-
-                        {/* Actions: delete only */}
-                        <div className="col-span-1 flex justify-end">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeLineItem(phase._key, item._key)}
-                            className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
-                            disabled={phase.lineItems.length === 1}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
                       </div>
                     );
                   })}

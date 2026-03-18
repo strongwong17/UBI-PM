@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +25,6 @@ interface EstimateApproveButtonProps {
 export function EstimateApproveButton({
   estimateId,
   isApproved,
-  version,
 }: EstimateApproveButtonProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -51,19 +49,20 @@ export function EstimateApproveButton({
   }
 
   if (isApproved) {
+    // Unapprove — shown inside dropdown menu, compact style
     return (
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button size="sm" variant="outline" className="border-orange-400 text-orange-700 hover:bg-orange-50">
-            <XCircle className="h-4 w-4 mr-1" />
+          <button className="flex items-center gap-2 text-sm text-orange-600 hover:text-orange-800 transition-colors w-full px-2 py-1.5">
+            <XCircle className="h-3.5 w-3.5" />
             Unapprove
-          </Button>
+          </button>
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Unapprove This Estimate?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will remove approval from this estimate. If no other estimates are approved,
+              This will remove approval. If no other estimates are approved,
               the project status will revert.
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -79,20 +78,20 @@ export function EstimateApproveButton({
     );
   }
 
+  // Approve — shown inline, icon + text clickable action
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button size="sm" variant="outline" className="border-green-500 text-green-700 hover:bg-green-50">
-          <CheckCircle className="h-4 w-4 mr-1" />
+        <button className="flex items-center gap-1.5 text-sm font-medium text-green-600 hover:text-green-800 transition-colors">
+          <CheckCircle className="h-4 w-4" />
           Approve
-        </Button>
+        </button>
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Approve This Estimate?</AlertDialogTitle>
           <AlertDialogDescription>
-            This will mark this estimate as approved. The project status will be updated
-            to &quot;Approved&quot;. Multiple estimates can be approved simultaneously.
+            This will mark this estimate as approved and set the project to In Progress.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

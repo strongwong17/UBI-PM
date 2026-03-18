@@ -1,236 +1,346 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { cn } from "@/lib/utils";
 import {
-  Calculator,
+  Plus,
+  ArrowRight,
   FolderKanban,
+  Calculator,
   Receipt,
-  Clock,
   Users,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
 
-const PROJECT_STATUSES = [
-  "INQUIRY_RECEIVED",
-  "ESTIMATE_SENT",
-  "APPROVED",
-  "IN_PROGRESS",
-  "COMPLETED",
-  "INVOICED",
-  "PAID",
-  "CLOSED",
-];
+function timeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  if (diffMins < 60) return `${diffMins}m ago`;
+  const diffHours = Math.floor(diffMins / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return "yesterday";
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
+}
 
 export default async function DashboardPage() {
   const session = await auth();
 
   const [
-    projectCount,
-    estimateCount,
-    clientCount,
-    invoiceCount,
-    projectStatusCounts,
+    // Actionable counts
+    estimatesSent,
     activeProjects,
-    recentEstimates,
-    recentProjects,
+    unpaidInvoices,
+    newInquiries,
+    completedNeedInvoice,
+    // Pipeline counts
+    statusCounts,
+    // Work queue items
+    sentEstimateProjects,
+    inProgressProjects,
+    invoicedProjects,
+    // Recent activity
+    recentActivity,
   ] = await Promise.all([
-    prisma.project.count(),
-    prisma.estimate.count(),
-    prisma.client.count(),
-    prisma.invoice.count(),
-    // Projects grouped by status
-    prisma.project.groupBy({
-      by: ["status"],
-      _count: { _all: true },
+    // Estimates sent but not yet approved
+    prisma.estimate.count({ where: { status: "SENT", isApproved: false, deletedAt: null } }),
+    // Active projects
+    prisma.project.count({ where: { status: "IN_PROGRESS" } }),
+    // Unpaid invoices (SENT or OVERDUE)
+    prisma.invoice.count({ where: { status: { in: ["SENT", "OVERDUE"] }, deletedAt: null } }),
+    // New inquiries not yet worked on
+    prisma.project.count({ where: { status: "INQUIRY_RECEIVED" } }),
+    // Completed but not yet invoiced
+    prisma.project.count({ where: { status: "COMPLETED" } }),
+    // Pipeline
+    prisma.project.groupBy({ by: ["status"], _count: { _all: true } }),
+    // Work queue: estimates awaiting response
+    prisma.project.findMany({
+      where: { status: "ESTIMATE_SENT" },
+      include: { client: { select: { company: true } } },
+      orderBy: { updatedAt: "asc" },
+      take: 5,
     }),
-    // Active / in-progress projects
+    // Work queue: in progress
     prisma.project.findMany({
       where: { status: "IN_PROGRESS" },
       include: { client: { select: { company: true } } },
       orderBy: { updatedAt: "desc" },
       take: 5,
     }),
-    prisma.estimate.findMany({
-      orderBy: { updatedAt: "desc" },
-      take: 3,
-      select: { id: true, title: true, status: true, updatedAt: true },
-    }),
+    // Work queue: invoiced, awaiting payment
     prisma.project.findMany({
-      orderBy: { updatedAt: "desc" },
-      take: 3,
-      select: { id: true, projectNumber: true, title: true, status: true, updatedAt: true },
+      where: { status: "INVOICED" },
+      include: { client: { select: { company: true } } },
+      orderBy: { updatedAt: "asc" },
+      take: 5,
+    }),
+    // Recent activity log
+    prisma.activityLog.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 8,
+      include: { user: { select: { name: true } } },
     }),
   ]);
 
-  const stats = [
-    { title: "Projects", value: projectCount, icon: FolderKanban, color: "text-purple-600", href: "/projects" },
-    { title: "Estimates", value: estimateCount, icon: Calculator, color: "text-green-600", href: "/estimates" },
-    { title: "Clients", value: clientCount, icon: Users, color: "text-blue-600", href: "/clients" },
-    { title: "Invoices", value: invoiceCount, icon: Receipt, color: "text-orange-600", href: "/invoices" },
-  ];
-
   const statusMap = Object.fromEntries(
-    projectStatusCounts.map((s) => [s.status, s._count._all])
+    statusCounts.map((s) => [s.status, s._count._all])
   );
 
-  const activityItems = [
-    ...recentEstimates.map((e) => ({
-      id: e.id,
-      label: e.title,
-      type: "Estimate" as const,
-      status: e.status,
-      updatedAt: e.updatedAt,
-      href: `/estimates/${e.id}`,
-    })),
-    ...recentProjects.map((p) => ({
-      id: p.id,
-      label: `${p.projectNumber} — ${p.title}`,
-      type: "Project" as const,
-      status: p.status,
-      updatedAt: p.updatedAt,
-      href: `/projects/${p.id}`,
-    })),
-  ]
-    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-    .slice(0, 6);
+  // Build summary text
+  const summaryParts: string[] = [];
+  if (estimatesSent > 0) summaryParts.push(`${estimatesSent} estimate${estimatesSent > 1 ? "s" : ""} awaiting response`);
+  if (unpaidInvoices > 0) summaryParts.push(`${unpaidInvoices} invoice${unpaidInvoices > 1 ? "s" : ""} unpaid`);
+  if (newInquiries > 0) summaryParts.push(`${newInquiries} new inquir${newInquiries > 1 ? "ies" : "y"}`);
+  if (completedNeedInvoice > 0) summaryParts.push(`${completedNeedInvoice} project${completedNeedInvoice > 1 ? "s" : ""} need invoicing`);
+
+  // Pipeline stages with CTAs
+  const pipelineStages: { status: string; label: string; cta: string; href: string; color: string }[] = [
+    { status: "INQUIRY_RECEIVED", label: "New inquiries", cta: "Review", href: "/projects?status=INQUIRY_RECEIVED", color: "bg-sky-500" },
+    { status: "ESTIMATE_SENT", label: "Estimate sent", cta: "Follow up", href: "/projects?status=ESTIMATE_SENT", color: "bg-violet-500" },
+    { status: "IN_PROGRESS", label: "In progress", cta: "View", href: "/projects?status=IN_PROGRESS", color: "bg-amber-500" },
+    { status: "COMPLETED", label: "Completed", cta: "Invoice", href: "/projects?status=COMPLETED", color: "bg-teal-500" },
+    { status: "INVOICED", label: "Invoiced", cta: "Track", href: "/projects?status=INVOICED", color: "bg-purple-500" },
+  ];
+
+  // Work queue groups
+  const workGroups = [
+    {
+      title: "Awaiting client response",
+      items: sentEstimateProjects,
+      emptyText: "No estimates pending response",
+      actionLabel: "Follow up",
+      color: "text-violet-600",
+    },
+    {
+      title: "In progress",
+      items: inProgressProjects,
+      emptyText: "No active projects",
+      actionLabel: "Open",
+      color: "text-amber-600",
+    },
+    {
+      title: "Awaiting payment",
+      items: invoicedProjects,
+      emptyText: "No invoices pending",
+      actionLabel: "View",
+      color: "text-purple-600",
+    },
+  ];
+
+  const totalWorkItems = sentEstimateProjects.length + inProgressProjects.length + invoicedProjects.length;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Welcome back, {session?.user?.name}
-        </h1>
-        <p className="text-gray-500 mt-1">Here&apos;s an overview of your projects</p>
+    <div className="space-y-6 max-w-6xl">
+      {/* ─── Action bar ─────────────────────────────────────────── */}
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">
+            {session?.user?.name ? `Hi, ${session.user.name}` : "Dashboard"}
+          </h1>
+          {summaryParts.length > 0 ? (
+            <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
+              <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              {summaryParts.join(" · ")}
+            </p>
+          ) : (
+            <p className="text-sm text-gray-400 mt-0.5">All caught up</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button asChild size="sm" variant="outline">
+            <Link href="/clients/new">
+              <Users className="h-3.5 w-3.5 mr-1.5" />
+              New Client
+            </Link>
+          </Button>
+          <Button asChild size="sm" variant="outline">
+            <Link href="/estimates/new">
+              <Calculator className="h-3.5 w-3.5 mr-1.5" />
+              New Estimate
+            </Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/projects/new">
+              <Plus className="h-3.5 w-3.5 mr-1.5" />
+              New Project
+            </Link>
+          </Button>
+        </div>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat) => (
-          <Link key={stat.title} href={stat.href}>
-            <Card className="hover:shadow-sm transition-shadow cursor-pointer">
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-500">
-                  {stat.title}
-                </CardTitle>
-                <stat.icon className={`h-4 w-4 ${stat.color}`} />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
+      {/* ─── Interactive metrics ─────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {[
+          { label: "New inquiries", count: newInquiries, icon: FolderKanban, href: "/projects?status=INQUIRY_RECEIVED", color: "text-sky-600", bg: "bg-sky-50" },
+          { label: "Estimates pending", count: estimatesSent, icon: Calculator, href: "/estimates?status=SENT", color: "text-violet-600", bg: "bg-violet-50" },
+          { label: "Active projects", count: activeProjects, icon: Clock, href: "/projects?status=IN_PROGRESS", color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Invoices unpaid", count: unpaidInvoices, icon: Receipt, href: "/invoices?status=SENT", color: "text-red-600", bg: "bg-red-50" },
+        ].map((metric) => (
+          <Link key={metric.label} href={metric.href}>
+            <Card className={cn(
+              "transition-all duration-150 cursor-pointer hover:shadow-md border",
+              metric.count > 0 ? "hover:border-gray-300" : "opacity-60"
+            )}>
+              <CardContent className="py-4 px-4 flex items-center gap-3">
+                <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", metric.bg)}>
+                  <metric.icon className={cn("h-4 w-4", metric.color)} />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-2xl font-bold tracking-tight leading-none">{metric.count}</p>
+                  <p className="text-xs text-gray-500 mt-1 truncate">{metric.label}</p>
+                </div>
               </CardContent>
             </Card>
           </Link>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Project Pipeline */}
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FolderKanban className="h-5 w-5 text-purple-500" />
-              Project Pipeline
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {PROJECT_STATUSES.map((status) => {
-                const count = statusMap[status] || 0;
-                const maxCount = Math.max(...Object.values(statusMap), 1);
-                const pct = Math.round((count / maxCount) * 100);
+      {/* ─── Main content: Work queue + Pipeline ─────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+
+        {/* Work queue (3 cols) */}
+        <div className="lg:col-span-3 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">Work queue</h2>
+            {totalWorkItems > 0 && (
+              <Badge variant="secondary" className="text-xs">{totalWorkItems} items</Badge>
+            )}
+          </div>
+
+          {totalWorkItems === 0 ? (
+            <Card>
+              <CardContent className="py-10 text-center">
+                <FolderKanban className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+                <p className="text-sm font-medium text-gray-500">No items need attention</p>
+                <p className="text-xs text-gray-400 mt-1">Create a project to get started</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-5">
+              {workGroups.map((group) => {
+                if (group.items.length === 0) return null;
                 return (
-                  <div key={status} className="flex items-center gap-3">
-                    <div className="w-36 shrink-0">
-                      <StatusBadge status={status} />
+                  <div key={group.title}>
+                    <p className={cn("text-xs font-medium mb-2", group.color)}>
+                      {group.title}
+                    </p>
+                    <div className="space-y-1.5">
+                      {group.items.map((project) => (
+                        <Link key={project.id} href={`/projects/${project.id}`} className="block group">
+                          <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-transparent hover:border-gray-200 hover:bg-gray-50/80 transition-all duration-150">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <StatusBadge status={project.status} />
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {project.projectNumber}
+                                  <span className="font-normal text-gray-500 ml-1.5">{project.title}</span>
+                                </p>
+                                <p className="text-xs text-gray-400 mt-0.5">{project.client.company}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <span className="text-xs text-gray-400">{timeAgo(project.updatedAt)}</span>
+                              <ArrowRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
                     </div>
-                    <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-purple-400 rounded-full transition-all"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-gray-700 w-6 text-right">
-                      {count}
-                    </span>
                   </div>
                 );
               })}
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Active Projects */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FolderKanban className="h-5 w-5 text-blue-500" />
-              In Progress
-              {activeProjects.length > 0 && (
-                <Badge variant="secondary" className="ml-auto">
-                  {activeProjects.length}
-                </Badge>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {activeProjects.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-4">
-                No active projects
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {activeProjects.map((project) => (
-                  <Link key={project.id} href={`/projects/${project.id}`} className="block">
-                    <div className="p-3 rounded-lg border hover:bg-blue-50 border-blue-100 transition-colors">
-                      <p className="text-sm font-medium text-gray-900 truncate">{project.projectNumber}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{project.client.company}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-gray-400" />
-            Recent Activity
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {activityItems.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-4">No recent activity</p>
-          ) : (
-            <div className="space-y-2">
-              {activityItems.map((item) => (
-                <Link key={`${item.type}-${item.id}`} href={item.href} className="block">
-                  <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-gray-50 transition-colors">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Badge variant="outline" className="text-xs shrink-0">
-                        {item.type}
-                      </Badge>
-                      <span className="text-sm font-medium text-gray-900 truncate">
-                        {item.label}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <StatusBadge status={item.status} />
-                      <span className="text-xs text-gray-400">
-                        {new Date(item.updatedAt).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
           )}
-        </CardContent>
-      </Card>
+        </div>
+
+        {/* Pipeline + Activity (2 cols) */}
+        <div className="lg:col-span-2 space-y-5">
+          {/* Actionable pipeline */}
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900 mb-3">Pipeline</h2>
+            <Card>
+              <CardContent className="py-1 px-1">
+                {pipelineStages.map((stage) => {
+                  const count = statusMap[stage.status] || 0;
+                  return (
+                    <Link
+                      key={stage.status}
+                      href={stage.href}
+                      className="flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-gray-50 transition-colors duration-150 group"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <div className={cn("h-2 w-2 rounded-full shrink-0", stage.color)} />
+                        <span className="text-[13px] text-gray-700">{stage.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={cn(
+                          "text-[13px] font-semibold tabular-nums",
+                          count > 0 ? "text-gray-900" : "text-gray-300"
+                        )}>
+                          {count}
+                        </span>
+                        {count > 0 && (
+                          <span className="text-[11px] text-gray-400 group-hover:text-blue-600 transition-colors">
+                            {stage.cta}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Recent activity */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-900">Recent activity</h2>
+              <Link href="/activity" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
+                View all
+              </Link>
+            </div>
+            <Card>
+              <CardContent className="py-1 px-1">
+                {recentActivity.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-6">No activity yet</p>
+                ) : (
+                  <div>
+                    {recentActivity.map((log) => (
+                      <div
+                        key={log.id}
+                        className="flex items-start gap-2.5 px-3 py-2 rounded-md"
+                      >
+                        <div className="h-5 w-5 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
+                          <span className="text-[10px] font-medium text-gray-500">
+                            {log.user?.name?.[0]?.toUpperCase() || "?"}
+                          </span>
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[12px] text-gray-600 leading-relaxed">
+                            <span className="font-medium text-gray-800">{log.user?.name || "System"}</span>
+                            {" "}
+                            <span className="text-gray-500">{log.description}</span>
+                          </p>
+                          <p className="text-[11px] text-gray-400 mt-0.5">{timeAgo(log.createdAt)}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

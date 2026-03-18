@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
@@ -8,10 +8,9 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
 
@@ -27,7 +26,7 @@ export async function PATCH(
         where: { id },
         data: {
           isApproved: nowApproved,
-          status: nowApproved ? "APPROVED" : "DRAFT",
+          status: nowApproved ? "SENT" : "DRAFT",
         },
         include: {
           project: { select: { id: true, title: true } },
@@ -39,11 +38,21 @@ export async function PATCH(
       });
 
       if (nowApproved) {
-        // Set project status to APPROVED
-        await tx.project.update({
+        // Set project status to IN_PROGRESS + start date (only if not already past that stage)
+        const project = await tx.project.findUnique({
           where: { id: estimate.projectId },
-          data: { status: "APPROVED" },
+          select: { startDate: true, status: true },
         });
+        const noForwardJump = ["COMPLETED", "INVOICED", "PAID", "CLOSED"];
+        if (project && !noForwardJump.includes(project.status)) {
+          await tx.project.update({
+            where: { id: estimate.projectId },
+            data: {
+              status: "IN_PROGRESS",
+              startDate: project.startDate ?? new Date(),
+            },
+          });
+        }
       } else {
         // Check if any other approved estimates remain
         const otherApproved = await tx.estimate.findFirst({
@@ -73,7 +82,7 @@ export async function PATCH(
       description: nowApproved
         ? `Approved estimate ${estimate.estimateNumber}`
         : `Unapproved estimate ${estimate.estimateNumber}`,
-      userId: (session.user as any).id,
+      userId,
       projectId: estimate.projectId,
     });
 

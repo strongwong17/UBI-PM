@@ -16,6 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Clock } from "lucide-react";
+import { RichTextEditor } from "@/components/shared/rich-text-editor";
 
 type ServiceModuleType =
   | "RECRUITMENT"
@@ -246,13 +247,10 @@ export function InquiryBriefForm({ projectId, initialData }: InquiryBriefFormPro
           {/* Notes */}
           <div className="space-y-1.5">
             <Label className="text-xs text-gray-500">Notes</Label>
-            <Textarea
-              name="timeline"
-              value={form.timeline}
-              onChange={handleChange}
+            <RichTextEditor
+              content={form.timeline}
+              onChange={(html) => setForm((prev) => ({ ...prev, timeline: html }))}
               placeholder="Other requirements, constraints, or context..."
-              rows={2}
-              className="resize-none text-sm"
             />
           </div>
         </CardContent>

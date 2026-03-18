@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { generateEstimateNumber } from "@/lib/generate-number";
@@ -63,10 +63,9 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
 
@@ -160,7 +159,7 @@ export async function POST(
         status: "DRAFT",
         projectId: id,
         currency: project.inquiry!.currency || "USD",
-        createdById: (session.user as any).id,
+        createdById: userId,
         phases: {
           create: [
             ...phases.map((phase, phaseIndex) => ({
@@ -215,13 +214,21 @@ export async function POST(
       },
     });
 
+    // Auto-advance project status to ESTIMATE_SENT if still at INQUIRY_RECEIVED
+    if (project.status === "INQUIRY_RECEIVED") {
+      await prisma.project.update({
+        where: { id },
+        data: { status: "ESTIMATE_SENT" },
+      });
+    }
+
     await logActivity({
       action: "GENERATE",
       entityType: "ESTIMATE",
       entityId: estimate.id,
       entityLabel: estimate.estimateNumber,
       description: `Generated estimate from brief`,
-      userId: (session.user as any).id,
+      userId,
       projectId: id,
     });
 

@@ -9,14 +9,12 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ProjectStatusStepper } from "@/components/projects/project-status-stepper";
 import { ProjectHubTabs } from "@/components/projects/project-hub-tabs";
 import { InquiryBriefForm } from "@/components/projects/inquiry-brief-form";
-import { ExecutionPhaseSelector } from "@/components/projects/execution-phase-selector";
 import { ProjectCompletionForm } from "@/components/projects/project-completion-form";
 import { GenerateInvoiceButton } from "@/components/projects/generate-invoice-button";
 import { EstimateApproveButton } from "@/components/estimates/estimate-approve-button";
-import { EstimateDuplicateButton } from "@/components/estimates/estimate-duplicate-button";
-import { EstimateStatusChanger } from "@/components/estimates/estimate-status-changer";
-import { EstimateDeleteButton } from "@/components/estimates/estimate-delete-button";
+import { EstimateCardActions } from "@/components/estimates/estimate-card-actions";
 import { InvoiceStatusChanger } from "@/components/invoices/invoice-status-changer";
+import { CreateRmbInvoiceButton } from "@/components/invoices/create-rmb-invoice-button";
 import { DeleteInquiryButton } from "@/components/projects/delete-inquiry-button";
 import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { ProjectAttachments } from "@/components/projects/project-attachments";
@@ -51,6 +49,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
             orderBy: { sortOrder: "asc" },
           },
           createdBy: { select: { name: true } },
+          rmbDuplicate: { select: { id: true, estimateNumber: true } },
         },
         orderBy: { version: "asc" },
       },
@@ -59,6 +58,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
         include: {
           lineItems: { orderBy: { sortOrder: "asc" } },
           estimate: { select: { estimateNumber: true, label: true, version: true } },
+          rmbDuplicate: { select: { id: true, invoiceNumber: true } },
         },
         orderBy: { createdAt: "desc" },
       },
@@ -86,7 +86,6 @@ export default async function ProjectHubPage({ params }: PageProps) {
 
   const hasUninvoicedApproved = approvedForInvoice.some((e) => !e.hasInvoice);
 
-
   function estimateTotal(estimate: NonNullable<typeof project>["estimates"][0]) {
     const subtotal = estimate.phases.reduce(
       (sum, phase) =>
@@ -99,6 +98,13 @@ export default async function ProjectHubPage({ params }: PageProps) {
     const tax = taxable * (taxRate / 100);
     return taxable + tax;
   }
+
+  // Total of approved estimates only (excluding RMB duplicates to avoid double-counting)
+  const approvedTotal = approvedEstimates
+    .filter((est) => !est.parentEstimateId)
+    .reduce((sum, est) => sum + estimateTotal(est), 0);
+  const fmtCurrency = (n: number) =>
+    n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // ── Tab contents ────────────────────────────────────────────
 
@@ -243,10 +249,10 @@ export default async function ProjectHubPage({ params }: PageProps) {
           {project.estimates.map((estimate) => {
             const total = estimateTotal(estimate);
             return (
-              <Card key={estimate.id} className={estimate.isApproved ? "border-green-400" : ""}>
+              <Card key={estimate.id} className={estimate.isApproved ? "border-green-400" : estimate.parentEstimateId ? "border-amber-300 bg-amber-50/30" : ""}>
                 <CardContent className="pt-4">
                   <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                       <Link
                         href={`/estimates/${estimate.id}`}
                         className="font-medium text-blue-600 hover:underline"
@@ -263,25 +269,31 @@ export default async function ProjectHubPage({ params }: PageProps) {
                           Approved
                         </Badge>
                       )}
+                      {estimate.parentEstimateId && (
+                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
+                          RMB Version
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-semibold">
-                        {estimate.currency} {total.toLocaleString()}
+                        {estimate.currency === "CNY" ? "¥" : "$"}{total.toLocaleString()}
                       </span>
-                      <EstimateStatusChanger
+                      {!estimate.isApproved && (
+                        <EstimateApproveButton
+                          estimateId={estimate.id}
+                          isApproved={false}
+                          version={estimate.version}
+                        />
+                      )}
+                      <EstimateCardActions
                         estimateId={estimate.id}
-                        currentStatus={estimate.status}
-                      />
-                      <EstimateApproveButton
-                        estimateId={estimate.id}
+                        estimateNumber={estimate.estimateNumber}
+                        estimateTitle={estimate.title}
                         isApproved={estimate.isApproved}
-                        version={estimate.version}
+                        isRmbDuplicate={!!estimate.parentEstimateId}
+                        hasRmbDuplicate={!!estimate.rmbDuplicate}
                       />
-                      <EstimateDuplicateButton estimateId={estimate.id} />
-                      <Button asChild variant="outline" size="sm">
-                        <Link href={`/estimates/${estimate.id}/edit`}>Edit</Link>
-                      </Button>
-                      <EstimateDeleteButton estimateId={estimate.id} estimateTitle={estimate.title} />
                     </div>
                   </div>
                 </CardContent>
@@ -290,40 +302,76 @@ export default async function ProjectHubPage({ params }: PageProps) {
           })}
         </div>
       )}
+
+      {/* CTA: Proceed to completion when there are approved estimates without invoices */}
+      {hasUninvoicedApproved && (
+        <Card className="border-green-300 bg-green-50/50">
+          <CardContent className="py-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="font-medium text-green-900">Estimate approved — ready to complete project</p>
+              <p className="text-sm text-green-700 mt-0.5">
+                Review deliverables, adjust quantities, and generate the final invoice.
+              </p>
+            </div>
+            <Button asChild className="bg-green-600 hover:bg-green-700 shrink-0">
+              <Link href={`/projects/${project.id}?tab=completion`}>
+                Proceed to Completion
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 
   const invoiceTab = (
     <div className="space-y-4">
-      {hasUninvoicedApproved && (
-        <div className="flex justify-end">
-          <GenerateInvoiceButton projectId={project.id} approvedEstimates={approvedForInvoice} />
-        </div>
-      )}
       {project.invoices.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center space-y-4">
             <p className="text-gray-500">No invoices yet.</p>
-            {approvedEstimates.length === 0 && (
-              <p className="text-sm text-gray-400">Approve an estimate to generate an invoice.</p>
+            {hasUninvoicedApproved ? (
+              <div>
+                <p className="text-sm text-gray-500 mb-3">Generate invoices through the Completion tab.</p>
+                <Button asChild variant="outline" size="sm">
+                  <Link href={`/projects/${project.id}?tab=completion`}>Go to Completion</Link>
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">Approve an estimate first, then use the Completion tab to generate invoices.</p>
             )}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
           {project.invoices.map((invoice) => (
-            <Card key={invoice.id}>
+            <Card key={invoice.id} className={invoice.parentInvoiceId ? "border-amber-300 bg-amber-50/30" : ""}>
               <CardHeader>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
-                    <CardTitle>{invoice.invoiceNumber}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <CardTitle>{invoice.invoiceNumber}</CardTitle>
+                      {invoice.parentInvoiceId && (
+                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
+                          RMB Duplicate
+                        </Badge>
+                      )}
+                      {invoice.currency !== "USD" && (
+                        <Badge variant="outline" className="text-xs">{invoice.currency}</Badge>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      Total: {invoice.total.toLocaleString()}
+                      Total: {invoice.currency === "CNY" ? "¥" : "$"}{invoice.total.toLocaleString()}
                     </p>
                     {invoice.estimate && (
                       <p className="text-xs text-gray-400 mt-0.5">
                         From: {invoice.estimate.estimateNumber} v{invoice.estimate.version}
                         {invoice.estimate.label ? ` — ${invoice.estimate.label}` : ""}
+                      </p>
+                    )}
+                    {invoice.exchangeRate && (
+                      <p className="text-xs text-amber-600 mt-0.5">
+                        Exchange rate: 1 USD = {invoice.exchangeRate} CNY
                       </p>
                     )}
                   </div>
@@ -333,6 +381,13 @@ export default async function ProjectHubPage({ params }: PageProps) {
                       invoiceId={invoice.id}
                       currentStatus={invoice.status}
                     />
+                    {!invoice.parentInvoiceId && (
+                      <CreateRmbInvoiceButton
+                        invoiceId={invoice.id}
+                        invoiceNumber={invoice.invoiceNumber}
+                        hasRmbDuplicate={!!invoice.rmbDuplicate}
+                      />
+                    )}
                     <Button asChild variant="outline" size="sm">
                       <Link href={`/invoices/${invoice.id}`}>View</Link>
                     </Button>
@@ -373,31 +428,31 @@ export default async function ProjectHubPage({ params }: PageProps) {
     </div>
   );
 
-  const executionTab = (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Execution Phase</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ExecutionPhaseSelector
-            projectId={project.id}
-            currentPhase={project.executionPhase}
-            disabled={project.status !== "IN_PROGRESS"}
-          />
-          {project.status !== "IN_PROGRESS" && (
-            <p className="text-sm text-gray-400 mt-3">
-              Set project status to &quot;In Progress&quot; to track execution phase.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-
   const completionTab = (
     <ProjectCompletionForm
       projectId={project.id}
+      projectStatus={project.status}
+      approvedEstimates={approvedEstimates.map((est) => ({
+        id: est.id,
+        estimateNumber: est.estimateNumber,
+        title: est.title,
+        label: est.label ?? null,
+        currency: est.currency,
+        taxRate: est.taxRate,
+        discount: est.discount,
+        parentEstimateId: est.parentEstimateId ?? null,
+        hasInvoice: invoicedEstimateIds.has(est.id),
+        phases: est.phases.map((phase) => ({
+          name: phase.name,
+          lineItems: phase.lineItems.map((li) => ({
+            description: li.description,
+            unit: li.unit,
+            quantity: li.quantity,
+            unitPrice: li.unitPrice,
+          })),
+        })),
+      }))}
+      hasInvoices={project.invoices.length > 0}
       initialData={project.completion ? {
         ...project.completion,
         internalCompletedAt: project.completion.internalCompletedAt?.toISOString() ?? null,
@@ -433,9 +488,22 @@ export default async function ProjectHubPage({ params }: PageProps) {
               {project.assignedTo && <span>· Assigned: {project.assignedTo.name}</span>}
             </div>
           </div>
-          {isAdmin && (
-            <DeleteProjectButton projectId={project.id} projectNumber={project.projectNumber} />
-          )}
+          <div className="flex items-center gap-4">
+            {approvedEstimates.length > 0 && (
+              <div className="text-right">
+                <p className="text-xs text-gray-500">Project Total</p>
+                <p className="text-xl font-bold tracking-tight text-green-700">
+                  ${fmtCurrency(approvedTotal)}
+                </p>
+                <p className="text-xs text-gray-400">
+                  {approvedEstimates.filter((e) => !e.parentEstimateId).length} approved
+                </p>
+              </div>
+            )}
+            {isAdmin && (
+              <DeleteProjectButton projectId={project.id} projectNumber={project.projectNumber} />
+            )}
+          </div>
         </div>
 
         {/* Status Stepper */}
@@ -451,7 +519,6 @@ export default async function ProjectHubPage({ params }: PageProps) {
           { value: "overview", label: "Overview", content: overviewTab },
           { value: "estimates", label: `Estimates (${project.estimates.length})`, content: estimatesTab },
           { value: "invoice", label: `Invoices (${project.invoices.length})`, content: invoiceTab },
-          { value: "execution", label: "Execution", content: executionTab },
           { value: "completion", label: "Completion", content: completionTab },
         ]}
       />

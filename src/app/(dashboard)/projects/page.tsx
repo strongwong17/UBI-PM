@@ -9,15 +9,20 @@ import {
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { FolderKanban, Plus } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { FolderKanban, Plus, Archive } from "lucide-react";
 
-const STATUSES = [
-  "INQUIRY_RECEIVED","ESTIMATE_SENT","APPROVED","IN_PROGRESS",
-  "COMPLETED","INVOICED","PAID","CLOSED",
+const STATUS_CHIPS: { value: string; label: string }[] = [
+  { value: "INQUIRY_RECEIVED", label: "Inquiry received" },
+  { value: "ESTIMATE_SENT", label: "Estimate sent" },
+  { value: "APPROVED", label: "Approved" },
+  { value: "IN_PROGRESS", label: "In progress" },
+  { value: "COMPLETED", label: "Completed" },
+  { value: "INVOICED", label: "Invoiced" },
 ];
 
 interface PageProps {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; view?: string }>;
 }
 
 export default async function ProjectsPage({ searchParams }: PageProps) {
@@ -26,64 +31,146 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
 
   const params = await searchParams;
   const statusFilter = params.status || "";
+  const view = params.view || "active";
 
   const where: Record<string, unknown> = {};
-  if (statusFilter) where.status = statusFilter;
+  if (statusFilter) {
+    where.status = statusFilter;
+  } else if (view === "archived") {
+    where.status = "CLOSED";
+  } else if (view === "active") {
+    where.status = { not: "CLOSED" };
+  }
 
-  const projects = await prisma.project.findMany({
-    where,
-    include: {
-      client: true,
-      primaryContact: { select: { name: true } },
-      assignedTo: { select: { name: true } },
-      _count: { select: { estimates: true } },
-      invoices: { where: { deletedAt: null }, select: { id: true, status: true }, take: 1 },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const [projects, archivedCount] = await Promise.all([
+    prisma.project.findMany({
+      where,
+      include: {
+        client: true,
+        primaryContact: { select: { name: true } },
+        assignedTo: { select: { name: true } },
+        _count: { select: { estimates: true } },
+        invoices: { where: { deletedAt: null }, select: { id: true, status: true }, take: 1 },
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    statusFilter ? Promise.resolve(0) : prisma.project.count({ where: { status: "CLOSED" } }),
+  ]);
+
+  // Derive active view for segmented control (ignore when status filter is set)
+  const activeView = statusFilter ? "" : view;
+
+  const heading = statusFilter
+    ? `${statusFilter.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())}`
+    : view === "archived"
+    ? "Archived Projects"
+    : view === "all"
+    ? "All Projects"
+    : "Active Projects";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          <p className="text-gray-500 mt-1">Manage all research projects</p>
+          <p className="text-sm text-gray-500 mt-0.5">Manage all research projects</p>
         </div>
         <Button asChild size="sm">
           <Link href="/projects/new">
-            <Plus className="h-4 w-4 mr-2" />New Project
+            <Plus className="h-4 w-4 mr-1.5" />
+            New Project
           </Link>
         </Button>
       </div>
 
-      <div className="flex flex-wrap gap-2 items-center">
-        <span className="text-sm font-medium text-gray-500 mr-1">Status:</span>
-        <Button size="sm" variant={!statusFilter ? "default" : "outline"} asChild>
-          <Link href="/projects">All</Link>
-        </Button>
-        {STATUSES.map((s) => (
-          <Button key={s} size="sm" variant={statusFilter === s ? "default" : "outline"} asChild>
-            <Link href={`/projects?status=${s}`}>{s.replace(/_/g, " ")}</Link>
-          </Button>
-        ))}
+      {/* Filter area */}
+      <div className="space-y-3">
+        {/* Row 1: Segmented view control */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider w-10 shrink-0">View</span>
+          <div className="inline-flex items-center rounded-lg bg-gray-100 p-0.5">
+            {(
+              [
+                { value: "active", label: "Active", href: "/projects" },
+                { value: "archived", label: `Archived${archivedCount > 0 ? ` (${archivedCount})` : ""}`, href: "/projects?view=archived" },
+                { value: "all", label: "All", href: "/projects?view=all" },
+              ] as const
+            ).map((item) => (
+              <Link
+                key={item.value}
+                href={item.href}
+                className={cn(
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 text-[13px] font-medium rounded-md transition-all duration-150",
+                  activeView === item.value
+                    ? "bg-white text-gray-900 shadow-sm"
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                {item.value === "archived" && <Archive className="h-3 w-3" />}
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Row 2: Status filter chips */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider w-10 shrink-0">Filter</span>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {statusFilter && (
+              <Link
+                href="/projects"
+                className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium text-gray-500 hover:text-gray-700 rounded-full border border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-150"
+              >
+                Clear
+              </Link>
+            )}
+            {STATUS_CHIPS.map((chip) => (
+              <Link
+                key={chip.value}
+                href={statusFilter === chip.value ? "/projects" : `/projects?status=${chip.value}`}
+                className={cn(
+                  "inline-flex items-center px-2.5 py-1 text-[12px] font-medium rounded-full border transition-all duration-150",
+                  statusFilter === chip.value
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:text-gray-800"
+                )}
+              >
+                {chip.label}
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
 
+      {/* Results */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <FolderKanban className="h-5 w-5" />
-            All Projects
-            <Badge variant="secondary" className="ml-1">{projects.length}</Badge>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FolderKanban className="h-4 w-4 text-gray-400" />
+            {heading}
+            <Badge variant="secondary" className="ml-1 text-xs">{projects.length}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
           {projects.length === 0 ? (
             <div className="text-center py-12 text-gray-500">
-              <FolderKanban className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-              <p className="text-lg font-medium">No projects found</p>
-              {!statusFilter && (
-                <Button asChild className="mt-4" size="sm">
-                  <Link href="/projects/new">New Project</Link>
+              <FolderKanban className="h-10 w-10 mx-auto mb-3 text-gray-300" />
+              <p className="font-medium">No projects found</p>
+              <p className="text-sm text-gray-400 mt-1">
+                {statusFilter
+                  ? "Try a different filter"
+                  : view === "archived"
+                  ? "No archived projects yet"
+                  : "Create your first project to get started"}
+              </p>
+              {!statusFilter && view === "active" && (
+                <Button asChild className="mt-4" size="sm" variant="outline">
+                  <Link href="/projects/new">
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    New Project
+                  </Link>
                 </Button>
               )}
             </div>
@@ -102,19 +189,19 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
               </TableHeader>
               <TableBody>
                 {projects.map((project) => (
-                  <TableRow key={project.id}>
+                  <TableRow key={project.id} className={project.status === "CLOSED" ? "opacity-50" : ""}>
                     <TableCell>
                       <Link href={`/projects/${project.id}`} className="font-medium text-blue-600 hover:underline">
                         {project.projectNumber}
                       </Link>
-                      <p className="text-sm text-gray-600 mt-0.5">{project.title}</p>
+                      <p className="text-sm text-gray-500 mt-0.5 truncate max-w-[200px]">{project.title}</p>
                     </TableCell>
-                    <TableCell className="text-gray-600">{project.client.company}</TableCell>
+                    <TableCell className="text-gray-600 text-sm">{project.client.company}</TableCell>
                     <TableCell className="text-sm text-gray-500">{project.primaryContact?.name || "-"}</TableCell>
                     <TableCell><StatusBadge status={project.status} /></TableCell>
-                    <TableCell><Badge variant="secondary">{project._count.estimates}</Badge></TableCell>
-                    <TableCell className="text-gray-600 text-sm">{project.assignedTo?.name || "-"}</TableCell>
-                    <TableCell className="text-sm text-gray-500">{new Date(project.createdAt).toLocaleDateString()}</TableCell>
+                    <TableCell><Badge variant="secondary" className="text-xs">{project._count.estimates}</Badge></TableCell>
+                    <TableCell className="text-gray-500 text-sm">{project.assignedTo?.name || "-"}</TableCell>
+                    <TableCell className="text-sm text-gray-400">{new Date(project.createdAt).toLocaleDateString()}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

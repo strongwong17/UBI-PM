@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
@@ -8,10 +8,8 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (isAuthError(authResult)) return authResult;
 
     const { id } = await params;
 
@@ -43,14 +41,13 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
     const body = await request.json();
-    const { status, issuedDate, dueDate, notes, contactEmail } = body;
+    const { status, issuedDate, dueDate, notes, contactEmail, discount, lineItems } = body;
 
     const existing = await prisma.invoice.findUnique({ where: { id } });
     if (!existing) {
@@ -64,10 +61,41 @@ export async function PATCH(
       if (dueDate !== undefined) updateData.dueDate = dueDate ? new Date(dueDate) : null;
       if (notes !== undefined) updateData.notes = notes;
       if (contactEmail !== undefined) updateData.contactEmail = contactEmail;
+      if (discount !== undefined) updateData.discount = discount;
 
       // PAID → set paidDate
       if (status === "PAID" && existing.status !== "PAID") {
         updateData.paidDate = new Date();
+      }
+
+      // Update line items if provided (replace all)
+      if (lineItems && Array.isArray(lineItems)) {
+        await tx.invoiceLineItem.deleteMany({ where: { invoiceId: id } });
+        await tx.invoiceLineItem.createMany({
+          data: lineItems.map((item: { description: string; quantity: number; unitPrice: number; total: number; sortOrder: number }, idx: number) => ({
+            invoiceId: id,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total,
+            sortOrder: item.sortOrder ?? idx,
+          })),
+        });
+
+        // Recalculate totals
+        const subtotal = lineItems.reduce((sum: number, item: { total: number }) => sum + item.total, 0);
+        const disc = discount ?? existing.discount;
+        const taxable = subtotal - disc;
+        const tax = taxable * (existing.taxRate / 100);
+        updateData.subtotal = subtotal;
+        updateData.tax = tax;
+        updateData.total = taxable + tax;
+      } else if (discount !== undefined) {
+        // Recalculate totals with new discount
+        const taxable = existing.subtotal - discount;
+        const tax = taxable * (existing.taxRate / 100);
+        updateData.tax = tax;
+        updateData.total = taxable + tax;
       }
 
       const inv = await tx.invoice.update({
@@ -79,18 +107,28 @@ export async function PATCH(
         },
       });
 
-      // PAID → set project status to PAID
+      // SENT → set project status to INVOICED
+      if (status === "SENT" && existing.status !== "SENT") {
+        const project = await tx.project.findUnique({ where: { id: existing.projectId }, select: { status: true } });
+        if (project && !["INVOICED", "PAID", "CLOSED"].includes(project.status)) {
+          await tx.project.update({
+            where: { id: existing.projectId },
+            data: { status: "INVOICED" },
+          });
+        }
+      }
+
+      // PAID → archive the project (set to CLOSED)
       if (status === "PAID" && existing.status !== "PAID") {
         await tx.project.update({
           where: { id: existing.projectId },
-          data: { status: "PAID" },
+          data: { status: "CLOSED" },
         });
       }
 
       return inv;
     });
 
-    const userId = (session.user as any).id;
     if (status && status !== existing.status) {
       await logActivity({
         action: "STATUS_CHANGE",
@@ -126,10 +164,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const { id } = await params;
 
@@ -149,7 +186,7 @@ export async function DELETE(
       entityId: id,
       entityLabel: existing.invoiceNumber,
       description: `Deleted invoice ${existing.invoiceNumber}`,
-      userId: (session.user as any).id,
+      userId,
       projectId: existing.projectId,
     });
 

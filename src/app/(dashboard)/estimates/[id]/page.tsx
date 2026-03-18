@@ -14,11 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Edit, Calendar, User, Download } from "lucide-react";
+import { ArrowLeft, Edit, Calendar, User, Download, FileSpreadsheet } from "lucide-react";
 import { EstimateStatusChanger } from "@/components/estimates/estimate-status-changer";
 import { EstimateDuplicateButton } from "@/components/estimates/estimate-duplicate-button";
 import { EstimateApproveButton } from "@/components/estimates/estimate-approve-button";
 import { EstimateDeleteButton } from "@/components/estimates/estimate-delete-button";
+import { CreateRmbEstimateButton } from "@/components/estimates/create-rmb-estimate-button";
 import { currencySymbol } from "@/lib/currency";
 
 export default async function EstimateDetailPage({
@@ -37,6 +38,8 @@ export default async function EstimateDetailPage({
         include: { lineItems: { orderBy: { sortOrder: "asc" } } },
         orderBy: { sortOrder: "asc" },
       },
+      rmbDuplicate: { select: { id: true, estimateNumber: true } },
+      parentEstimate: { select: { id: true, estimateNumber: true } },
     },
   });
 
@@ -88,6 +91,9 @@ export default async function EstimateDetailPage({
               {estimate.isApproved && (
                 <Badge className="bg-green-100 text-green-800 border-green-300">Approved</Badge>
               )}
+              {estimate.parentEstimateId && (
+                <Badge variant="secondary" className="bg-amber-100 text-amber-800">RMB Version</Badge>
+              )}
             </div>
           </div>
         </div>
@@ -99,10 +105,23 @@ export default async function EstimateDetailPage({
             version={estimate.version}
           />
           <EstimateDuplicateButton estimateId={estimate.id} />
+          {!estimate.parentEstimateId && (
+            <CreateRmbEstimateButton
+              estimateId={estimate.id}
+              estimateNumber={estimate.estimateNumber}
+              hasRmbDuplicate={!!estimate.rmbDuplicate}
+            />
+          )}
           <a href={`/api/estimates/${estimate.id}/pdf`} download>
             <Button variant="outline" size="sm">
               <Download className="h-4 w-4 mr-2" />
               PDF
+            </Button>
+          </a>
+          <a href={`/api/estimates/${estimate.id}/excel`} download>
+            <Button variant="outline" size="sm">
+              <FileSpreadsheet className="h-4 w-4 mr-2" />
+              Excel
             </Button>
           </a>
           <Link href={`/estimates/${estimate.id}/edit`}>
@@ -250,6 +269,46 @@ export default async function EstimateDetailPage({
                     <p className="text-sm font-medium">
                       {new Date(estimate.validUntil).toLocaleDateString()}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {estimate.exchangeRate && (
+                <div className="flex items-start gap-3">
+                  <Calendar className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">Exchange Rate</p>
+                    <p className="text-sm font-medium">1 USD = {estimate.exchangeRate} CNY</p>
+                  </div>
+                </div>
+              )}
+
+              {estimate.parentEstimate && (
+                <div className="flex items-start gap-3">
+                  <User className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">Original Estimate</p>
+                    <Link
+                      href={`/estimates/${estimate.parentEstimate.id}`}
+                      className="text-sm font-medium text-blue-600 hover:underline"
+                    >
+                      {estimate.parentEstimate.estimateNumber}
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {estimate.rmbDuplicate && (
+                <div className="flex items-start gap-3">
+                  <User className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-gray-500">RMB Version</p>
+                    <Link
+                      href={`/estimates/${estimate.rmbDuplicate.id}`}
+                      className="text-sm font-medium text-blue-600 hover:underline"
+                    >
+                      {estimate.rmbDuplicate.estimateNumber}
+                    </Link>
                   </div>
                 </div>
               )}

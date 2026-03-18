@@ -156,6 +156,11 @@ model Estimate {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
+  exchangeRate    Float?
+  parentEstimateId String?   @unique
+  parentEstimate  Estimate? @relation("EstimateRmbDuplicate", fields: [parentEstimateId], references: [id], onDelete: SetNull)
+  rmbDuplicate    Estimate? @relation("EstimateRmbDuplicate")
+
   projectId       String
   project         Project   @relation(fields: [projectId], references: [id])
   createdById     String
@@ -296,18 +301,23 @@ model Invoice {
   subtotal      Float     @default(0)
   taxRate       Float     @default(0)
   tax           Float     @default(0)
+  discount      Float     @default(0)
   total         Float     @default(0)
   currency      String    @default("USD")
+  exchangeRate  Float?
   notes         String?
   contactEmail  String?
   deletedAt     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  projectId  String
-  project    Project  @relation(fields: [projectId], references: [id])
-  estimateId String?
-  estimate   Estimate? @relation(fields: [estimateId], references: [id], onDelete: SetNull)
+  projectId       String
+  project         Project   @relation(fields: [projectId], references: [id])
+  estimateId      String?
+  estimate        Estimate? @relation(fields: [estimateId], references: [id], onDelete: SetNull)
+  parentInvoiceId String?   @unique
+  parentInvoice   Invoice?  @relation("InvoiceRmbDuplicate", fields: [parentInvoiceId], references: [id], onDelete: SetNull)
+  rmbDuplicate    Invoice?  @relation("InvoiceRmbDuplicate")
 
   lineItems InvoiceLineItem[]
 }

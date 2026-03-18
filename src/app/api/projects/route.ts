@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth();
+    if (isAuthError(authResult)) return authResult;
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -39,10 +37,9 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const body = await request.json();
     const { clientId, title, primaryContactId, assignedToId, startDate, endDate, notes } = body;
@@ -99,7 +96,7 @@ export async function POST(request: NextRequest) {
       entityId: project.id,
       entityLabel: project.projectNumber,
       description: `Created project ${project.projectNumber}`,
-      userId: (session.user as any).id,
+      userId,
       projectId: project.id,
     });
 
