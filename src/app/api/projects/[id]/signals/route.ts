@@ -70,11 +70,18 @@ export async function PATCH(
   try {
     const authResult = await requireAuth(["ADMIN", "MANAGER"]);
     if (isAuthError(authResult)) return authResult;
+    const { id } = await params;
     const body = await request.json();
     const { signalId, notes } = body;
 
     if (!signalId) {
       return NextResponse.json({ error: "signalId required" }, { status: 400 });
+    }
+
+    // Verify signal belongs to this project
+    const existing = await prisma.clientSignal.findUnique({ where: { id: signalId }, select: { projectId: true } });
+    if (!existing || existing.projectId !== id) {
+      return NextResponse.json({ error: "Signal not found" }, { status: 404 });
     }
 
     const signal = await prisma.clientSignal.update({

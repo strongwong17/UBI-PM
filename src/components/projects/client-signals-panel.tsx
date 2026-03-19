@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { ProjectAttachments } from "@/components/projects/project-attachments";
 import { RichTextEditor } from "@/components/shared/rich-text-editor";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 
 // ─── Types ───────────────────────────────────────
 
@@ -310,7 +311,7 @@ export function ClientSignalsPanel({ projectId, attachments = [], briefForm }: C
                 </div>
                 <div
                   className="text-[14px] text-gray-700 leading-relaxed prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: signal.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(signal.content) }}
                 />
                 <div className="flex items-center gap-1.5 text-[12px] text-gray-400">
                   <MessageCircle className="h-3 w-3" />
@@ -371,7 +372,7 @@ export function ClientSignalsPanel({ projectId, attachments = [], briefForm }: C
                       </div>
                       <div
                         className="text-[12px] text-gray-600 group-hover/note:text-gray-900 transition-colors prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ __html: signal.notes }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeHtml(signal.notes) }}
                       />
                     </div>
                   </div>

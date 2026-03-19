@@ -103,7 +103,7 @@ export function InquiryBriefForm({ projectId, initialData }: InquiryBriefFormPro
         body: JSON.stringify(payload),
       });
     } catch {
-      // silent fail on auto-save
+      toast.error("Failed to save brief");
     } finally {
       setSaving(false);
     }

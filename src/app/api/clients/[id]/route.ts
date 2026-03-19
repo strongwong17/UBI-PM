@@ -63,6 +63,7 @@ export async function PUT(
     const body = await request.json();
     const {
       company,
+      shortName,
       industry,
       email,
       phone,
@@ -88,6 +89,7 @@ export async function PUT(
       where: { id },
       data: {
         company: company.trim(),
+        shortName: shortName?.trim() || null,
         industry: industry?.trim() || null,
         email: email?.trim() || null,
         phone: phone?.trim() || null,

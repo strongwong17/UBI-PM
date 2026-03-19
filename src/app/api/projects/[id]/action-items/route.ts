@@ -64,10 +64,17 @@ export async function PATCH(
     const authResult = await requireAuth(["ADMIN", "MANAGER"]);
     if (isAuthError(authResult)) return authResult;
     const body = await request.json();
+    const { id } = await params;
     const { itemId, completed, title, deleted } = body;
 
     if (!itemId) {
       return NextResponse.json({ error: "itemId required" }, { status: 400 });
+    }
+
+    // Verify item belongs to this project
+    const existing = await prisma.actionItem.findUnique({ where: { id: itemId }, select: { projectId: true } });
+    if (!existing || existing.projectId !== id) {
+      return NextResponse.json({ error: "Item not found" }, { status: 404 });
     }
 
     // Delete

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -186,7 +187,7 @@ export function ScopeVersionHistory({ projectId }: ScopeVersionHistoryProps) {
                 {/* Content */}
                 <div
                   className="text-sm text-gray-700 prose prose-sm max-w-none"
-                  dangerouslySetInnerHTML={{ __html: v.content }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(v.content) }}
                 />
 
                 {/* Confirmation timestamp */}

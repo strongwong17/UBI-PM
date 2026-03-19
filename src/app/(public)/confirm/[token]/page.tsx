@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { sanitizeHtml } from "@/lib/sanitize-html";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { CheckCircle2, Loader2, AlertCircle } from "lucide-react";
@@ -99,7 +100,7 @@ export default function ConfirmPage() {
             </p>
             <div className="mt-6 text-left bg-gray-50 rounded-lg p-4">
               <p className="text-xs text-gray-400 mb-1">{data.project.company} / {data.project.title}</p>
-              <div className="text-sm text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: data.content }} />
+              <div className="text-sm text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(data.content) }} />
             </div>
           </CardContent>
         </Card>
@@ -124,7 +125,7 @@ export default function ConfirmPage() {
 
           {/* Scope content */}
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
-            <div className="text-sm text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: data.content }} />
+            <div className="text-sm text-gray-700 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(data.content) }} />
           </div>
 
           {/* Confirmation form */}
