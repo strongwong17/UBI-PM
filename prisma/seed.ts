@@ -21,11 +21,12 @@ async function main() {
     },
   });
 
-  // Users
+  // Users — deterministic IDs so JWT sessions survive DB drop+recreate
   const admin = await prisma.user.upsert({
     where: { email: "yushi@ubinsights.com" },
     update: {},
     create: {
+      id: "seed_user_yushi_admin",
       email: "yushi@ubinsights.com",
       name: "Yushi",
       passwordHash: hashSync("ubi12345", 10),
@@ -33,6 +34,32 @@ async function main() {
     },
   });
   console.log("Created admin user:", admin.email);
+
+  const jason = await prisma.user.upsert({
+    where: { email: "jason@ubinsights.com" },
+    update: {},
+    create: {
+      id: "seed_user_jason_manager",
+      email: "jason@ubinsights.com",
+      name: "Jason",
+      passwordHash: hashSync("ubi1234", 10),
+      role: "MANAGER",
+    },
+  });
+  console.log("Created manager user:", jason.email);
+
+  const lily = await prisma.user.upsert({
+    where: { email: "lily@ubinsights.com" },
+    update: {},
+    create: {
+      id: "seed_user_lily_manager",
+      email: "lily@ubinsights.com",
+      name: "Lily",
+      passwordHash: hashSync("ubi1234", 10),
+      role: "MANAGER",
+    },
+  });
+  console.log("Created manager user:", lily.email);
 
   // Estimate templates
   await prisma.estimateTemplate.create({
