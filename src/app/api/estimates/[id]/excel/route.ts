@@ -265,10 +265,14 @@ export async function GET(
     const buffer = await workbook.xlsx.writeBuffer();
     const uint8 = new Uint8Array(buffer as ArrayBuffer);
 
+    const filename = `${estimate.estimateNumber}.xlsx`;
+    const asciiFilename = filename.replace(/[^\x20-\x7E]/g, "_");
+    const encodedFilename = encodeURIComponent(filename);
+
     return new NextResponse(uint8, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "Content-Disposition": `attachment; filename="${estimate.estimateNumber}.xlsx"`,
+        "Content-Disposition": `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`,
         "Content-Length": uint8.byteLength.toString(),
       },
     });

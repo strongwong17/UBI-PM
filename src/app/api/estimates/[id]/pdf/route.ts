@@ -45,10 +45,14 @@ export async function GET(
     const buffer = await renderToBuffer(React.createElement(EstimatePDF, { estimate, business }) as any);
     const uint8 = new Uint8Array(buffer);
 
+    const filename = `${estimate.estimateNumber}.pdf`;
+    const asciiFilename = filename.replace(/[^\x20-\x7E]/g, "_");
+    const encodedFilename = encodeURIComponent(filename);
+
     return new NextResponse(uint8, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${estimate.estimateNumber}.pdf"`,
+        "Content-Disposition": `attachment; filename="${asciiFilename}"; filename*=UTF-8''${encodedFilename}`,
         "Content-Length": uint8.byteLength.toString(),
       },
     });
