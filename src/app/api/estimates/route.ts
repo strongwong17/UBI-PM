@@ -70,7 +70,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
     }
 
-    const project = await prisma.project.findUnique({ where: { id: projectId } });
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      include: { client: { select: { company: true, shortName: true } } },
+    });
     if (!project) {
       return NextResponse.json({ error: "Project not found" }, { status: 404 });
     }
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
     });
     const nextVersion = (versionAgg._max.version ?? 0) + 1;
 
-    const estimateNumber = await generateEstimateNumber();
+    const estimateNumber = await generateEstimateNumber(project.client.shortName || project.client.company, project.title);
 
     const estimate = await prisma.estimate.create({
       data: {

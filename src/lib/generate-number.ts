@@ -4,12 +4,19 @@ function randomFourDigit(): number {
   return Math.floor(Math.random() * 9000) + 1000;
 }
 
-export async function generateEstimateNumber(): Promise<string> {
-  const year = new Date().getFullYear();
+/**
+ * Generate estimate number: ACME-ProjectName-NNNN
+ * Uses client shortName if available, falls back to company name
+ */
+export async function generateEstimateNumber(
+  shortName?: string,
+  projectTitle?: string
+): Promise<string> {
+  const prefix = buildPrefix(shortName, projectTitle);
 
   for (let i = 0; i < 10; i++) {
     const num = randomFourDigit();
-    const estimateNumber = `EST-${year}-${String(num).padStart(4, "0")}`;
+    const estimateNumber = `${prefix}-${num}`;
     const exists = await prisma.estimate.findUnique({
       where: { estimateNumber },
       select: { id: true },
@@ -17,17 +24,23 @@ export async function generateEstimateNumber(): Promise<string> {
     if (!exists) return estimateNumber;
   }
 
-  // Fallback: timestamp-based
   const ts = Date.now().toString().slice(-6);
-  return `EST-${year}-${ts}`;
+  return `${prefix}-${ts}`;
 }
 
-export async function generateInvoiceNumber(): Promise<string> {
-  const year = new Date().getFullYear();
+/**
+ * Generate invoice number: ACME-ProjectName-NNNN
+ * Uses client shortName if available, falls back to company name
+ */
+export async function generateInvoiceNumber(
+  shortName?: string,
+  projectTitle?: string
+): Promise<string> {
+  const prefix = buildPrefix(shortName, projectTitle);
 
   for (let i = 0; i < 10; i++) {
     const num = randomFourDigit();
-    const invoiceNumber = `INV-${year}-${String(num).padStart(4, "0")}`;
+    const invoiceNumber = `${prefix}-${num}`;
     const exists = await prisma.invoice.findUnique({
       where: { invoiceNumber },
       select: { id: true },
@@ -36,5 +49,22 @@ export async function generateInvoiceNumber(): Promise<string> {
   }
 
   const ts = Date.now().toString().slice(-6);
-  return `INV-${year}-${ts}`;
+  return `${prefix}-${ts}`;
+}
+
+function buildPrefix(shortName?: string, projectTitle?: string): string {
+  const client = shortName?.trim() || "EST";
+  const project = projectTitle ? slugify(projectTitle, 20) : "";
+  if (project) return `${client}-${project}`;
+  return client;
+}
+
+/** Create a short, clean slug from a string */
+function slugify(str: string, maxLen: number): string {
+  const cleaned = str
+    .trim()
+    .replace(/[\/\\:*?"<>|]/g, "")
+    .replace(/\s+/g, " ");
+  if (cleaned.length <= maxLen) return cleaned;
+  return cleaned.slice(0, maxLen).trim();
 }

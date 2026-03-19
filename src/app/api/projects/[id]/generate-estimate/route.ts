@@ -8,52 +8,34 @@ const MODULE_TO_PHASE: Record<
   string,
   { phaseName: string; description: string; unit: string; sortOrder: number }
 > = {
+  FULL_SERVICE: {
+    phaseName: "Full Service",
+    description: "Full Service Research",
+    unit: "project",
+    sortOrder: 0,
+  },
   RECRUITMENT: {
     phaseName: "Recruitment",
     description: "Participant Recruitment",
     unit: "participants",
-    sortOrder: 0,
+    sortOrder: 1,
+  },
+  RECRUITMENT_MODERATION: {
+    phaseName: "Fieldwork",
+    description: "Recruitment + Moderation",
+    unit: "sessions",
+    sortOrder: 2,
   },
   MODERATION: {
     phaseName: "Fieldwork",
     description: "Moderation Sessions",
     unit: "sessions",
-    sortOrder: 1,
-  },
-  SIMULTANEOUS_TRANSLATION: {
-    phaseName: "Fieldwork",
-    description: "Simultaneous Translation",
-    unit: "days",
-    sortOrder: 1,
-  },
-  PROJECT_MANAGEMENT: {
-    phaseName: "Project Management",
-    description: "Project Management",
-    unit: "days",
-    sortOrder: 2,
+    sortOrder: 3,
   },
   INCENTIVES: {
     phaseName: "Incentives",
     description: "Participant Incentives",
     unit: "participants",
-    sortOrder: 3,
-  },
-  VENUE: {
-    phaseName: "Logistics",
-    description: "Venue Hire",
-    unit: "days",
-    sortOrder: 4,
-  },
-  REPORTING: {
-    phaseName: "Reporting",
-    description: "Report Writing",
-    unit: "days",
-    sortOrder: 5,
-  },
-  LOGISTICS: {
-    phaseName: "Logistics",
-    description: "Logistics",
-    unit: "lump sum",
     sortOrder: 4,
   },
 };
@@ -72,6 +54,7 @@ export async function POST(
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
+        client: { select: { company: true, shortName: true } },
         inquiry: { include: { serviceModules: { orderBy: { sortOrder: "asc" } } } },
       },
     });
@@ -149,7 +132,7 @@ export async function POST(
       }
     }
 
-    const estimateNumber = await generateEstimateNumber();
+    const estimateNumber = await generateEstimateNumber(project.client.shortName || project.client.company, project.title);
 
     const estimate = await prisma.estimate.create({
       data: {

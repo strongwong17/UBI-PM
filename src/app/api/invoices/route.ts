@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
 
     const project = await prisma.project.findUnique({
       where: { id: projectId },
+      include: { client: { select: { company: true, shortName: true } } },
     });
 
     if (!project) {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { generateInvoiceNumber } = await import("@/lib/generate-number");
-    const invoiceNumber = await generateInvoiceNumber();
+    const invoiceNumber = await generateInvoiceNumber(project.client.shortName || project.client.company, project.title);
 
     const items: { description: string; quantity: number; unitPrice: number; sortOrder?: number }[] =
       lineItems || [];

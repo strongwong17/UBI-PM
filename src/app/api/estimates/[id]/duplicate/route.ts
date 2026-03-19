@@ -18,6 +18,7 @@ export async function POST(
     const original = await prisma.estimate.findUnique({
       where: { id },
       include: {
+        project: { include: { client: { select: { company: true, shortName: true } } } },
         phases: {
           include: { lineItems: { orderBy: { sortOrder: "asc" } } },
           orderBy: { sortOrder: "asc" },
@@ -37,7 +38,7 @@ export async function POST(
 
     const newVersion = (latestVersion?.version ?? original.version) + 1;
 
-    const estimateNumber = await generateEstimateNumber();
+    const estimateNumber = await generateEstimateNumber(original.project.client.shortName || original.project.client.company, original.project.title);
 
     const duplicate = await prisma.estimate.create({
       data: {

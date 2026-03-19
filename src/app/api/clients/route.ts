@@ -47,6 +47,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       company,
+      shortName,
       industry,
       email,
       phone,
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
     const client = await prisma.client.create({
       data: {
         company: company.trim(),
+        shortName: shortName?.trim() || null,
         industry: industry?.trim() || null,
         email: email?.trim() || null,
         phone: phone?.trim() || null,

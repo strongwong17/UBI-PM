@@ -15,11 +15,13 @@ export async function middleware(req: NextRequest) {
   const isLoginPage = req.nextUrl.pathname === "/login";
   const isRegisterPage = req.nextUrl.pathname === "/register";
   const isSharePage = req.nextUrl.pathname.startsWith("/share/");
+  const isConfirmPage = req.nextUrl.pathname.startsWith("/confirm/");
   const isApiAuth = req.nextUrl.pathname.startsWith("/api/auth");
   const isApiShare = req.nextUrl.pathname.startsWith("/api/share");
+  const isApiConfirm = req.nextUrl.pathname.startsWith("/api/confirm/");
 
   // Allow public routes
-  if (isSharePage || isApiAuth || isApiShare) {
+  if (isSharePage || isConfirmPage || isApiAuth || isApiShare || isApiConfirm) {
     return NextResponse.next();
   }
 

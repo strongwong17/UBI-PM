@@ -1,13 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -16,49 +14,38 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Loader2, Clock } from "lucide-react";
-import { RichTextEditor } from "@/components/shared/rich-text-editor";
+
 
 type ServiceModuleType =
+  | "FULL_SERVICE"
   | "RECRUITMENT"
+  | "RECRUITMENT_MODERATION"
   | "MODERATION"
-  | "SIMULTANEOUS_TRANSLATION"
-  | "PROJECT_MANAGEMENT"
-  | "INCENTIVES"
-  | "VENUE"
-  | "REPORTING"
-  | "LOGISTICS";
+  | "INCENTIVES";
 
 const MODULE_LABELS: Record<ServiceModuleType, string> = {
-  RECRUITMENT: "Recruitment",
-  MODERATION: "Moderation",
-  SIMULTANEOUS_TRANSLATION: "Translation",
-  PROJECT_MANAGEMENT: "Project Mgmt",
+  FULL_SERVICE: "Full service",
+  RECRUITMENT: "Recruitment only",
+  RECRUITMENT_MODERATION: "Recruitment + Moderation",
+  MODERATION: "Moderation only",
   INCENTIVES: "Incentives",
-  VENUE: "Venue",
-  REPORTING: "Reporting",
-  LOGISTICS: "Logistics",
 };
 
 const ALL_MODULES: ServiceModuleType[] = [
+  "FULL_SERVICE",
   "RECRUITMENT",
+  "RECRUITMENT_MODERATION",
   "MODERATION",
-  "SIMULTANEOUS_TRANSLATION",
-  "PROJECT_MANAGEMENT",
   "INCENTIVES",
-  "VENUE",
-  "REPORTING",
-  "LOGISTICS",
 ];
 
 interface InquiryBriefFormProps {
   projectId: string;
   initialData?: {
     createdAt?: string | null;
-    rawContent?: string | null;
     source?: string;
     sourceDetail?: string | null;
-    desiredStartDate?: string | null;
-    desiredEndDate?: string | null;
+    durationWeeks?: string;
     timeline?: string | null;
     serviceModules?: { moduleType: string; sortOrder: number }[];
   } | null;
@@ -69,15 +56,9 @@ export function InquiryBriefForm({ projectId, initialData }: InquiryBriefFormPro
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
-    rawContent: initialData?.rawContent || "",
     source: initialData?.source || "OTHER",
     sourceDetail: initialData?.sourceDetail || "",
-    desiredStartDate: initialData?.desiredStartDate
-      ? new Date(initialData.desiredStartDate).toISOString().split("T")[0]
-      : "",
-    desiredEndDate: initialData?.desiredEndDate
-      ? new Date(initialData.desiredEndDate).toISOString().split("T")[0]
-      : "",
+    durationWeeks: initialData?.durationWeeks || "",
     timeline: initialData?.timeline || "",
   });
 
@@ -101,56 +82,53 @@ export function InquiryBriefForm({ projectId, initialData }: InquiryBriefFormPro
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  // Auto-save with debounce
+  const saveTimeout = useRef<NodeJS.Timeout | null>(null);
+  const isFirstRender = useRef(true);
+
+  const doSave = useCallback(async () => {
     setSaving(true);
     try {
       const payload = {
-        rawContent: form.rawContent || null,
         source: form.source,
         sourceDetail: form.sourceDetail || null,
-        desiredStartDate: form.desiredStartDate || null,
-        desiredEndDate: form.desiredEndDate || null,
-        timeline: form.timeline || null,
+        scope: form.durationWeeks ? `${form.durationWeeks} weeks` : null,
         serviceModules: ALL_MODULES.filter((t) => selectedModules.has(t)).map(
           (moduleType, i) => ({ moduleType, sortOrder: i })
         ),
       };
-
-      const res = await fetch(`/api/projects/${projectId}/inquiry`, {
+      await fetch(`/api/projects/${projectId}/inquiry`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to save");
-      }
-
-      toast.success("Brief saved");
-      router.refresh();
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to save");
+    } catch {
+      toast.error("Failed to save brief");
     } finally {
       setSaving(false);
     }
-  }
+  }, [form, selectedModules, projectId]);
+
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(doSave, 1000);
+    return () => { if (saveTimeout.current) clearTimeout(saveTimeout.current); };
+  }, [form, selectedModules, doSave]);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-gray-500">Client Brief</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Inquiry received timestamp */}
-          {initialData?.createdAt && (
-            <div className="flex items-center gap-1.5 text-xs text-gray-400">
-              <Clock className="h-3 w-3" />
-              Inquiry received {new Date(initialData.createdAt).toLocaleString()}
-            </div>
-          )}
+    <div className="space-y-4">
+      <div className="space-y-4">
+        {/* Inquiry received timestamp */}
+        {initialData?.createdAt && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+            <Clock className="h-3 w-3" />
+            Inquiry received {new Date(initialData.createdAt).toLocaleString()}
+          </div>
+        )}
 
           {/* Point of contact */}
           <div className="grid grid-cols-2 gap-3">
@@ -183,19 +161,6 @@ export function InquiryBriefForm({ projectId, initialData }: InquiryBriefFormPro
             </div>
           </div>
 
-          {/* Client message */}
-          <div className="space-y-1.5">
-            <Label className="text-xs text-gray-500">Client Message</Label>
-            <Textarea
-              name="rawContent"
-              value={form.rawContent}
-              onChange={handleChange}
-              placeholder="Paste the original client message here..."
-              rows={4}
-              className="resize-none text-sm"
-            />
-          </div>
-
           {/* Service tags */}
           <div className="space-y-1.5">
             <Label className="text-xs text-gray-500">Services</Label>
@@ -220,48 +185,25 @@ export function InquiryBriefForm({ projectId, initialData }: InquiryBriefFormPro
             </div>
           </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-xs text-gray-500">Target Start</Label>
-              <Input
-                name="desiredStartDate"
-                type="date"
-                value={form.desiredStartDate}
-                onChange={handleChange}
-                className="h-8 text-sm"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-xs text-gray-500">Target End</Label>
-              <Input
-                name="desiredEndDate"
-                type="date"
-                value={form.desiredEndDate}
-                onChange={handleChange}
-                className="h-8 text-sm"
-              />
-            </div>
-          </div>
-
-          {/* Notes */}
+          {/* Duration */}
           <div className="space-y-1.5">
-            <Label className="text-xs text-gray-500">Notes</Label>
-            <RichTextEditor
-              content={form.timeline}
-              onChange={(html) => setForm((prev) => ({ ...prev, timeline: html }))}
-              placeholder="Other requirements, constraints, or context..."
-            />
+            <Label className="text-xs text-gray-500">Estimated duration</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                name="durationWeeks"
+                type="number"
+                min={1}
+                value={form.durationWeeks}
+                onChange={handleChange}
+                placeholder="e.g. 4"
+                className="h-8 text-sm w-24"
+              />
+              <span className="text-sm text-gray-500">weeks</span>
+            </div>
           </div>
-        </CardContent>
-      </Card>
 
-      <div className="flex justify-end">
-        <Button type="submit" size="sm" disabled={saving}>
-          {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Save Brief
-        </Button>
       </div>
-    </form>
+      {saving && <p className="text-[11px] text-gray-400">Saving...</p>}
+    </div>
   );
 }
