@@ -207,6 +207,54 @@ npx shadcn@latest add <component-name> --yes
 
 ---
 
+## Production Deployment
+
+**URL:** https://pmt.ubinsights.com
+**VM:** GCP `internal-tools` in `us-central1-c` (Debian 12, 2GB RAM, no external IP)
+**SSH:** `gcloud compute ssh internal-tools --zone=us-central1-c`
+**App dir:** `/opt/ubinsights-pmt` (standalone build)
+**Build dir:** `/tmp/ubi-pm-build` (git clone, used for builds)
+**Process:** PM2 process `ubinsights-pmt` on port 3002
+**Tunnel:** Cloudflare Tunnel → `localhost:3002`
+**DB:** PostgreSQL 15, user `ubinsights`, db `ubinsights_pmt`
+**Backups:** `/home/yushi_ubinsights_com/backups/`
+
+### Deploy flow
+
+```bash
+# 1. Pull latest code on server
+cd /tmp/ubi-pm-build && git pull origin main
+
+# 2. Build
+npm run build
+
+# 3. Copy standalone build (NEVER overwrite ecosystem.config.cjs)
+sudo rsync -a --delete .next/standalone/ /opt/ubinsights-pmt/ \
+  --exclude ecosystem.config.cjs --exclude logs --exclude uploads
+sudo rsync -a --delete .next/static/ /opt/ubinsights-pmt/.next/static/
+sudo rsync -a public/ /opt/ubinsights-pmt/public/
+sudo rsync -a prisma/ /opt/ubinsights-pmt/prisma/
+sudo cp prisma.config.ts /opt/ubinsights-pmt/prisma.config.ts
+sudo cp package.json /opt/ubinsights-pmt/package.json
+
+# 4. Apply migrations (NEVER drop the database)
+DATABASE_URL='...' npx prisma migrate deploy
+
+# 5. Restart
+cd /opt/ubinsights-pmt && pm2 restart ecosystem.config.cjs && pm2 save
+```
+
+### Production database rules
+
+- **NEVER drop or recreate the production database.** Only run `prisma migrate deploy`.
+- **NEVER run `prisma migrate reset`** or `DROP DATABASE` on production.
+- **NEVER seed production** unless explicitly asked — seed is for local dev / initial setup only.
+- **NEVER overwrite `ecosystem.config.cjs`** on the server — it contains production env vars (DATABASE_URL, AUTH_SECRET, AUTH_URL, AUTH_TRUST_HOST) that are NOT in the repo.
+- **Always ask for permission** before any destructive database operation on production.
+- **Table ownership** must be `ubinsights` (not `postgres`) for migrations to succeed.
+
+---
+
 ## Tests
 
 No test framework is configured.

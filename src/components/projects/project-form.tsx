@@ -45,6 +45,10 @@ export function ProjectForm({ users }: ProjectFormProps) {
     async function fetchClients() {
       try {
         const res = await fetch("/api/clients");
+        if (res.status === 401) {
+          window.location.href = "/login";
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
           // Also fetch contacts for each client

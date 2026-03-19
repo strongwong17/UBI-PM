@@ -32,16 +32,20 @@ export async function requireAuth(
   const role = ((session.user as any).role || "VIEWER") as Role;
   const name = session.user.name || "User";
 
-  // Verify user still exists in DB (catches stale JWTs after DB reset)
+  // Verify user still exists in DB (catches stale JWTs after DB restore/reset)
   const userExists = await prisma.user.findUnique({
     where: { id: userId },
     select: { id: true },
   });
   if (!userExists) {
-    return NextResponse.json(
+    const response = NextResponse.json(
       { error: "Session expired. Please log in again." },
       { status: 401 }
     );
+    // Clear session cookies so middleware redirects to /login on next navigation
+    response.cookies.set("authjs.session-token", "", { maxAge: 0, path: "/" });
+    response.cookies.set("__Secure-authjs.session-token", "", { maxAge: 0, path: "/", secure: true });
+    return response;
   }
 
   if (allowedRoles && !allowedRoles.includes(role)) {
