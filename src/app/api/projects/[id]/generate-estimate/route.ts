@@ -72,6 +72,7 @@ export async function POST(
     const project = await prisma.project.findUnique({
       where: { id },
       include: {
+        client: { select: { company: true, shortName: true } },
         inquiry: { include: { serviceModules: { orderBy: { sortOrder: "asc" } } } },
       },
     });
@@ -149,7 +150,7 @@ export async function POST(
       }
     }
 
-    const estimateNumber = await generateEstimateNumber();
+    const estimateNumber = await generateEstimateNumber(project.client.shortName || project.client.company, project.title);
 
     const estimate = await prisma.estimate.create({
       data: {

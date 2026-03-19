@@ -22,6 +22,9 @@ model User {
   assignedProjects       Project[]          @relation("ProjectAssignee")
   internalCompletions    ProjectCompletion[] @relation("CompletionCompletedBy")
   activityLogs           ActivityLog[]
+  scopeVersions          ScopeVersion[]
+  clientSignals          ClientSignal[]     @relation("SignalCreatedBy")
+  internalNotes          InternalNote[]     @relation("NoteCreatedBy")
 }
 
 // ─── CLIENTS ────────────────────────────────────────────
@@ -29,6 +32,7 @@ model User {
 model Client {
   id             String   @id @default(cuid())
   company        String
+  shortName      String?
   industry       String?
   email          String?
   phone          String?
@@ -83,12 +87,64 @@ model Project {
   assignedToId     String?
   assignedTo       User?          @relation("ProjectAssignee", fields: [assignedToId], references: [id])
 
-  inquiry      Inquiry?
-  estimates    Estimate[]
-  invoices     Invoice[]
-  completion   ProjectCompletion?
-  attachments  Attachment[]
-  activityLogs ActivityLog[]
+  inquiry       Inquiry?
+  estimates     Estimate[]
+  invoices      Invoice[]
+  completion    ProjectCompletion?
+  attachments   Attachment[]
+  activityLogs  ActivityLog[]
+  clientSignals ClientSignal[]
+  actionItems   ActionItem[]
+  internalNotes InternalNote[]
+}
+
+// ─── CLIENT SIGNALS & ACTIONS ──────────────────────────
+
+model ClientSignal {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  source      String   @default("WECHAT") // WECHAT, EMAIL, LARK, OTHER
+  contactName String?
+  tags        String?  // comma-separated: "Estimate,Scope,Budget"
+  notes       String?  // internal notes on this message
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?    @relation("SignalCreatedBy", fields: [createdById], references: [id])
+  actionItems ActionItem[]
+}
+
+model ActionItem {
+  id          String    @id @default(cuid())
+  title       String
+  tag         String?   // "Estimate", "Scope", "Budget", "Timeline"
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  category    String    @default("TODO") // TODO, FOLLOWUP
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  projectId      String
+  project        Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  clientSignalId String?
+  clientSignal   ClientSignal? @relation(fields: [clientSignalId], references: [id], onDelete: SetNull)
+}
+
+model InternalNote {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdById String?
+  createdBy   User?   @relation("NoteCreatedBy", fields: [createdById], references: [id])
 }
 
 // ─── INQUIRY (child of Project) ─────────────────────────
@@ -117,6 +173,27 @@ model Inquiry {
   projectId      String                 @unique
   project        Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
   serviceModules InquiryServiceModule[]
+  scopeVersions  ScopeVersion[]
+}
+
+model ScopeVersion {
+  id              String    @id @default(cuid())
+  content         String
+  version         Int
+  createdAt       DateTime  @default(now())
+
+  // Who created this version
+  createdById     String?
+  createdBy       User?     @relation(fields: [createdById], references: [id])
+
+  // Client confirmation
+  confirmed       Boolean   @default(false)
+  confirmedAt     DateTime?
+  confirmedByName String?
+  confirmToken    String?   @unique
+
+  inquiryId       String
+  inquiry         Inquiry   @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
 }
 
 model InquiryServiceModule {

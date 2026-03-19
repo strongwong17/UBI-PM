@@ -23,16 +23,18 @@ interface ContactInput {
 
 interface ClientFormData {
   company: string;
+  shortName: string;
   industry: string;
+  notes: string;
+  billingAddress: string;
+  taxId: string;
+  // Keep these in the data model for backward compat but don't show in form
   email: string;
   phone: string;
   wechatId: string;
-  notes: string;
   billingName: string;
-  billingAddress: string;
   billingEmail: string;
   billingPhone: string;
-  taxId: string;
 }
 
 interface ClientFormProps {
@@ -47,16 +49,18 @@ export function ClientForm({ initialData, initialContacts = [], mode }: ClientFo
 
   const [formData, setFormData] = useState<ClientFormData>({
     company: initialData?.company || "",
+    shortName: initialData?.shortName || "",
     industry: initialData?.industry || "",
+    notes: initialData?.notes || "",
+    billingAddress: initialData?.billingAddress || "",
+    taxId: initialData?.taxId || "",
+    // Preserve existing values but don't show in form
     email: initialData?.email || "",
     phone: initialData?.phone || "",
     wechatId: initialData?.wechatId || "",
-    notes: initialData?.notes || "",
     billingName: initialData?.billingName || "",
-    billingAddress: initialData?.billingAddress || "",
     billingEmail: initialData?.billingEmail || "",
     billingPhone: initialData?.billingPhone || "",
-    taxId: initialData?.taxId || "",
   });
 
   const [contacts, setContacts] = useState<ContactInput[]>(initialContacts);
@@ -173,32 +177,32 @@ export function ClientForm({ initialData, initialContacts = [], mode }: ClientFo
         </div>
       </div>
 
+      {/* Company details */}
       <Card>
-        <CardHeader><CardTitle>Client Information</CardTitle></CardHeader>
+        <CardHeader><CardTitle>Company</CardTitle></CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="company">Company <span className="text-red-500">*</span></Label>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="company">Company name <span className="text-red-500">*</span></Label>
               <Input id="company" name="company" value={formData.company} onChange={handleChange} placeholder="Company / Organisation name" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="industry">Industry</Label>
-              <Input id="industry" name="industry" value={formData.industry} onChange={handleChange} placeholder="e.g. FMCG, Automotive" />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" value={formData.email} onChange={handleChange} placeholder="client@example.com" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" name="phone" value={formData.phone} onChange={handleChange} placeholder="+86 ..." />
+              <Label htmlFor="shortName">Short name</Label>
+              <Input id="shortName" name="shortName" value={formData.shortName} onChange={handleChange} placeholder="e.g. ACME" className="uppercase" />
+              <p className="text-xs text-gray-400">Used in estimate/invoice numbers</p>
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="wechatId">WeChat ID</Label>
-            <Input id="wechatId" name="wechatId" value={formData.wechatId} onChange={handleChange} placeholder="WeChat ID" />
+            <Label htmlFor="industry">Industry</Label>
+            <Input id="industry" name="industry" value={formData.industry} onChange={handleChange} placeholder="e.g. FMCG, Automotive" />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="billingAddress">Address</Label>
+            <Textarea id="billingAddress" name="billingAddress" value={formData.billingAddress} onChange={handleChange} placeholder="Company address" rows={2} />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="taxId">Tax ID / Business registration no.</Label>
+            <Input id="taxId" name="taxId" value={formData.taxId} onChange={handleChange} placeholder="e.g. 统一社会信用代码" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
@@ -207,36 +211,7 @@ export function ClientForm({ initialData, initialContacts = [], mode }: ClientFo
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Billing Information</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="billingName">Billing Name</Label>
-              <Input id="billingName" name="billingName" value={formData.billingName} onChange={handleChange} placeholder="Legal entity name for invoices" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="taxId">Tax ID / Business Reg No.</Label>
-              <Input id="taxId" name="taxId" value={formData.taxId} onChange={handleChange} placeholder="统一社会信用代码" />
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="billingAddress">Billing Address</Label>
-            <Textarea id="billingAddress" name="billingAddress" value={formData.billingAddress} onChange={handleChange} placeholder="Full billing address" rows={2} />
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="billingEmail">Billing Email</Label>
-              <Input id="billingEmail" name="billingEmail" type="email" value={formData.billingEmail} onChange={handleChange} placeholder="billing@company.com" />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="billingPhone">Billing Phone</Label>
-              <Input id="billingPhone" name="billingPhone" value={formData.billingPhone} onChange={handleChange} placeholder="+86 ..." />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
+      {/* Contacts */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -249,7 +224,7 @@ export function ClientForm({ initialData, initialContacts = [], mode }: ClientFo
         </CardHeader>
         <CardContent>
           {contacts.length === 0 ? (
-            <p className="text-sm text-gray-500 text-center py-6">No contacts yet.</p>
+            <p className="text-sm text-gray-500 text-center py-6">No contacts yet. Add a contact to assign to projects.</p>
           ) : (
             <div className="space-y-4">
               {contacts.map((contact, index) => (

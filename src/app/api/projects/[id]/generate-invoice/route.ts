@@ -33,6 +33,12 @@ export async function POST(
       );
     }
 
+    // Fetch project for naming
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: { client: { select: { company: true, shortName: true } } },
+    });
+
     // Fetch the specific approved estimate
     const estimate = await prisma.estimate.findUnique({
       where: { id: estimateId },
@@ -44,7 +50,7 @@ export async function POST(
       },
     });
 
-    if (!estimate || estimate.projectId !== id) {
+    if (!estimate || estimate.projectId !== id || !project) {
       return NextResponse.json({ error: "Estimate not found for this project" }, { status: 404 });
     }
 
@@ -77,7 +83,7 @@ export async function POST(
     const tax = taxable * (taxRate / 100);
     const total = taxable + tax;
 
-    const invoiceNumber = await generateInvoiceNumber();
+    const invoiceNumber = await generateInvoiceNumber(project.client.shortName || project.client.company, project.title);
 
     const invoice = await prisma.$transaction(async (tx) => {
       const inv = await tx.invoice.create({

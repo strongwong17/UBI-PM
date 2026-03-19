@@ -15,9 +15,10 @@ import { EstimateApproveButton } from "@/components/estimates/estimate-approve-b
 import { EstimateCardActions } from "@/components/estimates/estimate-card-actions";
 import { InvoiceStatusChanger } from "@/components/invoices/invoice-status-changer";
 import { CreateRmbInvoiceButton } from "@/components/invoices/create-rmb-invoice-button";
-import { DeleteInquiryButton } from "@/components/projects/delete-inquiry-button";
+
 import { DeleteProjectButton } from "@/components/projects/delete-project-button";
-import { ProjectAttachments } from "@/components/projects/project-attachments";
+import { ClientSignalsPanel } from "@/components/projects/client-signals-panel";
+
 import { ArrowLeft, Building2, User, Calendar, Plus } from "lucide-react";
 
 interface PageProps {
@@ -166,64 +167,32 @@ export default async function ProjectHubPage({ params }: PageProps) {
         </Card>
       )}
 
-      {/* Brief / Inquiry */}
-      {isAdmin && project.inquiry && (
-        <div className="flex justify-end">
-          <DeleteInquiryButton projectId={project.id} />
-        </div>
-      )}
-      <InquiryBriefForm
+      {/* Client Brief — everything in one section */}
+      <ClientSignalsPanel
         projectId={project.id}
-        initialData={project.inquiry ? {
-          createdAt: project.inquiry.createdAt.toISOString(),
-          rawContent: project.inquiry.rawContent ?? null,
-          source: project.inquiry.source,
-          sourceDetail: project.inquiry.sourceDetail ?? null,
-          desiredStartDate: project.inquiry.desiredStartDate?.toISOString() ?? null,
-          desiredEndDate: project.inquiry.desiredEndDate?.toISOString() ?? null,
-          timeline: project.inquiry.timeline ?? null,
-          serviceModules: project.inquiry.serviceModules.map((m) => ({
-            moduleType: m.moduleType,
-            sortOrder: m.sortOrder,
-          })),
-        } : undefined}
+        attachments={project.attachments.map((a) => ({
+          ...a,
+          createdAt: a.createdAt.toISOString(),
+        }))}
+        briefForm={
+          <>
+            <InquiryBriefForm
+              projectId={project.id}
+              initialData={project.inquiry ? {
+                createdAt: project.inquiry.createdAt.toISOString(),
+                source: project.inquiry.source,
+                sourceDetail: project.inquiry.sourceDetail ?? null,
+                durationWeeks: project.inquiry.scope?.replace(/\s*weeks?/i, "") || "",
+                timeline: project.inquiry.timeline ?? null,
+                serviceModules: project.inquiry.serviceModules.map((m) => ({
+                  moduleType: m.moduleType,
+                  sortOrder: m.sortOrder,
+                })),
+              } : undefined}
+            />
+          </>
+        }
       />
-
-      {/* Attachments */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-medium text-gray-500">
-            Attachments{project.attachments.length > 0 && ` (${project.attachments.length})`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ProjectAttachments
-            projectId={project.id}
-            attachments={project.attachments.map((a) => ({
-              ...a,
-              createdAt: a.createdAt.toISOString(),
-            }))}
-          />
-        </CardContent>
-      </Card>
-
-      {/* Quick actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium text-gray-500">Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          <Button asChild variant="outline" size="sm">
-            <Link href={`/estimates/new?projectId=${project.id}`}>
-              <Plus className="h-4 w-4 mr-2" />
-              New Estimate
-            </Link>
-          </Button>
-          {hasUninvoicedApproved && (
-            <GenerateInvoiceButton projectId={project.id} approvedEstimates={approvedForInvoice} />
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 
@@ -508,7 +477,21 @@ export default async function ProjectHubPage({ params }: PageProps) {
 
         {/* Status Stepper */}
         <div className="pt-2">
-          <ProjectStatusStepper projectId={project.id} currentStatus={project.status} />
+          <ProjectStatusStepper
+            projectId={project.id}
+            currentStatus={project.status}
+            context={{
+              hasInquiry: !!project.inquiry,
+              estimateCount: project.estimates.length,
+              approvedEstimateCount: approvedEstimates.length,
+              invoiceCount: project.invoices.length,
+              hasUninvoicedApproved,
+              updatedAt: project.updatedAt.toISOString(),
+              startDate: project.startDate?.toISOString() ?? null,
+              contactEmail: project.primaryContact?.email ?? null,
+              contactName: project.primaryContact?.name ?? null,
+            }}
+          />
         </div>
       </div>
 

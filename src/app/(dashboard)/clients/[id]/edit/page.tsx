@@ -27,6 +27,7 @@ export default async function EditClientPage({
         initialData={{
           id: client.id,
           company: client.company,
+          shortName: client.shortName || "",
           industry: client.industry || "",
           email: client.email || "",
           phone: client.phone || "",

@@ -33,6 +33,7 @@ export async function POST(
     const original = await prisma.invoice.findUnique({
       where: { id },
       include: {
+        project: { include: { client: { select: { company: true, shortName: true } } } },
         lineItems: { orderBy: { sortOrder: "asc" } },
         rmbDuplicate: { select: { id: true } },
       },
@@ -65,7 +66,7 @@ export async function POST(
     const tax = Math.round(taxable * (combinedTaxRate / 100) * 100) / 100;
     const total = Math.round((taxable + tax) * 100) / 100;
 
-    const invoiceNumber = await generateInvoiceNumber();
+    const invoiceNumber = await generateInvoiceNumber(original.project.client.shortName || original.project.client.company, original.project.title);
 
     const rmbInvoice = await prisma.invoice.create({
       data: {
