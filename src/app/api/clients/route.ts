@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
           }
         : undefined,
       include: {
+        contacts: true,
         _count: {
           select: {
             contacts: true,
