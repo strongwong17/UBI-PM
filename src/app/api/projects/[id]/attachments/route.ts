@@ -93,7 +93,8 @@ export async function POST(
 
     return NextResponse.json(attachment);
   } catch (error) {
-    console.error("Failed to upload attachment:", error);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Failed to upload attachment:", message, error);
+    return NextResponse.json({ error: `Upload failed: ${message}` }, { status: 500 });
   }
 }
