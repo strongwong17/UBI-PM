@@ -64,12 +64,15 @@ export function ProjectAttachments({ projectId, attachments }: ProjectAttachment
           method: "POST",
           body: fd,
         });
-        if (!res.ok) throw new Error("Upload failed");
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data.error || `Upload failed (${res.status})`);
+        }
       }
       toast.success(list.length === 1 ? "File uploaded" : `${list.length} files uploaded`);
       router.refresh();
-    } catch {
-      toast.error("Upload failed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Upload failed");
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -126,6 +129,7 @@ export function ProjectAttachments({ projectId, attachments }: ProjectAttachment
           type="file"
           multiple
           hidden
+          accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,.heif,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.7z,.svg,.mp4,.mp3,.wav,.eml,.msg"
           onChange={(e) => e.target.files && uploadFiles(e.target.files)}
         />
         {uploading ? (

@@ -37,18 +37,31 @@ export async function POST(
 
     // Validate MIME type
     const ALLOWED_TYPES = [
+      // Documents
       "application/pdf",
-      "image/jpeg", "image/png", "image/gif", "image/webp",
       "application/msword",
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       "application/vnd.ms-excel",
       "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "application/vnd.ms-powerpoint",
       "text/plain", "text/csv",
-      "application/zip",
+      // Images
+      "image/jpeg", "image/png", "image/gif", "image/webp",
+      "image/svg+xml", "image/heic", "image/heif",
+      // Archives
+      "application/zip", "application/x-rar-compressed", "application/x-7z-compressed",
+      "application/vnd.rar",
+      // Email
+      "message/rfc822", "application/vnd.ms-outlook",
+      // Media
+      "video/mp4", "video/quicktime",
+      "audio/mpeg", "audio/wav",
+      // Fallback for unknown
+      "application/octet-stream",
     ];
     if (file.type && !ALLOWED_TYPES.includes(file.type)) {
-      return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
+      return NextResponse.json({ error: `File type "${file.type}" not allowed` }, { status: 400 });
     }
 
     const ext = path.extname(file.name).toLowerCase();
