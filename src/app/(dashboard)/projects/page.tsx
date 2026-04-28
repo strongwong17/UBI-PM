@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { FolderKanban, Plus, Archive } from "lucide-react";
 import { computeBillingState } from "@/lib/billing";
 import { currencySymbol } from "@/lib/currency";
+import { statusTokens } from "@/lib/redesign-tokens";
 
 const STATUS_CHIPS: { value: string; label: string }[] = [
   { value: "NEW",         label: "New" },
@@ -78,8 +79,8 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage all research projects</p>
+          <h1 className="text-2xl font-bold tracking-[-0.025em] text-ink-900">Projects</h1>
+          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">// {projects.length} {view === "archived" ? "archived" : "active"}</p>
         </div>
         <Button asChild size="sm">
           <Link href="/projects/new">
@@ -136,10 +137,10 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
                 key={chip.value}
                 href={statusFilter === chip.value ? "/projects" : `/projects?status=${chip.value}`}
                 className={cn(
-                  "inline-flex items-center px-2.5 py-1 text-[12px] font-medium rounded-full border transition-all duration-150",
+                  "inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md transition-all",
                   statusFilter === chip.value
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:text-gray-800"
+                    ? "bg-ink-900 text-white"
+                    : "bg-card-rd text-ink-700 border border-hairline hover:border-hairline-strong",
                 )}
               >
                 {chip.label}
@@ -195,23 +196,29 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
               <TableBody>
                 {projects.map((project) => {
                   const billing = computeBillingState(project);
-                  const sym = currencySymbol(billing.primaryCurrency);
                   const pct = billing.estimated > 0 ? Math.min(100, (billing.invoiced / billing.estimated) * 100) : 0;
                   return (
                     <TableRow key={project.id} className={project.status === "CLOSED" ? "opacity-50" : ""}>
                       <TableCell>
-                        <Link href={`/projects/${project.id}`} className="font-medium text-blue-600 hover:underline">
-                          {project.projectNumber}
-                        </Link>
-                        <p className="text-sm text-gray-500 mt-0.5 truncate max-w-[200px]">{project.title}</p>
-                        {billing.estimated > 0 && (
-                          <div className="mt-1">
-                            <div className="text-xs text-gray-500">Invoiced <strong>{sym}{billing.invoiced.toLocaleString()}</strong> / {sym}{billing.estimated.toLocaleString()}</div>
-                            <div className="h-1 mt-0.5 bg-slate-100 rounded">
-                              <div className="h-full bg-emerald-500 rounded" style={{ width: `${pct}%` }} />
-                            </div>
+                        <div className="flex gap-3">
+                          <span className="w-1 h-9 rounded-full shrink-0" style={{ background: statusTokens(project.status).dot }} />
+                          <div>
+                            <Link href={`/projects/${project.id}`} className="font-mono text-[11px] text-ink-300 tracking-[0.04em] no-underline">
+                              {project.projectNumber}
+                            </Link>
+                            <p className="text-[13px] font-medium text-ink-900 mt-0.5 truncate max-w-[260px]">{project.title}</p>
+                            {billing.estimated > 0 && (
+                              <div className="mt-1 max-w-[260px]">
+                                <div className="font-mono text-[11px] text-ink-400">
+                                  Invoiced <strong className="text-ink-700 font-semibold">{currencySymbol(billing.primaryCurrency)}{billing.invoiced.toLocaleString()}</strong> / {currencySymbol(billing.primaryCurrency)}{billing.estimated.toLocaleString()}
+                                </div>
+                                <div className="h-1 mt-1 bg-canvas-cool rounded">
+                                  <div className="h-full rounded" style={{ width: `${pct}%`, background: "var(--color-s-delivered)" }} />
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-gray-600 text-sm">{project.client.company}</TableCell>
                       <TableCell className="text-sm text-gray-500">{project.primaryContact?.name || "-"}</TableCell>
