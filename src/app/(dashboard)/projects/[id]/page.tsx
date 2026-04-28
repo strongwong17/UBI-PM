@@ -9,7 +9,8 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ProjectStatusStepper } from "@/components/projects/project-status-stepper";
 import { ProjectHubTabs } from "@/components/projects/project-hub-tabs";
 import { InquiryBriefForm } from "@/components/projects/inquiry-brief-form";
-import { ProjectCompletionForm } from "@/components/projects/project-completion-form";
+import { DeliverySignoffTab } from "@/components/projects/delivery-signoff-tab";
+import { computeBillingState } from "@/lib/billing";
 import { GenerateInvoiceButton } from "@/components/projects/generate-invoice-button";
 import { EstimateApproveButton } from "@/components/estimates/estimate-approve-button";
 import { EstimateCardActions } from "@/components/estimates/estimate-card-actions";
@@ -104,6 +105,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
   const approvedTotal = approvedEstimates
     .filter((est) => !est.parentEstimateId)
     .reduce((sum, est) => sum + estimateTotal(est), 0);
+  const billing = computeBillingState(project);
   const fmtCurrency = (n: number) =>
     n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -398,35 +400,52 @@ export default async function ProjectHubPage({ params }: PageProps) {
   );
 
   const completionTab = (
-    <ProjectCompletionForm
+    <DeliverySignoffTab
       projectId={project.id}
       projectStatus={project.status}
-      approvedEstimates={approvedEstimates.map((est) => ({
-        id: est.id,
-        estimateNumber: est.estimateNumber,
-        title: est.title,
-        label: est.label ?? null,
-        currency: est.currency,
-        taxRate: est.taxRate,
-        discount: est.discount,
-        parentEstimateId: est.parentEstimateId ?? null,
-        hasInvoice: invoicedEstimateIds.has(est.id),
-        phases: est.phases.map((phase) => ({
-          name: phase.name,
-          lineItems: phase.lineItems.map((li) => ({
-            description: li.description,
-            unit: li.unit,
-            quantity: li.quantity,
-            unitPrice: li.unitPrice,
-          })),
-        })),
-      }))}
+      estimates={approvedEstimates
+        .filter((e) => !e.parentEstimateId)
+        .map((est) => ({
+          id: est.id,
+          estimateNumber: est.estimateNumber,
+          title: est.title,
+          label: est.label ?? null,
+          currency: est.currency,
+          lines: est.phases.flatMap((p) =>
+            p.lineItems.map((l) => ({
+              id: l.id,
+              description: l.description,
+              serviceModuleType: l.serviceModuleType ?? null,
+              unit: l.unit,
+              quantity: l.quantity,
+              unitPrice: l.unitPrice,
+              deliveredQuantity: l.deliveredQuantity ?? null,
+            }))
+          ),
+        }))}
+      initialCompletion={
+        project.completion
+          ? {
+              internalCompleted: project.completion.internalCompleted,
+              internalCompletedAt: project.completion.internalCompletedAt?.toISOString() ?? null,
+              internalCompletedBy: project.completion.internalCompletedBy
+                ? { name: project.completion.internalCompletedBy.name }
+                : null,
+              internalNotes: project.completion.internalNotes,
+              clientAcknowledged: project.completion.clientAcknowledged,
+              clientAcknowledgedAt: project.completion.clientAcknowledgedAt?.toISOString() ?? null,
+              clientAcknowledgedBy: project.completion.clientAcknowledgedBy,
+              clientAcknowledgeNotes: project.completion.clientAcknowledgeNotes,
+              deliverablesNotes: project.completion.deliverablesNotes,
+            }
+          : null
+      }
+      billingSummary={{
+        estimated: billing.estimated,
+        invoiced: billing.invoiced,
+        primaryCurrency: billing.primaryCurrency,
+      }}
       hasInvoices={project.invoices.length > 0}
-      initialData={project.completion ? {
-        ...project.completion,
-        internalCompletedAt: project.completion.internalCompletedAt?.toISOString() ?? null,
-        clientAcknowledgedAt: project.completion.clientAcknowledgedAt?.toISOString() ?? null,
-      } : undefined}
     />
   );
 
@@ -502,7 +521,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
           { value: "overview", label: "Overview", content: overviewTab },
           { value: "estimates", label: `Estimates (${project.estimates.length})`, content: estimatesTab },
           { value: "invoice", label: `Invoices (${project.invoices.length})`, content: invoiceTab },
-          { value: "completion", label: "Completion", content: completionTab },
+          { value: "completion", label: "Delivery & Sign-off", content: completionTab },
         ]}
       />
     </div>
