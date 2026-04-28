@@ -14,15 +14,14 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-const STAGES = [
-  { value: "INQUIRY_RECEIVED", label: "Inquiry", number: 1 },
-  { value: "ESTIMATE_SENT", label: "Estimate", number: 2 },
-  { value: "APPROVED", label: "Approved", number: 3 },
-  { value: "IN_PROGRESS", label: "In Progress", number: 4 },
-  { value: "COMPLETED", label: "Completed", number: 5 },
-  { value: "INVOICED", label: "Invoiced", number: 6 },
-  { value: "PAID", label: "Paid", number: 7 },
-  { value: "CLOSED", label: "Closed", number: 8 },
+const STAGES: { value: string; label: string; number: number; auto: boolean }[] = [
+  { value: "NEW",         label: "New",         number: 1, auto: true  },
+  { value: "BRIEFED",     label: "Briefed",     number: 2, auto: true  },
+  { value: "ESTIMATING",  label: "Estimating",  number: 3, auto: true  },
+  { value: "APPROVED",    label: "Approved",    number: 4, auto: true  },
+  { value: "IN_PROGRESS", label: "In Progress", number: 5, auto: false },
+  { value: "DELIVERED",   label: "Delivered",   number: 6, auto: true  },
+  { value: "CLOSED",      label: "Closed",      number: 7, auto: false },
 ];
 
 interface ProjectContext {
@@ -57,13 +56,12 @@ function timeAgoText(date: string): string {
 // What pending status text to show on the NEXT step
 function getNextStepStatus(status: string, ctx: ProjectContext): string {
   switch (status) {
-    case "INQUIRY_RECEIVED": return ctx.estimateCount > 0 ? "created" : "pending";
-    case "ESTIMATE_SENT": return "awaiting";
-    case "APPROVED":
+    case "NEW": return ctx.hasInquiry ? "ready" : "pending";
+    case "BRIEFED": return ctx.estimateCount > 0 ? "created" : "pending";
+    case "ESTIMATING": return ctx.approvedEstimateCount > 0 ? "ready" : "awaiting approval";
+    case "APPROVED": return "ready to start";
     case "IN_PROGRESS": return "in progress";
-    case "COMPLETED": return ctx.hasUninvoicedApproved ? "pending" : "ready";
-    case "INVOICED": return "awaiting";
-    case "PAID": return "ready";
+    case "DELIVERED": return "ready to archive";
     default: return "";
   }
 }
@@ -78,48 +76,74 @@ interface StageInfo {
 
 function getStageInfo(status: string, ctx: ProjectContext, projectId: string): StageInfo {
   switch (status) {
-    case "INQUIRY_RECEIVED":
+    case "NEW":
       return {
         nextStep: {
-          description: "Create an estimate to move this project forward",
-          buttonLabel: "Create Estimate",
-          href: `/estimates/new?projectId=${projectId}`,
+          description: "Fill in the project brief: objectives and at least one service module",
+          buttonLabel: "Open Brief",
+          href: `/projects/${projectId}?tab=brief`,
         },
         secondaryActions: ctx.contactEmail ? [
           { label: "Contact Client", icon: MessageCircle, href: `mailto:${ctx.contactEmail}?subject=${encodeURIComponent(`Re: Project inquiry`)}` },
         ] : [],
-        stageTitle: "Inquiry",
+        stageTitle: "New",
         bullets: [
-          `Inquiry received ${timeAgoText(ctx.updatedAt)}`,
-          ctx.estimateCount === 0 ? "No estimate created" : `${ctx.estimateCount} estimate${ctx.estimateCount > 1 ? "s" : ""} created`,
-          ctx.hasInquiry ? "Brief filled in" : "No activity since creation",
+          `Created ${timeAgoText(ctx.updatedAt)}`,
+          ctx.hasInquiry ? "Brief filled in" : "No brief yet",
         ],
         riskDays: 2,
       };
-    case "ESTIMATE_SENT":
+    case "BRIEFED":
       return {
         nextStep: {
-          description: "Follow up with client to get the estimate approved",
+          description: "Build an estimate from the brief's service modules",
+          buttonLabel: "Open Estimates",
+          href: `/projects/${projectId}?tab=estimates`,
+        },
+        stageTitle: "Briefed",
+        bullets: [
+          `Brief saved ${timeAgoText(ctx.updatedAt)}`,
+          ctx.estimateCount === 0 ? "No estimate yet" : `${ctx.estimateCount} estimate${ctx.estimateCount > 1 ? "s" : ""} drafted`,
+        ],
+        riskDays: 3,
+      };
+    case "ESTIMATING":
+      return {
+        nextStep: {
+          description: "Approve an estimate to lock the scope and budget",
           buttonLabel: "View Estimates",
           href: `/projects/${projectId}?tab=estimates`,
         },
         secondaryActions: ctx.contactEmail ? [
-          { label: "Contact Client", icon: MessageCircle, href: `mailto:${ctx.contactEmail}?subject=${encodeURIComponent(`Re: Project inquiry`)}` },
+          { label: "Contact Client", icon: MessageCircle, href: `mailto:${ctx.contactEmail}?subject=${encodeURIComponent(`Re: Project estimate`)}` },
         ] : [],
-        stageTitle: "Estimate Sent",
+        stageTitle: "Estimating",
         bullets: [
-          `${ctx.estimateCount} estimate${ctx.estimateCount > 1 ? "s" : ""} sent`,
+          `${ctx.estimateCount} estimate${ctx.estimateCount > 1 ? "s" : ""} drafted`,
           `Last updated ${timeAgoText(ctx.updatedAt)}`,
-          "Waiting for client approval",
+          ctx.approvedEstimateCount > 0 ? `${ctx.approvedEstimateCount} approved` : "Waiting for approval",
         ],
-        riskDays: 3,
+        riskDays: 5,
       };
     case "APPROVED":
+      return {
+        nextStep: {
+          description: "Mark in progress when work begins",
+          buttonLabel: "Start Work",
+          href: "#in-progress",
+        },
+        stageTitle: "Approved",
+        bullets: [
+          `Approved ${timeAgoText(ctx.updatedAt)}`,
+          `${ctx.approvedEstimateCount} approved estimate${ctx.approvedEstimateCount > 1 ? "s" : ""}`,
+        ],
+        riskDays: 7,
+      };
     case "IN_PROGRESS":
       return {
         nextStep: {
-          description: "Review deliverables and generate the final invoice",
-          buttonLabel: "Complete Project",
+          description: "Record actuals and confirm sign-off in the Delivery & Sign-off tab",
+          buttonLabel: "Open Delivery & Sign-off",
           href: `/projects/${projectId}?tab=completion`,
         },
         stageTitle: "In Progress",
@@ -128,50 +152,21 @@ function getStageInfo(status: string, ctx: ProjectContext, projectId: string): S
           `${ctx.approvedEstimateCount} approved estimate${ctx.approvedEstimateCount > 1 ? "s" : ""}`,
           `Last updated ${timeAgoText(ctx.updatedAt)}`,
         ],
-        riskDays: 7,
-      };
-    case "COMPLETED":
-      return {
-        nextStep: {
-          description: ctx.hasUninvoicedApproved
-            ? "Generate the final invoice for this project"
-            : "Send the invoice to the client",
-          buttonLabel: ctx.hasUninvoicedApproved ? "Generate Invoice" : "View Invoice",
-          href: ctx.hasUninvoicedApproved
-            ? `/projects/${projectId}?tab=completion`
-            : `/projects/${projectId}?tab=invoice`,
-        },
-        stageTitle: "Completed",
-        bullets: [
-          `Completed ${timeAgoText(ctx.updatedAt)}`,
-          `${ctx.invoiceCount} invoice${ctx.invoiceCount !== 1 ? "s" : ""} generated`,
-        ],
-        riskDays: 3,
-      };
-    case "INVOICED":
-      return {
-        nextStep: {
-          description: "Record payment once received from client",
-          buttonLabel: "View Invoice",
-          href: `/projects/${projectId}?tab=invoice`,
-        },
-        stageTitle: "Invoiced",
-        bullets: [
-          `Invoiced ${timeAgoText(ctx.updatedAt)}`,
-          "Waiting for payment",
-        ],
         riskDays: 14,
       };
-    case "PAID":
+    case "DELIVERED":
       return {
         nextStep: {
-          description: "Archive this project to keep your workspace clean",
-          buttonLabel: "Archive Project",
-          href: "#",
+          description: "Manage invoices and close out the project",
+          buttonLabel: "Open Invoices",
+          href: `/projects/${projectId}?tab=invoice`,
         },
-        stageTitle: "Paid",
-        bullets: [`Payment confirmed ${timeAgoText(ctx.updatedAt)}`],
-        riskDays: 0,
+        stageTitle: "Delivered",
+        bullets: [
+          `Delivered ${timeAgoText(ctx.updatedAt)}`,
+          `${ctx.invoiceCount} invoice${ctx.invoiceCount !== 1 ? "s" : ""}`,
+        ],
+        riskDays: 7,
       };
     case "CLOSED":
       return {
@@ -232,6 +227,12 @@ export function ProjectStatusStepper({
 
   function handleStepClick(value: string) {
     if (value === status || updating) return;
+    const targetStage = STAGES.find((s) => s.value === value);
+    if (!targetStage) return;
+    if (targetStage.auto) {
+      // Auto steps cannot be set manually — they happen automatically when conditions are met
+      return;
+    }
     const targetIndex = STAGES.findIndex((s) => s.value === value);
     if (targetIndex < currentIndex) {
       setConfirmTarget(value);
@@ -254,7 +255,7 @@ export function ProjectStatusStepper({
               {/* Step */}
               <button
                 onClick={() => handleStepClick(step.value)}
-                disabled={updating}
+                disabled={updating || step.auto}
                 className="flex flex-col items-center gap-1 px-1 w-full transition-all duration-150 group disabled:cursor-not-allowed"
               >
                 {/* Circle */}
@@ -318,12 +319,16 @@ export function ProjectStatusStepper({
             {info.nextStep.description}
           </p>
           <div className="flex items-center gap-2 ml-[34px]">
-            {info.nextStep.href === "#" ? (
+            {info.nextStep.href === "#" || info.nextStep.href.startsWith("#") ? (
               <Button
                 size="sm"
                 onClick={() => {
-                  const nextStage = STAGES[currentIndex + 1];
-                  if (nextStage) handleStepClick(nextStage.value);
+                  if (info.nextStep.href === "#in-progress") {
+                    doUpdate("IN_PROGRESS");
+                  } else {
+                    const nextStage = STAGES[currentIndex + 1];
+                    if (nextStage) handleStepClick(nextStage.value);
+                  }
                 }}
                 disabled={updating}
                 className="bg-blue-600 hover:bg-blue-700 rounded-lg h-8 text-[12px]"
