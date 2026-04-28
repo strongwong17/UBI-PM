@@ -7,8 +7,77 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Inter", system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono);
+  /* ─── 2026 Visual Redesign tokens ─── */
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), "JetBrains Mono", ui-monospace, monospace;
+
+  /* Surfaces */
+  --color-canvas: #F8F5EE;
+  --color-canvas-cool: #F0EDE5;
+  --color-card-rd: #FFFFFF;
+
+  /* Ink */
+  --color-ink-900: #0F1729;
+  --color-ink-700: #2A3548;
+  --color-ink-500: #5A6478;
+  --color-ink-400: #7A8395;
+  --color-ink-300: #A0A8B8;
+  --color-ink-200: #C4CAD6;
+
+  /* Hairlines */
+  --color-hairline: #ECE7DD;
+  --color-hairline-strong: #D9D2C2;
+
+  /* Accent — terracotta */
+  --color-accent-rd: #D9522B;
+  --color-accent-strong: #BC4220;
+  --color-accent-soft: #FBE8DE;
+
+  /* Warning — stale */
+  --color-warn: #C97520;
+  --color-warn-bg: #FCEDD9;
+  --color-warn-fg: #92511A;
+
+  /* Status palette — saturated */
+  --color-s-new: #94A3B8;
+  --color-s-new-bg: #EFF1F5;
+  --color-s-new-fg: #475569;
+  --color-s-briefed: #64748B;
+  --color-s-briefed-bg: #E5E9F0;
+  --color-s-briefed-fg: #334155;
+  --color-s-estimating: #3B82F6;
+  --color-s-estimating-bg: #DBEAFE;
+  --color-s-estimating-fg: #1D4ED8;
+  --color-s-approved: #10B981;
+  --color-s-approved-bg: #D1FAE5;
+  --color-s-approved-fg: #047857;
+  --color-s-in-progress: #6366F1;
+  --color-s-in-progress-bg: #E0E7FF;
+  --color-s-in-progress-fg: #4338CA;
+  --color-s-delivered: #059669;
+  --color-s-delivered-bg: #C8F0DC;
+  --color-s-delivered-fg: #065F46;
+  --color-s-closed: #71717A;
+  --color-s-closed-bg: #E7E5DF;
+  --color-s-closed-fg: #3F3F46;
+
+  /* Execution-phase palette (Hub 2 only) */
+  --color-p-recruit: #A855F7;
+  --color-p-recruit-bg: #F3E8FF;
+  --color-p-recruit-fg: #6B21A8;
+  --color-p-field: #06B6D4;
+  --color-p-field-bg: #CFFAFE;
+  --color-p-field-fg: #155E75;
+  --color-p-analyze: #F59E0B;
+  --color-p-analyze-bg: #FEF3C7;
+  --color-p-analyze-fg: #92400E;
+  --color-p-report: #EC4899;
+  --color-p-report-bg: #FCE7F3;
+  --color-p-report-fg: #9F1239;
+
+  /* Variance */
+  --color-var-under: #059669;
+  --color-var-over: #DC2626;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -123,4 +192,18 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+@keyframes rd-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
+.rd-blink {
+  animation: rd-blink 2.4s ease-in-out infinite;
+}
+
+.rd-tabular {
+  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
 }
