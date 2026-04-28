@@ -22,8 +22,8 @@ export default async function DashboardLayout({
         userName={session.user.name || "User"}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto bg-[#f8f9fa]">
-          <div className="max-w-7xl mx-auto px-8 py-8">
+        <main className="flex-1 overflow-y-auto" style={{ background: "var(--color-canvas)" }}>
+          <div className="max-w-[1320px] mx-auto px-12 py-8">
             <ContractStoreInitializer />
             {children}
           </div>
