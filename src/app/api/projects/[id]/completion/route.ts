@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
+import type { Prisma } from "@/generated/prisma/client";
 
 export async function GET(
   request: NextRequest,
@@ -52,7 +53,7 @@ export async function PATCH(
     }
     const existing = await prisma.projectCompletion.findUnique({ where: { projectId: id } });
 
-    const updateData: Record<string, unknown> = {};
+    const updateData: Prisma.ProjectCompletionUncheckedUpdateInput = {};
     if (internalNotes !== undefined) updateData.internalNotes = internalNotes;
     if (clientAcknowledgedBy !== undefined) updateData.clientAcknowledgedBy = clientAcknowledgedBy;
     if (clientAcknowledgeNotes !== undefined) updateData.clientAcknowledgeNotes = clientAcknowledgeNotes;
@@ -87,7 +88,7 @@ export async function PATCH(
       });
     } else {
       completion = await prisma.projectCompletion.create({
-        data: { projectId: id, ...updateData } as any,
+        data: { projectId: id, ...updateData } as Prisma.ProjectCompletionUncheckedCreateInput,
         include: { internalCompletedBy: { select: { name: true } } },
       });
     }

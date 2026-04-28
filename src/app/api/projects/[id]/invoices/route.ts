@@ -71,7 +71,7 @@ export async function POST(
     }
 
     // Build line items per mode
-    let invoiceLines: { description: string; quantity: number; unitPrice: number; total: number; sortOrder: number; estimateLineItemId: string | null }[] = [];
+    const invoiceLines: { description: string; quantity: number; unitPrice: number; total: number; sortOrder: number; estimateLineItemId: string | null }[] = [];
 
     if (mode === "SLICE") {
       if (!lines || lines.length === 0) {

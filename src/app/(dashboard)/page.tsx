@@ -38,14 +38,14 @@ export default async function DashboardPage() {
     estimatesSent,
     activeProjects,
     unpaidInvoices,
-    newInquiries,
-    completedNeedInvoice,
+    newProjects,
+    deliveredNeedInvoice,
     // Pipeline counts
     statusCounts,
     // Work queue items
-    sentEstimateProjects,
+    estimatingProjects,
     inProgressProjects,
-    invoicedProjects,
+    awaitingPaymentInvoices,
     // Recent activity
     recentActivity,
   ] = await Promise.all([
@@ -55,30 +55,30 @@ export default async function DashboardPage() {
     prisma.project.count({ where: { status: "IN_PROGRESS" } }),
     // Unpaid invoices (SENT or OVERDUE)
     prisma.invoice.count({ where: { status: { in: ["SENT", "OVERDUE"] }, deletedAt: null } }),
-    // New inquiries not yet worked on
-    prisma.project.count({ where: { status: "INQUIRY_RECEIVED" } }),
-    // Completed but not yet invoiced
-    prisma.project.count({ where: { status: "COMPLETED" } }),
+    // New projects not yet briefed
+    prisma.project.count({ where: { status: "NEW" } }),
+    // Delivered but with uninvoiced work remaining (proxy: DELIVERED status)
+    prisma.project.count({ where: { status: "DELIVERED" } }),
     // Pipeline
     prisma.project.groupBy({ by: ["status"], _count: { _all: true } }),
-    // Work queue: estimates awaiting response
+    // Work queue: projects in ESTIMATING (drafted estimates awaiting approval)
     prisma.project.findMany({
-      where: { status: "ESTIMATE_SENT" },
+      where: { status: "ESTIMATING" },
       include: { client: { select: { company: true } } },
       orderBy: { updatedAt: "asc" },
       take: 5,
     }),
-    // Work queue: in progress
+    // Work queue: projects in progress
     prisma.project.findMany({
       where: { status: "IN_PROGRESS" },
       include: { client: { select: { company: true } } },
       orderBy: { updatedAt: "desc" },
       take: 5,
     }),
-    // Work queue: invoiced, awaiting payment
-    prisma.project.findMany({
-      where: { status: "INVOICED" },
-      include: { client: { select: { company: true } } },
+    // Work queue: invoices awaiting payment (project status independent)
+    prisma.invoice.findMany({
+      where: { status: { in: ["SENT", "OVERDUE"] }, deletedAt: null },
+      include: { project: { include: { client: { select: { company: true } } } } },
       orderBy: { updatedAt: "asc" },
       take: 5,
     }),
@@ -98,44 +98,73 @@ export default async function DashboardPage() {
   const summaryParts: string[] = [];
   if (estimatesSent > 0) summaryParts.push(`${estimatesSent} estimate${estimatesSent > 1 ? "s" : ""} awaiting response`);
   if (unpaidInvoices > 0) summaryParts.push(`${unpaidInvoices} invoice${unpaidInvoices > 1 ? "s" : ""} unpaid`);
-  if (newInquiries > 0) summaryParts.push(`${newInquiries} new inquir${newInquiries > 1 ? "ies" : "y"}`);
-  if (completedNeedInvoice > 0) summaryParts.push(`${completedNeedInvoice} project${completedNeedInvoice > 1 ? "s" : ""} need invoicing`);
+  if (newProjects > 0) summaryParts.push(`${newProjects} new project${newProjects > 1 ? "s" : ""} to brief`);
+  if (deliveredNeedInvoice > 0) summaryParts.push(`${deliveredNeedInvoice} delivered project${deliveredNeedInvoice > 1 ? "s" : ""} ready to invoice`);
 
-  // Pipeline stages with CTAs
+  // Pipeline stages with CTAs (work-only, no billing state)
   const pipelineStages: { status: string; label: string; cta: string; href: string; color: string }[] = [
-    { status: "INQUIRY_RECEIVED", label: "New inquiries", cta: "Review", href: "/projects?status=INQUIRY_RECEIVED", color: "bg-sky-500" },
-    { status: "ESTIMATE_SENT", label: "Estimate sent", cta: "Follow up", href: "/projects?status=ESTIMATE_SENT", color: "bg-violet-500" },
-    { status: "IN_PROGRESS", label: "In progress", cta: "View", href: "/projects?status=IN_PROGRESS", color: "bg-amber-500" },
-    { status: "COMPLETED", label: "Completed", cta: "Invoice", href: "/projects?status=COMPLETED", color: "bg-teal-500" },
-    { status: "INVOICED", label: "Invoiced", cta: "Track", href: "/projects?status=INVOICED", color: "bg-purple-500" },
+    { status: "NEW", label: "New", cta: "Brief", href: "/projects?status=NEW", color: "bg-gray-400" },
+    { status: "BRIEFED", label: "Briefed", cta: "Estimate", href: "/projects?status=BRIEFED", color: "bg-slate-500" },
+    { status: "ESTIMATING", label: "Estimating", cta: "Follow up", href: "/projects?status=ESTIMATING", color: "bg-blue-500" },
+    { status: "APPROVED", label: "Approved", cta: "Start", href: "/projects?status=APPROVED", color: "bg-green-500" },
+    { status: "IN_PROGRESS", label: "In progress", cta: "View", href: "/projects?status=IN_PROGRESS", color: "bg-indigo-500" },
+    { status: "DELIVERED", label: "Delivered", cta: "Invoice", href: "/projects?status=DELIVERED", color: "bg-emerald-500" },
   ];
 
   // Work queue groups
+  const estimatingItems = estimatingProjects.map((p) => ({
+    id: p.id,
+    href: `/projects/${p.id}`,
+    status: p.status,
+    projectNumber: p.projectNumber,
+    title: p.title,
+    company: p.client.company,
+    updatedAt: p.updatedAt,
+  }));
+  const inProgressItems = inProgressProjects.map((p) => ({
+    id: p.id,
+    href: `/projects/${p.id}`,
+    status: p.status,
+    projectNumber: p.projectNumber,
+    title: p.title,
+    company: p.client.company,
+    updatedAt: p.updatedAt,
+  }));
+  const awaitingPaymentItems = awaitingPaymentInvoices.map((inv) => ({
+    id: inv.id,
+    href: `/invoices/${inv.id}`,
+    status: inv.status,
+    projectNumber: inv.invoiceNumber,
+    title: inv.project?.title ?? "(unknown project)",
+    company: inv.project?.client.company ?? "—",
+    updatedAt: inv.updatedAt,
+  }));
+
   const workGroups = [
     {
-      title: "Awaiting client response",
-      items: sentEstimateProjects,
+      title: "Awaiting estimate approval",
+      items: estimatingItems,
       emptyText: "No estimates pending response",
       actionLabel: "Follow up",
-      color: "text-violet-600",
+      color: "text-blue-600",
     },
     {
       title: "In progress",
-      items: inProgressProjects,
+      items: inProgressItems,
       emptyText: "No active projects",
       actionLabel: "Open",
-      color: "text-amber-600",
+      color: "text-indigo-600",
     },
     {
       title: "Awaiting payment",
-      items: invoicedProjects,
+      items: awaitingPaymentItems,
       emptyText: "No invoices pending",
       actionLabel: "View",
-      color: "text-purple-600",
+      color: "text-amber-600",
     },
   ];
 
-  const totalWorkItems = sentEstimateProjects.length + inProgressProjects.length + invoicedProjects.length;
+  const totalWorkItems = estimatingItems.length + inProgressItems.length + awaitingPaymentItems.length;
 
   return (
     <div className="space-y-6 max-w-6xl">
@@ -179,9 +208,9 @@ export default async function DashboardPage() {
       {/* ─── Interactive metrics ─────────────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: "New inquiries", count: newInquiries, icon: FolderKanban, href: "/projects?status=INQUIRY_RECEIVED", color: "text-sky-600", bg: "bg-sky-50" },
-          { label: "Estimates pending", count: estimatesSent, icon: Calculator, href: "/estimates?status=SENT", color: "text-violet-600", bg: "bg-violet-50" },
-          { label: "Active projects", count: activeProjects, icon: Clock, href: "/projects?status=IN_PROGRESS", color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "New projects", count: newProjects, icon: FolderKanban, href: "/projects?status=NEW", color: "text-gray-600", bg: "bg-gray-50" },
+          { label: "Estimates pending", count: estimatesSent, icon: Calculator, href: "/estimates?status=SENT", color: "text-blue-600", bg: "bg-blue-50" },
+          { label: "Active projects", count: activeProjects, icon: Clock, href: "/projects?status=IN_PROGRESS", color: "text-indigo-600", bg: "bg-indigo-50" },
           { label: "Invoices unpaid", count: unpaidInvoices, icon: Receipt, href: "/invoices?status=SENT", color: "text-red-600", bg: "bg-red-50" },
         ].map((metric) => (
           <Link key={metric.label} href={metric.href}>
@@ -233,21 +262,21 @@ export default async function DashboardPage() {
                       {group.title}
                     </p>
                     <div className="space-y-1.5">
-                      {group.items.map((project) => (
-                        <Link key={project.id} href={`/projects/${project.id}`} className="block group">
+                      {group.items.map((item) => (
+                        <Link key={item.id} href={item.href} className="block group">
                           <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-transparent hover:border-gray-200 hover:bg-gray-50/80 transition-all duration-150">
                             <div className="flex items-center gap-3 min-w-0">
-                              <StatusBadge status={project.status} />
+                              <StatusBadge status={item.status} />
                               <div className="min-w-0">
                                 <p className="text-sm font-medium text-gray-900 truncate">
-                                  {project.projectNumber}
-                                  <span className="font-normal text-gray-500 ml-1.5">{project.title}</span>
+                                  {item.projectNumber}
+                                  <span className="font-normal text-gray-500 ml-1.5">{item.title}</span>
                                 </p>
-                                <p className="text-xs text-gray-400 mt-0.5">{project.client.company}</p>
+                                <p className="text-xs text-gray-400 mt-0.5">{item.company}</p>
                               </div>
                             </div>
                             <div className="flex items-center gap-3 shrink-0">
-                              <span className="text-xs text-gray-400">{timeAgo(project.updatedAt)}</span>
+                              <span className="text-xs text-gray-400">{timeAgo(item.updatedAt)}</span>
                               <ArrowRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-gray-500 transition-colors" />
                             </div>
                           </div>
