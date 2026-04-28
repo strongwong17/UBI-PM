@@ -70,6 +70,10 @@ export function NewInvoiceSheet({ projectId, estimates, open, onOpenChange }: Pr
 
   const [billQty, setBillQty] = useState<Record<string, number>>(initialQty);
   const [creating, setCreating] = useState(false);
+  const [percent, setPercent] = useState(50);
+  const [flatAmount, setFlatAmount] = useState(0);
+  const [flatDescription, setFlatDescription] = useState("");
+  const [activeMode, setActiveMode] = useState<"slice" | "percent" | "flat">("slice");
 
   // Reset on estimate change
   useEffect(() => setBillQty(initialQty), [initialQty]);
@@ -84,14 +88,25 @@ export function NewInvoiceSheet({ projectId, estimates, open, onOpenChange }: Pr
   const create = async () => {
     setCreating(true);
     try {
-      const lines = estimate.lines
-        .filter((ln) => (billQty[ln.id] ?? 0) > 0)
-        .map((ln) => ({ estimateLineItemId: ln.id, quantity: billQty[ln.id] }));
-      if (lines.length === 0) throw new Error("Select at least one line with a positive quantity");
+      let body: Record<string, unknown>;
+      if (activeMode === "slice") {
+        const lines = estimate.lines
+          .filter((ln) => (billQty[ln.id] ?? 0) > 0)
+          .map((ln) => ({ estimateLineItemId: ln.id, quantity: billQty[ln.id] }));
+        if (lines.length === 0) throw new Error("Select at least one line with a positive quantity");
+        body = { estimateId, mode: "SLICE", lines };
+      } else if (activeMode === "percent") {
+        if (percent <= 0 || percent > 100) throw new Error("Percent must be 1..100");
+        body = { estimateId, mode: "PERCENT", percent };
+      } else {
+        if (flatAmount <= 0) throw new Error("Amount must be > 0");
+        if (!flatDescription.trim()) throw new Error("Description required");
+        body = { estimateId, mode: "FLAT", flatAmount, flatDescription };
+      }
       const res = await fetch(`/api/projects/${projectId}/invoices`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estimateId, mode: "SLICE", lines }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error((await res.json()).error || "Failed");
       toast.success("Invoice created (DRAFT)");
@@ -128,12 +143,13 @@ export function NewInvoiceSheet({ projectId, estimates, open, onOpenChange }: Pr
           </div>
         )}
 
-        <Tabs defaultValue="slice">
+        <Tabs value={activeMode} onValueChange={(v) => setActiveMode(v as "slice" | "percent" | "flat")}>
           <TabsList>
             <TabsTrigger value="slice">① Slice</TabsTrigger>
-            <TabsTrigger value="percent" disabled>② Percent</TabsTrigger>
-            <TabsTrigger value="flat" disabled>③ Flat</TabsTrigger>
+            <TabsTrigger value="percent">② Percent</TabsTrigger>
+            <TabsTrigger value="flat">③ Flat</TabsTrigger>
           </TabsList>
+
           <TabsContent value="slice">
             <p className="text-xs text-gray-500 mb-2">
               Remaining = Delivered − Invoiced. Lines with no remaining quantity are disabled.
@@ -195,17 +211,72 @@ export function NewInvoiceSheet({ projectId, estimates, open, onOpenChange }: Pr
               </TableBody>
             </Table>
           </TabsContent>
+
+          <TabsContent value="percent">
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">Bills a percentage of the estimate total. Doesn&apos;t decrement remaining quantities.</p>
+              <div className="flex items-center gap-3">
+                <label className="text-sm">Percent</label>
+                <Input
+                  type="number" min={0} max={100} step="any"
+                  value={percent}
+                  onChange={(e) => setPercent(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  className="w-24 text-right h-8"
+                />
+                <span className="text-sm">% of {estimate.estimateNumber}</span>
+              </div>
+              <div className="text-sm">
+                Estimate total: <strong>{fmt(estimate.totalEstimateValue, sym)}</strong>
+                {" → "}
+                Invoice total: <strong className="text-emerald-700">{fmt(estimate.totalEstimateValue * (percent / 100), sym)}</strong>
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="flat">
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500">Custom amount. Generates a single descriptive line. Doesn&apos;t decrement remaining quantities.</p>
+              <div className="flex items-center gap-3">
+                <label className="text-sm w-24">Description</label>
+                <Input
+                  value={flatDescription}
+                  onChange={(e) => setFlatDescription(e.target.value)}
+                  placeholder="e.g. Setup fee"
+                  className="flex-1 h-8"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <label className="text-sm w-24">Amount</label>
+                <span>{sym}</span>
+                <Input
+                  type="number" min={0} step="any"
+                  value={flatAmount}
+                  onChange={(e) => setFlatAmount(Math.max(0, parseFloat(e.target.value) || 0))}
+                  className="w-32 text-right h-8"
+                />
+              </div>
+            </div>
+          </TabsContent>
         </Tabs>
 
         <DialogFooter className="items-center sm:justify-between flex-wrap gap-2">
           <div className="text-sm text-gray-700">
-            Selected {selectedCount} of {estimate.lines.length} · Subtotal <strong>{fmt(subtotal, sym)}</strong>
-            {estimate.taxRate > 0 && (<> · Tax ({estimate.taxRate}%) <strong>{fmt(tax, sym)}</strong></>)}
-            <> · <span className="text-emerald-700">Total <strong>{fmt(total, sym)}</strong></span></>
+            {activeMode === "slice" && (
+              <>Selected {selectedCount} of {estimate.lines.length} · Subtotal <strong>{fmt(subtotal, sym)}</strong>
+              {estimate.taxRate > 0 && (<> · Tax ({estimate.taxRate}%) <strong>{fmt(tax, sym)}</strong></>)}
+              <> · <span className="text-emerald-700">Total <strong>{fmt(total, sym)}</strong></span></>
+              </>
+            )}
+            {activeMode === "percent" && (
+              <>Total <strong className="text-emerald-700">{fmt(estimate.totalEstimateValue * (percent / 100), sym)}</strong></>
+            )}
+            {activeMode === "flat" && (
+              <>Total <strong className="text-emerald-700">{fmt(flatAmount, sym)}</strong></>
+            )}
           </div>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="button" onClick={create} disabled={creating || subtotal <= 0}>
+            <Button type="button" onClick={create} disabled={creating}>
               {creating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Create Draft Invoice
             </Button>
