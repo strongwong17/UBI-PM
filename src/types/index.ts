@@ -12,13 +12,12 @@ declare module "next-auth" {
 export type Role = "ADMIN" | "MANAGER" | "VIEWER";
 
 export type ProjectStatus =
-  | "INQUIRY_RECEIVED"
-  | "ESTIMATE_SENT"
+  | "NEW"
+  | "BRIEFED"
+  | "ESTIMATING"
   | "APPROVED"
   | "IN_PROGRESS"
-  | "COMPLETED"
-  | "INVOICED"
-  | "PAID"
+  | "DELIVERED"
   | "CLOSED";
 
 export type ExecutionPhase = "RECRUITMENT" | "FIELDWORK" | "ANALYSIS" | "REPORTING";

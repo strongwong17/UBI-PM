@@ -2,15 +2,20 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 const statusColorMap: Record<string, string> = {
-  // Project statuses (8 stages) — each visually distinct
-  INQUIRY_RECEIVED: "bg-sky-100 text-sky-800 border-sky-200",
-  ESTIMATE_SENT: "bg-violet-100 text-violet-800 border-violet-200",
+  // Project statuses (7 stages — work only)
+  NEW: "bg-gray-100 text-gray-700 border-gray-200",
+  BRIEFED: "bg-slate-200 text-slate-700 border-slate-300",
+  ESTIMATING: "bg-blue-100 text-blue-800 border-blue-200",
   APPROVED: "bg-green-100 text-green-800 border-green-200",
-  IN_PROGRESS: "bg-amber-100 text-amber-800 border-amber-200",
-  COMPLETED: "bg-blue-100 text-blue-800 border-blue-200",
-  INVOICED: "bg-purple-100 text-purple-800 border-purple-200",
-  PAID: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  CLOSED: "bg-slate-200 text-slate-700 border-slate-300",
+  IN_PROGRESS: "bg-indigo-100 text-indigo-800 border-indigo-200",
+  DELIVERED: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  CLOSED: "bg-zinc-200 text-zinc-700 border-zinc-300",
+  // Legacy status fallbacks (kept until status remap script runs in production)
+  INQUIRY_RECEIVED: "bg-gray-100 text-gray-700 border-gray-200",
+  ESTIMATE_SENT: "bg-blue-100 text-blue-800 border-blue-200",
+  COMPLETED: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  INVOICED: "bg-emerald-100 text-emerald-800 border-emerald-200",
+  PAID: "bg-zinc-200 text-zinc-700 border-zinc-300",
   // Estimate statuses
   DRAFT: "bg-gray-100 text-gray-600 border-gray-200",
   SENT: "bg-violet-100 text-violet-800 border-violet-200",
