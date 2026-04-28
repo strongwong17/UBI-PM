@@ -11,11 +11,9 @@ import { ProjectHubTabs } from "@/components/projects/project-hub-tabs";
 import { InquiryBriefForm } from "@/components/projects/inquiry-brief-form";
 import { DeliverySignoffTab } from "@/components/projects/delivery-signoff-tab";
 import { computeBillingState } from "@/lib/billing";
-import { GenerateInvoiceButton } from "@/components/projects/generate-invoice-button";
+import { InvoicesTab } from "@/components/invoices/invoices-tab";
 import { EstimateApproveButton } from "@/components/estimates/estimate-approve-button";
 import { EstimateCardActions } from "@/components/estimates/estimate-card-actions";
-import { InvoiceStatusChanger } from "@/components/invoices/invoice-status-changer";
-import { CreateRmbInvoiceButton } from "@/components/invoices/create-rmb-invoice-button";
 
 import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { ClientSignalsPanel } from "@/components/projects/client-signals-panel";
@@ -106,6 +104,58 @@ export default async function ProjectHubPage({ params }: PageProps) {
     .filter((est) => !est.parentEstimateId)
     .reduce((sum, est) => sum + estimateTotal(est), 0);
   const billing = computeBillingState(project);
+
+  const estimatesForSheet = approvedEstimates
+    .filter((e) => !e.parentEstimateId)
+    .map((est) => {
+      const totalEstimateValue = est.phases.reduce(
+        (s, p) => s + p.lineItems.reduce((ss, l) => ss + l.quantity * l.unitPrice, 0),
+        0
+      );
+      return {
+        id: est.id,
+        estimateNumber: est.estimateNumber,
+        title: est.title,
+        label: est.label ?? null,
+        currency: est.currency,
+        taxRate: est.taxRate,
+        totalEstimateValue,
+        lines: est.phases.flatMap((p) =>
+          p.lineItems.map((l) => {
+            const invoicedQuantity = project.invoices
+              .filter((inv) => !inv.deletedAt)
+              .flatMap((inv) => inv.lineItems)
+              .filter((li) => li.estimateLineItemId === l.id)
+              .reduce((s, li) => s + li.quantity, 0);
+            return {
+              id: l.id,
+              description: l.description,
+              unit: l.unit,
+              quantity: l.quantity,
+              unitPrice: l.unitPrice,
+              deliveredQuantity: l.deliveredQuantity ?? null,
+              invoicedQuantity,
+            };
+          })
+        ),
+      };
+    });
+
+  const invoiceRows = project.invoices.map((inv) => ({
+    id: inv.id,
+    invoiceNumber: inv.invoiceNumber,
+    status: inv.status,
+    total: inv.total,
+    currency: inv.currency,
+    dueDate: inv.dueDate?.toISOString() ?? null,
+    paidDate: inv.paidDate?.toISOString() ?? null,
+    exchangeRate: inv.exchangeRate ?? null,
+    parentInvoiceId: inv.parentInvoiceId ?? null,
+    rmbDuplicate: inv.rmbDuplicate ?? null,
+    estimate: inv.estimate ?? null,
+    lineCount: inv.lineItems.length,
+  }));
+
   const fmtCurrency = (n: number) =>
     n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
@@ -296,107 +346,12 @@ export default async function ProjectHubPage({ params }: PageProps) {
   );
 
   const invoiceTab = (
-    <div className="space-y-4">
-      {project.invoices.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center space-y-4">
-            <p className="text-gray-500">No invoices yet.</p>
-            {hasUninvoicedApproved ? (
-              <div>
-                <p className="text-sm text-gray-500 mb-3">Generate invoices through the Completion tab.</p>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/projects/${project.id}?tab=completion`}>Go to Completion</Link>
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400">Approve an estimate first, then use the Completion tab to generate invoices.</p>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {project.invoices.map((invoice) => (
-            <Card key={invoice.id} className={invoice.parentInvoiceId ? "border-amber-300 bg-amber-50/30" : ""}>
-              <CardHeader>
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <CardTitle>{invoice.invoiceNumber}</CardTitle>
-                      {invoice.parentInvoiceId && (
-                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
-                          RMB Duplicate
-                        </Badge>
-                      )}
-                      {invoice.currency !== "USD" && (
-                        <Badge variant="outline" className="text-xs">{invoice.currency}</Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Total: {invoice.currency === "CNY" ? "¥" : "$"}{invoice.total.toLocaleString()}
-                    </p>
-                    {invoice.estimate && (
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        From: {invoice.estimate.estimateNumber} v{invoice.estimate.version}
-                        {invoice.estimate.label ? ` — ${invoice.estimate.label}` : ""}
-                      </p>
-                    )}
-                    {invoice.exchangeRate && (
-                      <p className="text-xs text-amber-600 mt-0.5">
-                        Exchange rate: 1 USD = {invoice.exchangeRate} CNY
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <StatusBadge status={invoice.status} />
-                    <InvoiceStatusChanger
-                      invoiceId={invoice.id}
-                      currentStatus={invoice.status}
-                    />
-                    {!invoice.parentInvoiceId && (
-                      <CreateRmbInvoiceButton
-                        invoiceId={invoice.id}
-                        invoiceNumber={invoice.invoiceNumber}
-                        hasRmbDuplicate={!!invoice.rmbDuplicate}
-                      />
-                    )}
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/invoices/${invoice.id}`}>View</Link>
-                    </Button>
-                    <Button asChild variant="outline" size="sm">
-                      <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank">
-                        PDF
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              {invoice.lineItems.length > 0 && (
-                <CardContent>
-                  <div className="space-y-1">
-                    {invoice.lineItems.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm">
-                        <span className="text-gray-600">{item.description}</span>
-                        <span className="font-medium">{item.total.toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {invoice.dueDate && (
-                    <p className="text-sm text-gray-500 mt-3">
-                      Due: {new Date(invoice.dueDate).toLocaleDateString()}
-                    </p>
-                  )}
-                  {invoice.paidDate && (
-                    <p className="text-sm text-green-600 mt-1">
-                      Paid: {new Date(invoice.paidDate).toLocaleDateString()}
-                    </p>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
+    <InvoicesTab
+      projectId={project.id}
+      billing={billing}
+      invoices={invoiceRows}
+      estimatesForSheet={estimatesForSheet}
+    />
   );
 
   const completionTab = (
