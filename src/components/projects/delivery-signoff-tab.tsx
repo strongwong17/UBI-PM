@@ -160,9 +160,14 @@ export function DeliverySignoffTab({ projectId, projectStatus, estimates }: Prop
                             value={val ?? ""}
                             disabled={readOnly}
                             placeholder="—"
-                            onChange={(e) =>
-                              update(est.id, ln.id, e.target.value === "" ? null : parseFloat(e.target.value))
-                            }
+                            onChange={(e) => {
+                              if (e.target.value === "") {
+                                update(est.id, ln.id, null);
+                                return;
+                              }
+                              const n = parseFloat(e.target.value);
+                              update(est.id, ln.id, Number.isFinite(n) ? n : null);
+                            }}
                             className="w-20 ml-auto text-right h-8"
                           />
                         </TableCell>
