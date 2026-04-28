@@ -12,6 +12,7 @@ import { NewInvoiceSheet, type SheetEstimate } from "@/components/invoices/new-i
 import { InvoiceStatusChanger } from "@/components/invoices/invoice-status-changer";
 import { CreateRmbInvoiceButton } from "@/components/invoices/create-rmb-invoice-button";
 import type { BillingState } from "@/lib/billing";
+import { currencySymbol } from "@/lib/currency";
 
 interface InvoiceRow {
   id: string;
@@ -76,7 +77,7 @@ export function InvoicesTab({ projectId, billing, invoices, estimatesForSheet }:
                       )}
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      Total: {invoice.currency === "CNY" ? "¥" : "$"}{invoice.total.toLocaleString()}
+                      Total: {currencySymbol(invoice.currency)}{invoice.total.toLocaleString()}
                     </p>
                     {invoice.estimate && (
                       <p className="text-xs text-gray-400 mt-0.5">
@@ -105,7 +106,7 @@ export function InvoicesTab({ projectId, billing, invoices, estimatesForSheet }:
                       <Link href={`/invoices/${invoice.id}`}>View</Link>
                     </Button>
                     <Button asChild variant="outline" size="sm">
-                      <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank">PDF</a>
+                      <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank" rel="noopener noreferrer">PDF</a>
                     </Button>
                   </div>
                 </div>
@@ -123,7 +124,7 @@ export function InvoicesTab({ projectId, billing, invoices, estimatesForSheet }:
 
       {uninvoicedRemaining > 0 && billing.invoiced > 0 && (
         <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          💡 <strong>{billing.primaryCurrency === "CNY" ? "¥" : "$"}{uninvoicedRemaining.toLocaleString()}</strong> still uninvoiced — create another invoice to bill the remainder.
+          💡 <strong>{currencySymbol(billing.primaryCurrency)}{uninvoicedRemaining.toLocaleString()}</strong> still uninvoiced — create another invoice to bill the remainder.
         </div>
       )}
 
