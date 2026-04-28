@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { StatusPill } from "@/components/redesign/status-pill";
 import { ProjectStatusStepper } from "@/components/projects/project-status-stepper";
 import { ProjectHubTabs } from "@/components/projects/project-hub-tabs";
 import { InquiryBriefForm } from "@/components/projects/inquiry-brief-form";
@@ -18,7 +19,7 @@ import { EstimateCardActions } from "@/components/estimates/estimate-card-action
 import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { ClientSignalsPanel } from "@/components/projects/client-signals-panel";
 
-import { ArrowLeft, Building2, User, Calendar, Plus } from "lucide-react";
+import { Building2, User, Calendar, Plus } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -155,9 +156,6 @@ export default async function ProjectHubPage({ params }: PageProps) {
     estimate: inv.estimate ?? null,
     lineCount: inv.lineItems.length,
   }));
-
-  const fmtCurrency = (n: number) =>
-    n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   // ── Tab contents ────────────────────────────────────────────
 
@@ -406,68 +404,52 @@ export default async function ProjectHubPage({ params }: PageProps) {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/projects">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Projects
-          </Link>
-        </Button>
+      {/* Crumbs */}
+      <div className="font-mono text-[11px] text-ink-400 mb-3 tracking-[0.02em]">
+        <Link href="/projects" className="text-ink-400 hover:text-ink-700 no-underline">Projects</Link>
+        <span className="mx-1.5 text-ink-300">›</span>
+        <Link href={`/clients/${project.client.id}`} className="text-ink-400 hover:text-ink-700 no-underline">{project.client.company}</Link>
+        <span className="mx-1.5 text-ink-300">›</span>
+        <span className="text-ink-700 font-semibold">{project.projectNumber}</span>
       </div>
 
-      {/* Project Title & Meta */}
-      <div className="bg-white border rounded-xl p-6 space-y-4">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-mono text-gray-400">{project.projectNumber}</span>
-              <StatusBadge status={project.status} />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mt-1">{project.title}</h1>
-            <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 flex-wrap">
-              <span>{project.client.company}</span>
-              {project.primaryContact && <span>· {project.primaryContact.name}</span>}
-              {project.assignedTo && <span>· Assigned: {project.assignedTo.name}</span>}
-            </div>
+      <div className="flex items-start justify-between gap-6 flex-wrap mb-5">
+        <div>
+          <div className="flex items-center gap-2.5 mb-1">
+            <span className="font-mono text-[11px] font-semibold text-ink-300 tracking-[0.04em]">
+              {project.projectNumber}
+            </span>
+            <StatusPill status={project.status} />
           </div>
-          <div className="flex items-center gap-4">
-            {approvedEstimates.length > 0 && (
-              <div className="text-right">
-                <p className="text-xs text-gray-500">Project Total</p>
-                <p className="text-xl font-bold tracking-tight text-green-700">
-                  ${fmtCurrency(approvedTotal)}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {approvedEstimates.filter((e) => !e.parentEstimateId).length} approved
-                </p>
-              </div>
-            )}
-            {isAdmin && (
-              <DeleteProjectButton projectId={project.id} projectNumber={project.projectNumber} />
-            )}
-          </div>
+          <h1 className="text-2xl font-bold tracking-[-0.025em] mb-1.5">{project.title}</h1>
+          <p className="text-[13px] text-ink-500">
+            {project.client.company}
+            {project.startDate ? ` · started ${new Date(project.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}
+            {project.assignedTo ? ` · ${project.assignedTo.name} lead` : ""}
+            {approvedTotal > 0 ? ` · $${approvedTotal.toLocaleString()} approved` : ""}
+          </p>
         </div>
-
-        {/* Status Stepper */}
-        <div className="pt-2">
-          <ProjectStatusStepper
-            projectId={project.id}
-            currentStatus={project.status}
-            context={{
-              hasInquiry: !!project.inquiry,
-              estimateCount: project.estimates.length,
-              approvedEstimateCount: approvedEstimates.length,
-              invoiceCount: project.invoices.length,
-              hasUninvoicedApproved,
-              updatedAt: project.updatedAt.toISOString(),
-              startDate: project.startDate?.toISOString() ?? null,
-              contactEmail: project.primaryContact?.email ?? null,
-              contactName: project.primaryContact?.name ?? null,
-            }}
-          />
-        </div>
+        {isAdmin && (
+          <DeleteProjectButton projectId={project.id} projectNumber={project.projectNumber} />
+        )}
       </div>
+
+      {/* Status Stepper (4-stage card row) */}
+      <ProjectStatusStepper
+        projectId={project.id}
+        currentStatus={project.status}
+        context={{
+          hasInquiry: !!project.inquiry,
+          estimateCount: project.estimates.length,
+          approvedEstimateCount: approvedEstimates.length,
+          invoiceCount: project.invoices.length,
+          hasUninvoicedApproved,
+          updatedAt: project.updatedAt.toISOString(),
+          startDate: project.startDate?.toISOString() ?? null,
+          contactEmail: project.primaryContact?.email ?? null,
+          contactName: project.primaryContact?.name ?? null,
+        }}
+      />
 
       {/* Tabs */}
       <ProjectHubTabs
