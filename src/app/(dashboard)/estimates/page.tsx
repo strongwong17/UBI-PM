@@ -78,8 +78,8 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Estimates</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage project estimates and quotes</p>
+          <h1 className="text-2xl font-bold tracking-[-0.025em] text-ink-900">Estimates</h1>
+          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">// {estimates.length} {statusFilter ? statusFilter.toLowerCase() : "total"}</p>
         </div>
         <Button asChild size="sm">
           <Link href="/estimates/new">
@@ -91,12 +91,12 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
 
       {/* Filter area — unified with projects page pattern */}
       <div className="flex items-center gap-3">
-        <span className="text-xs font-medium text-gray-400 uppercase tracking-wider w-10 shrink-0">Filter</span>
+        <span className="text-xs font-medium text-ink-400 uppercase tracking-wider w-10 shrink-0">Filter</span>
         <div className="flex items-center gap-1.5 flex-wrap">
           {statusFilter && (
             <Link
               href="/estimates"
-              className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium text-gray-500 hover:text-gray-700 rounded-full border border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-150"
+              className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium text-ink-500 hover:text-ink-700 rounded-md border border-dashed border-hairline hover:border-hairline-strong transition-colors duration-150"
             >
               Clear
             </Link>
@@ -108,17 +108,17 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
                 key={chip.value}
                 href={statusFilter === chip.value ? "/estimates" : `/estimates?status=${chip.value}`}
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-1 text-[12px] font-medium rounded-full border transition-all duration-150",
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
                   statusFilter === chip.value
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:text-gray-800"
+                    ? "bg-ink-900 text-white"
+                    : "bg-card-rd text-ink-700 border border-hairline hover:border-hairline-strong",
                 )}
               >
                 {chip.label}
                 {count > 0 && (
                   <span className={cn(
                     "text-[10px] tabular-nums",
-                    statusFilter === chip.value ? "text-gray-400" : "text-gray-400"
+                    statusFilter === chip.value ? "text-ink-300" : "text-ink-400"
                   )}>
                     {count}
                   </span>
@@ -132,7 +132,7 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
       {/* Results */}
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+          <h2 className="text-sm font-semibold text-ink-900 flex items-center gap-2">
             {heading}
             <Badge variant="secondary" className="text-xs">{estimates.length}</Badge>
           </h2>
@@ -141,9 +141,9 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
         {estimates.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
-              <Calculator className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-              <p className="font-medium text-gray-500">No estimates found</p>
-              <p className="text-sm text-gray-400 mt-1">
+              <Calculator className="h-10 w-10 mx-auto mb-3 text-ink-300" />
+              <p className="font-medium text-ink-500">No estimates found</p>
+              <p className="text-sm text-ink-400 mt-1">
                 {statusFilter ? "Try a different filter" : "Create your first estimate to get started"}
               </p>
               {!statusFilter && (
@@ -168,7 +168,7 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
                 <Link key={estimate.id} href={`/estimates/${estimate.id}`} className="block group">
                   <div className={cn(
                     "flex items-center justify-between px-4 py-3 rounded-lg border border-transparent transition-all duration-150",
-                    "hover:border-gray-200 hover:bg-gray-50/80",
+                    "hover:border-hairline hover:bg-card-rd/80",
                     isSentLong && "bg-amber-50/50 border-amber-100 hover:border-amber-200 hover:bg-amber-50/80"
                   )}>
                     {/* Left: identity */}
@@ -176,10 +176,10 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
                       <StatusBadge status={estimate.status} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-gray-900 truncate">
+                          <span className="font-mono text-[11px] text-ink-300 tracking-[0.04em] truncate">
                             {estimate.estimateNumber}
                           </span>
-                          <span className="text-sm text-gray-500 truncate hidden sm:inline">
+                          <span className="text-sm font-medium text-ink-900 truncate hidden sm:inline">
                             {estimate.title}
                           </span>
                           {estimate.isApproved && (
@@ -194,16 +194,16 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
                           )}
                         </div>
                         <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-gray-400 truncate">
+                          <span className="text-xs text-ink-400 truncate">
                             {estimate.project.client.company}
                           </span>
-                          <span className="text-gray-300">·</span>
-                          <span className="text-xs text-gray-400 truncate">
+                          <span className="text-ink-300">·</span>
+                          <span className="font-mono text-[11px] text-ink-300 tracking-[0.04em] truncate">
                             {estimate.project.projectNumber}
                           </span>
                           {isSentLong && (
                             <>
-                              <span className="text-gray-300">·</span>
+                              <span className="text-ink-300">·</span>
                               <span className="text-xs text-amber-600 font-medium">Needs follow-up</span>
                             </>
                           )}
@@ -213,13 +213,13 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
 
                     {/* Right: amount + time + arrow */}
                     <div className="flex items-center gap-4 shrink-0">
-                      <span className="text-sm font-semibold tabular-nums text-gray-900">
+                      <span className="text-sm font-semibold tabular-nums text-ink-900">
                         {sym}{total.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                       </span>
-                      <span className="text-xs text-gray-400 w-16 text-right">
+                      <span className="text-xs text-ink-400 w-16 text-right">
                         {timeAgo(estimate.updatedAt)}
                       </span>
-                      <ArrowRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-gray-500 transition-colors" />
+                      <ArrowRight className="h-3.5 w-3.5 text-ink-300 group-hover:text-ink-500 transition-colors" />
                     </div>
                   </div>
                 </Link>
