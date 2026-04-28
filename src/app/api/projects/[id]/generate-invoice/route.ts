@@ -14,6 +14,10 @@ export async function POST(
   const authResult = await requireAuth(["ADMIN", "MANAGER"]);
   if (isAuthError(authResult)) return authResult;
 
+  console.warn(
+    "[deprecated] POST /api/projects/[id]/generate-invoice — use POST /api/projects/[id]/invoices with mode 'SLICE' instead",
+  );
+
   const { id } = await params;
   const body = await request.json();
   const { estimateId } = body as { estimateId?: string };

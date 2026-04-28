@@ -134,7 +134,7 @@ export async function POST(
 
     const subtotal = invoiceLines.reduce((s, l) => s + l.total, 0);
     const taxRate = taxRateOverride ?? estimate.taxRate;
-    const discount = discountOverride ?? 0;
+    const discount = discountOverride ?? estimate.discount;
     const taxable = subtotal - discount;
     const tax = taxable * (taxRate / 100);
     const total = taxable + tax;
