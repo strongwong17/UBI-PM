@@ -352,6 +352,14 @@ export default async function ProjectHubPage({ params }: PageProps) {
     />
   );
 
+  // Default tab by lifecycle stage
+  const stage1 = ["NEW", "BRIEFED", "ESTIMATING", "APPROVED"].includes(project.status);
+  const stage3 = project.status === "DELIVERED";
+  const defaultTab =
+    stage3 ? "completion"
+    : stage1 ? "estimates"
+    : "overview";
+
   const completionTab = (
     <DeliverySignoffTab
       projectId={project.id}
@@ -453,7 +461,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
 
       {/* Tabs */}
       <ProjectHubTabs
-        defaultTab="overview"
+        defaultTab={defaultTab}
         tabs={[
           { value: "overview", label: "Overview", content: overviewTab },
           { value: "estimates", label: `Estimates (${project.estimates.length})`, content: estimatesTab },
