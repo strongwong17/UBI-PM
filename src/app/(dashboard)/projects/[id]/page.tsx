@@ -18,6 +18,7 @@ import { EstimateCardActions } from "@/components/estimates/estimate-card-action
 
 import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { ClientSignalsPanel } from "@/components/projects/client-signals-panel";
+import { UnderDevButton } from "@/components/redesign/under-dev-button";
 
 import { Building2, User, Calendar, Plus } from "lucide-react";
 
@@ -352,6 +353,38 @@ export default async function ProjectHubPage({ params }: PageProps) {
     />
   );
 
+  const executionTab = (
+    <div className="space-y-4">
+      {/* Future: Deliverable & team management — gray placeholder */}
+      <div
+        className="rounded-2xl p-5 mt-4"
+        style={{
+          background: "linear-gradient(180deg, #F4F1E8 0%, #EFEAE0 100%)",
+          border: "1px dashed var(--color-hairline-strong)",
+        }}
+      >
+        <div className="flex items-center justify-between mb-3.5">
+          <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase m-0">
+            // DELIVERABLES & TEAM TRACKING
+          </p>
+          <span
+            className="font-mono text-[9px] font-bold text-white px-2 py-0.5 rounded-full tracking-[0.06em] uppercase"
+            style={{ background: "var(--color-ink-300)" }}
+          >
+            UNDER DEVELOPMENT
+          </span>
+        </div>
+        <p className="text-[12px] text-ink-500 mb-3 max-w-prose">
+          Auto-generate deliverables from the approved estimate&apos;s line items. Assign internal team
+          members or external vendors to each deliverable. Track per-line completion through
+          Recruitment → Fieldwork → Analysis → Reporting. The summary feeds into Confirm Actuals on
+          Stage 3.
+        </p>
+        <UnderDevButton label="Generate deliverables from estimate" />
+      </div>
+    </div>
+  );
+
   // Default tab by lifecycle stage
   const stage1 = ["NEW", "BRIEFED", "ESTIMATING", "APPROVED"].includes(project.status);
   const stage3 = project.status === "DELIVERED";
@@ -466,6 +499,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
           { value: "overview", label: "Overview", content: overviewTab },
           { value: "estimates", label: `Estimates (${project.estimates.length})`, content: estimatesTab },
           { value: "invoice", label: `Invoices (${project.invoices.length})`, content: invoiceTab },
+          { value: "execution", label: "Execution", content: executionTab },
           { value: "completion", label: "Delivery & Sign-off", content: completionTab },
         ]}
       />
