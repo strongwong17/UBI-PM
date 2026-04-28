@@ -1,7 +1,7 @@
 // src/components/invoices/new-invoice-sheet.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Loader2 } from "lucide-react";
+import { currencySymbol } from "@/lib/currency";
 
 export interface SheetEstimateLine {
   id: string;
@@ -55,7 +56,7 @@ export function NewInvoiceSheet({ projectId, estimates, open, onOpenChange }: Pr
   const router = useRouter();
   const [estimateId, setEstimateId] = useState(estimates[0]?.id ?? "");
   const estimate = estimates.find((e) => e.id === estimateId);
-  const sym = estimate?.currency === "CNY" ? "¥" : "$";
+  const sym = estimate ? currencySymbol(estimate.currency) : "$";
 
   const initialQty: Record<string, number> = useMemo(() => {
     const out: Record<string, number> = {};
@@ -71,7 +72,7 @@ export function NewInvoiceSheet({ projectId, estimates, open, onOpenChange }: Pr
   const [creating, setCreating] = useState(false);
 
   // Reset on estimate change
-  useMemo(() => setBillQty(initialQty), [initialQty]);
+  useEffect(() => setBillQty(initialQty), [initialQty]);
 
   if (!estimate) return null;
 
