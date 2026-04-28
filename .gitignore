@@ -44,3 +44,6 @@ next-env.d.ts
 
 # superpowers brainstorm scratch directory
 .superpowers/
+
+# Prisma data-migration backups (audit artifacts; one-time scripts)
+prisma/backups/
