@@ -92,12 +92,15 @@ export async function PATCH(
       });
     }
 
-    // If both completed, set project status to COMPLETED
+    // If both signed off, set project status to DELIVERED
     if (completion.internalCompleted && completion.clientAcknowledged) {
-      await prisma.project.update({
-        where: { id },
-        data: { status: "COMPLETED" },
-      });
+      const proj = await prisma.project.findUnique({ where: { id }, select: { status: true } });
+      if (proj && proj.status !== "CLOSED") {
+        await prisma.project.update({
+          where: { id },
+          data: { status: "DELIVERED" },
+        });
+      }
     }
 
     await logActivity({
