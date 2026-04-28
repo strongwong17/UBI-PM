@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import Link from "next/link";
+import { currencySymbol } from "@/lib/currency";
 
 export interface DeliveryLine {
   id: string;
@@ -327,29 +328,32 @@ export function DeliverySignoffTab({ projectId, projectStatus, estimates, initia
       </Card>
 
       {/* Section C — What's next */}
-      {billingSummary && (
-        <Card className="border-green-200 bg-green-50/40">
-          <CardContent className="py-4 flex items-center justify-between gap-4 flex-wrap">
-            <div className="text-sm">
-              {hasInvoices ? (
-                <>
-                  Estimated <strong>{billingSummary.primaryCurrency === "CNY" ? "¥" : "$"}{billingSummary.estimated.toLocaleString()}</strong>
-                  {" / "}
-                  Invoiced <strong>{billingSummary.primaryCurrency === "CNY" ? "¥" : "$"}{billingSummary.invoiced.toLocaleString()}</strong>
-                  {billingSummary.invoiced < billingSummary.estimated && (
-                    <> · <span className="text-amber-700">Remaining {billingSummary.primaryCurrency === "CNY" ? "¥" : "$"}{(billingSummary.estimated - billingSummary.invoiced).toLocaleString()}</span></>
-                  )}
-                </>
-              ) : (
-                <>✓ Generate the final invoice in the Invoices tab.</>
-              )}
-            </div>
-            <Button asChild variant="outline" size="sm">
-              <Link href={`/projects/${projectId}?tab=invoice`}>Go to Invoices</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      {billingSummary && (() => {
+        const sym = currencySymbol(billingSummary.primaryCurrency);
+        return (
+          <Card className="border-green-200 bg-green-50/40">
+            <CardContent className="py-4 flex items-center justify-between gap-4 flex-wrap">
+              <div className="text-sm">
+                {hasInvoices ? (
+                  <>
+                    Estimated <strong>{sym}{billingSummary.estimated.toLocaleString()}</strong>
+                    {" / "}
+                    Invoiced <strong>{sym}{billingSummary.invoiced.toLocaleString()}</strong>
+                    {billingSummary.invoiced < billingSummary.estimated && (
+                      <> · <span className="text-amber-700">Remaining {sym}{(billingSummary.estimated - billingSummary.invoiced).toLocaleString()}</span></>
+                    )}
+                  </>
+                ) : (
+                  <>✓ Generate the final invoice in the Invoices tab.</>
+                )}
+              </div>
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/projects/${projectId}?tab=invoice`}>Go to Invoices</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }
