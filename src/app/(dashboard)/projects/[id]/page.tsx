@@ -324,19 +324,19 @@ export default async function ProjectHubPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* CTA: Proceed to completion when there are approved estimates without invoices */}
+      {/* CTA: when approved estimates have uninvoiced lines, point to the Delivery & Sign-off tab */}
       {hasUninvoicedApproved && (
         <Card className="border-green-300 bg-green-50/50">
           <CardContent className="py-5 flex items-center justify-between gap-4">
             <div>
-              <p className="font-medium text-green-900">Estimate approved — ready to complete project</p>
+              <p className="font-medium text-green-900">Estimate approved — ready for delivery</p>
               <p className="text-sm text-green-700 mt-0.5">
-                Review deliverables, adjust quantities, and generate the final invoice.
+                Record actuals and confirm sign-off. Invoices are created on the Invoices tab.
               </p>
             </div>
             <Button asChild className="bg-green-600 hover:bg-green-700 shrink-0">
               <Link href={`/projects/${project.id}?tab=completion`}>
-                Proceed to Completion
+                Open Delivery & Sign-off
               </Link>
             </Button>
           </CardContent>
