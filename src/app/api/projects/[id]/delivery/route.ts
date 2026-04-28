@@ -25,12 +25,16 @@ export async function PATCH(
 
     // Verify all line IDs belong to estimates of this project
     const ids = lines.map((l) => l.estimateLineItemId);
+    const uniqueIds = new Set(ids);
+    if (uniqueIds.size !== ids.length) {
+      return NextResponse.json({ error: "Duplicate estimateLineItemId in lines" }, { status: 400 });
+    }
     const found = await prisma.estimateLineItem.findMany({
       where: { id: { in: ids } },
       select: { id: true, phase: { select: { estimate: { select: { projectId: true } } } } },
     });
     const mismatched = found.filter((f) => f.phase.estimate.projectId !== id);
-    if (mismatched.length > 0 || found.length !== lines.length) {
+    if (mismatched.length > 0 || found.length !== uniqueIds.size) {
       return NextResponse.json({ error: "Some line items do not belong to this project" }, { status: 400 });
     }
 
