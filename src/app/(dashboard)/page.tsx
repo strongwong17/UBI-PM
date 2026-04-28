@@ -38,12 +38,25 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     orderBy: { updatedAt: "desc" },
   });
 
-  const inquiryProjects = allProjects.filter((p) =>
+  const allProjectsWithTotals = allProjects.map((p) => ({
+    ...p,
+    estimates: p.estimates.map((e) => {
+      const subtotal = e.phases.reduce(
+        (s, ph) => s + ph.lineItems.reduce((ss, li) => ss + li.quantity * li.unitPrice, 0),
+        0,
+      );
+      const taxable = subtotal - (e.discount ?? 0);
+      const tax = taxable * ((e.taxRate ?? 0) / 100);
+      return { ...e, total: taxable + tax };
+    }),
+  }));
+
+  const inquiryProjects = allProjectsWithTotals.filter((p) =>
     ["NEW", "BRIEFED", "ESTIMATING", "APPROVED"].includes(p.status),
   );
-  const inProgressProjects = allProjects.filter((p) => p.status === "IN_PROGRESS");
-  const completionProjects = allProjects.filter((p) => p.status === "DELIVERED");
-  const archiveProjects = allProjects.filter((p) => p.status === "CLOSED");
+  const inProgressProjects = allProjectsWithTotals.filter((p) => p.status === "IN_PROGRESS");
+  const completionProjects = allProjectsWithTotals.filter((p) => p.status === "DELIVERED");
+  const archiveProjects = allProjectsWithTotals.filter((p) => p.status === "CLOSED");
 
   const staleCutoff = new Date(Date.now() - STALE_DAYS * 86_400_000);
   const inquiryStale = inquiryProjects.filter(
@@ -100,8 +113,8 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
       {active === "inquiry" && (
         <HubInquiry
-          projects={inquiryProjects as any[]}
-          staleProjects={inquiryStale as any[]}
+          projects={inquiryProjects}
+          staleProjects={inquiryStale}
         />
       )}
       {active === "in-progress" && <HubInProgress projects={inProgressProjects} />}
