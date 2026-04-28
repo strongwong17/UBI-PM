@@ -1,6 +1,8 @@
 // src/components/invoices/billing-meter.tsx
 "use client";
 
+import { Button } from "@/components/ui/button";
+import { currencySymbol } from "@/lib/currency";
 import type { BillingState } from "@/lib/billing";
 
 interface Props {
@@ -10,8 +12,7 @@ interface Props {
 }
 
 function fmt(n: number, currency: string) {
-  const sym = currency === "CNY" ? "¥" : "$";
-  return `${sym}${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+  return `${currencySymbol(currency)}${n.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
 export function BillingMeter({ state, showNewInvoiceButton, onNewInvoice }: Props) {
@@ -49,13 +50,9 @@ export function BillingMeter({ state, showNewInvoiceButton, onNewInvoice }: Prop
           <div className="text-base font-semibold text-gray-900 tabular-nums">{fmt(paid, primaryCurrency)}</div>
         </div>
         {showNewInvoiceButton && (
-          <button
-            type="button"
-            onClick={onNewInvoice}
-            className="ml-auto rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-700"
-          >
+          <Button type="button" size="sm" className="ml-auto" onClick={onNewInvoice}>
             + New Invoice
-          </button>
+          </Button>
         )}
       </div>
       {otherCurrencyTotals.length > 0 && (
