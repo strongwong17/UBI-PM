@@ -38,19 +38,16 @@ export async function PATCH(
       });
 
       if (nowApproved) {
-        // Set project status to IN_PROGRESS + start date (only if not already past that stage)
+        // Set project status to APPROVED (only if not already past that stage)
         const project = await tx.project.findUnique({
           where: { id: estimate.projectId },
-          select: { startDate: true, status: true },
+          select: { status: true },
         });
-        const noForwardJump = ["COMPLETED", "INVOICED", "PAID", "CLOSED"];
+        const noForwardJump = ["IN_PROGRESS", "DELIVERED", "CLOSED", "COMPLETED", "INVOICED", "PAID"];
         if (project && !noForwardJump.includes(project.status)) {
           await tx.project.update({
             where: { id: estimate.projectId },
-            data: {
-              status: "IN_PROGRESS",
-              startDate: project.startDate ?? new Date(),
-            },
+            data: { status: "APPROVED" },
           });
         }
       } else {
@@ -66,7 +63,7 @@ export async function PATCH(
         if (!otherApproved) {
           await tx.project.update({
             where: { id: estimate.projectId },
-            data: { status: "ESTIMATE_SENT" },
+            data: { status: "ESTIMATING" },
           });
         }
       }
