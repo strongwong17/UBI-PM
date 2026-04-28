@@ -1,129 +1,51 @@
+// src/app/api/projects/[id]/generate-invoice/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
-import { logActivity } from "@/lib/activity-log";
-import { generateInvoiceNumber } from "@/lib/generate-number";
 
+/**
+ * @deprecated Use POST /api/projects/[id]/invoices with mode: "SLICE" instead.
+ * This wrapper exists for one release cycle to avoid breaking older callers.
+ */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
-    if (isAuthError(authResult)) return authResult;
-    const { userId } = authResult;
+  const authResult = await requireAuth(["ADMIN", "MANAGER"]);
+  if (isAuthError(authResult)) return authResult;
 
-    const { id } = await params;
-    const body = await request.json();
-    const { estimateId } = body;
+  const { id } = await params;
+  const body = await request.json();
+  const { estimateId } = body as { estimateId?: string };
 
-    if (!estimateId) {
-      return NextResponse.json({ error: "estimateId is required" }, { status: 400 });
-    }
+  if (!estimateId) return NextResponse.json({ error: "estimateId required" }, { status: 400 });
 
-    // Check if this estimate already has an invoice
-    const existingInvoice = await prisma.invoice.findFirst({
-      where: { estimateId, deletedAt: null },
-    });
-
-    if (existingInvoice) {
-      return NextResponse.json(
-        { error: "An invoice already exists for this estimate" },
-        { status: 409 }
-      );
-    }
-
-    // Fetch project for naming
-    const project = await prisma.project.findUnique({
-      where: { id },
-      include: { client: { select: { company: true, shortName: true } } },
-    });
-
-    // Fetch the specific approved estimate
-    const estimate = await prisma.estimate.findUnique({
-      where: { id: estimateId },
-      include: {
-        phases: {
-          include: { lineItems: { orderBy: { sortOrder: "asc" } } },
-          orderBy: { sortOrder: "asc" },
-        },
+  const estimate = await prisma.estimate.findUnique({
+    where: { id: estimateId },
+    include: {
+      phases: {
+        include: { lineItems: { orderBy: { sortOrder: "asc" } } },
+        orderBy: { sortOrder: "asc" },
       },
-    });
-
-    if (!estimate || estimate.projectId !== id || !project) {
-      return NextResponse.json({ error: "Estimate not found for this project" }, { status: 404 });
-    }
-
-    if (!estimate.isApproved) {
-      return NextResponse.json(
-        { error: "Estimate must be approved before generating an invoice" },
-        { status: 400 }
-      );
-    }
-
-    // Build line items from estimate phases/lineItems
-    const lineItems: { description: string; quantity: number; unitPrice: number; total: number; sortOrder: number }[] = [];
-    let sortOrder = 0;
-    for (const phase of estimate.phases) {
-      for (const item of phase.lineItems) {
-        lineItems.push({
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          total: item.quantity * item.unitPrice,
-          sortOrder: sortOrder++,
-        });
-      }
-    }
-
-    const subtotal = lineItems.reduce((sum, li) => sum + li.total, 0);
-    const taxRate = estimate.taxRate;
-    const discount = estimate.discount;
-    const taxable = subtotal - discount;
-    const tax = taxable * (taxRate / 100);
-    const total = taxable + tax;
-
-    const invoiceNumber = await generateInvoiceNumber(project.client.shortName || project.client.company, project.title);
-
-    const invoice = await prisma.$transaction(async (tx) => {
-      const inv = await tx.invoice.create({
-        data: {
-          invoiceNumber,
-          status: "DRAFT",
-          currency: estimate.currency,
-          subtotal,
-          taxRate,
-          tax,
-          discount,
-          total,
-          projectId: id,
-          estimateId: estimate.id,
-          lineItems: { create: lineItems },
-        },
-        include: {
-          project: { select: { id: true, title: true } },
-          lineItems: { orderBy: { sortOrder: "asc" } },
-        },
-      });
-
-      // Don't auto-set INVOICED here — that happens when invoice status is set to SENT
-
-      return inv;
-    });
-
-    await logActivity({
-      action: "GENERATE",
-      entityType: "INVOICE",
-      entityId: invoice.id,
-      entityLabel: invoice.invoiceNumber,
-      description: `Generated invoice ${invoice.invoiceNumber} from estimate ${estimate.estimateNumber}`,
-      userId,
-      projectId: id,
-    });
-
-    return NextResponse.json(invoice, { status: 201 });
-  } catch (error) {
-    console.error("Failed to generate invoice:", error);
-    return NextResponse.json({ error: "Failed to generate invoice" }, { status: 500 });
+    },
+  });
+  if (!estimate || estimate.projectId !== id) {
+    return NextResponse.json({ error: "Estimate not found for this project" }, { status: 404 });
   }
+
+  const lines = estimate.phases.flatMap((p) =>
+    p.lineItems.map((l) => ({ estimateLineItemId: l.id, quantity: l.quantity }))
+  );
+
+  // Forward to the new endpoint
+  const url = new URL(request.url);
+  url.pathname = `/api/projects/${id}/invoices`;
+  const forward = new Request(url.toString(), {
+    method: "POST",
+    headers: request.headers,
+    body: JSON.stringify({ estimateId, mode: "SLICE", lines }),
+  });
+  // Call the handler directly to avoid an extra HTTP hop
+  const { POST: createInvoice } = await import("../invoices/route");
+  return createInvoice(forward as NextRequest, { params: Promise.resolve({ id }) });
 }
