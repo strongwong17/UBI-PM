@@ -81,7 +81,7 @@ export default async function InvoicesPage({ searchParams }: PageProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-[-0.025em] text-ink-900">Invoices</h1>
-          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">// {invoices.length} {statusFilter ? statusFilter.toLowerCase() : "total"}</p>
+          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">{"// "}{invoices.length} {statusFilter ? statusFilter.toLowerCase() : "total"}</p>
         </div>
         {outstandingTotal > 0 && (
           <div className="text-right">

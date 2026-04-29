@@ -21,7 +21,9 @@ function pad(n: number) { return n.toString().padStart(2, "0"); }
 
 export function HubArchive({ projects }: Props) {
   const allTimeRevenue = projects.flatMap((p) => p.estimates.filter((e) => e.isApproved)).reduce((s, e) => s + e.total, 0);
+  // eslint-disable-next-line react-hooks/purity
   const last30 = projects.filter((p) => Date.now() - p.updatedAt.getTime() < 30 * 86_400_000);
+  // eslint-disable-next-line react-hooks/purity
   const last90 = projects.filter((p) => Date.now() - p.updatedAt.getTime() < 90 * 86_400_000);
   const avgProject = projects.length ? allTimeRevenue / projects.length : 0;
 
@@ -56,7 +58,7 @@ export function HubArchive({ projects }: Props) {
         tagColor="var(--color-s-closed-fg)"
         context={
           <>
-            // <strong className="text-ink-900 font-bold">{projects.length} ARCHIVED</strong> · paid &amp; closed · browse to learn
+            {"// "}<strong className="text-ink-900 font-bold">{projects.length} ARCHIVED</strong> · paid &amp; closed · browse to learn
           </>
         }
       >
@@ -87,6 +89,7 @@ export function HubArchive({ projects }: Props) {
           cells={[
             { label: "STATUS", value: "ARCHIVE" },
             { label: "UNIQUE.CLIENTS", value: byClient.size.toString() },
+            // eslint-disable-next-line react-hooks/purity
             { label: "MOST.RECENT", value: projects[0] ? `${Math.floor((Date.now() - projects[0].updatedAt.getTime()) / 86_400_000)}d ago` : "—" },
             { label: "TOP.CLIENT", value: topClients[0]?.name ?? "—" },
           ]}
@@ -115,7 +118,7 @@ export function HubArchive({ projects }: Props) {
               <div key={y} className="mb-6">
                 <div className="flex items-center gap-3 mb-3 px-1">
                   <span className="font-mono text-lg font-bold text-ink-700 tracking-[-0.01em]">{y}</span>
-                  <span className="font-mono text-[11px] text-ink-400 tracking-[0.02em]">// {yearProjects.length} archived · {fmtUSD(yearRevenue)}</span>
+                  <span className="font-mono text-[11px] text-ink-400 tracking-[0.02em]">{"// "}{yearProjects.length} archived · {fmtUSD(yearRevenue)}</span>
                   <span className="flex-1 h-px bg-hairline" />
                 </div>
                 <div className="bg-card-rd border border-hairline rounded-xl shadow-sm overflow-hidden">
@@ -137,7 +140,7 @@ export function HubArchive({ projects }: Props) {
                           </div>
                         </span>
                         <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full font-mono text-[10px] font-bold tracking-[0.02em]" style={{ border: "1px dashed var(--color-ink-300)", color: "var(--color-ink-400)" }}>
-                          // no feedback yet
+                          {"// no feedback yet"}
                         </span>
                         <span className="text-right">
                           <div className="text-[13px] font-semibold text-ink-900 rd-tabular tracking-[-0.01em]">{e ? fmtUSD(e.total) : "—"}</div>
@@ -167,7 +170,7 @@ export function HubArchive({ projects }: Props) {
             }}
           >
             <div className="flex items-center justify-between mb-3.5">
-              <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase m-0">// ARCHIVE-STAGE TOOLS</p>
+              <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase m-0">{"// ARCHIVE-STAGE TOOLS"}</p>
               <span className="font-mono text-[9px] font-bold text-white px-2 py-0.5 rounded-full tracking-[0.06em] uppercase" style={{ background: "var(--color-ink-300)" }}>UNDER DEVELOPMENT</span>
             </div>
             <div className="grid grid-cols-3 gap-2.5">
@@ -185,7 +188,7 @@ export function HubArchive({ projects }: Props) {
           <div className="bg-card-rd border border-hairline rounded-2xl p-4.5 mb-4 shadow-sm">
             <p className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500 m-0 mb-3.5 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--color-s-closed)" }} />
-              // HUB STATS · LIVE
+              {"// HUB STATS · LIVE"}
             </p>
             {[
               ["All-time revenue", fmtUSD(allTimeRevenue)],
@@ -203,7 +206,7 @@ export function HubArchive({ projects }: Props) {
           <div className="bg-card-rd border border-hairline rounded-2xl p-4.5 mb-4 shadow-sm">
             <p className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500 m-0 mb-3.5 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--color-accent)" }} />
-              // TOP CLIENTS · ALL-TIME
+              {"// TOP CLIENTS · ALL-TIME"}
             </p>
             {topClients.map((c, i) => (
               <div key={c.name} className="grid items-center gap-2.5 py-2 border-b border-dashed border-hairline last:border-b-0 first:pt-0 last:pb-0 text-xs" style={{ gridTemplateColumns: "24px 1fr auto auto" }}>

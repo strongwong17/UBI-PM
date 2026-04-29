@@ -80,7 +80,7 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-[-0.025em] text-ink-900">Projects</h1>
-          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">// {projects.length} {view === "archived" ? "archived" : "active"}</p>
+          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">{"// "}{projects.length} {view === "archived" ? "archived" : "active"}</p>
         </div>
         <Button asChild size="sm">
           <Link href="/projects/new">

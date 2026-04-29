@@ -37,14 +37,16 @@ export function HubInProgress({ projects }: Props) {
   const oldest = projects.reduce(
     (max, p) =>
       p.startDate
-        ? Math.max(max, Math.floor((Date.now() - p.startDate.getTime()) / 86_400_000))
+        ? // eslint-disable-next-line react-hooks/purity
+          Math.max(max, Math.floor((Date.now() - p.startDate.getTime()) / 86_400_000))
         : max,
     0,
   );
   const newest = projects.reduce(
     (min, p) =>
       p.startDate
-        ? Math.min(min, Math.floor((Date.now() - p.startDate.getTime()) / 86_400_000))
+        ? // eslint-disable-next-line react-hooks/purity
+          Math.min(min, Math.floor((Date.now() - p.startDate.getTime()) / 86_400_000))
         : min,
     Number.POSITIVE_INFINITY,
   );
@@ -57,7 +59,7 @@ export function HubInProgress({ projects }: Props) {
         tagColor="var(--color-s-in-progress-fg)"
         context={
           <>
-            // all <strong className="text-ink-900 font-bold">{projects.length} PROJECTS</strong> below are actively being executed
+            {"// all "}<strong className="text-ink-900 font-bold">{projects.length} PROJECTS</strong> below are actively being executed
           </>
         }
       >
@@ -98,7 +100,7 @@ export function HubInProgress({ projects }: Props) {
             }}
           >
             <div className="flex items-center justify-between mb-3.5">
-              <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase m-0">// IN-PROGRESS TOOLS</p>
+              <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase m-0">{"// IN-PROGRESS TOOLS"}</p>
               <span
                 className="font-mono text-[9px] font-bold text-white px-2 py-0.5 rounded-full tracking-[0.06em] uppercase"
                 style={{ background: "var(--color-ink-300)" }}
@@ -121,7 +123,7 @@ export function HubInProgress({ projects }: Props) {
           <div className="bg-card-rd border border-hairline rounded-2xl p-4.5 mb-4 shadow-sm">
             <p className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500 m-0 mb-3.5 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--color-s-in-progress)" }} />
-              // HUB STATS · LIVE
+              {"// HUB STATS · LIVE"}
             </p>
             {[
               ["Active value", fmtUSD(activeValue)],
@@ -168,13 +170,14 @@ function PhaseGroup({
           className="rounded-xl p-4.5 text-center font-mono text-[11px] text-ink-400 tracking-[0.04em]"
           style={{ background: "#FAFAF6", border: "1px dashed var(--color-hairline-strong)" }}
         >
-          // STDBY · NO PROJECTS IN {phase}
+          {"// STDBY · NO PROJECTS IN "}{phase}
         </div>
       ) : (
         <div className="bg-card-rd border border-hairline rounded-xl shadow-sm overflow-hidden">
           {projects.map((p) => {
             const days = p.startDate
-              ? Math.floor((Date.now() - p.startDate.getTime()) / 86_400_000)
+              ? // eslint-disable-next-line react-hooks/purity
+                Math.floor((Date.now() - p.startDate.getTime()) / 86_400_000)
               : null;
             const e = p.estimates.find((x) => x.isApproved);
             return (

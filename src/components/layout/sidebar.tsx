@@ -48,7 +48,7 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
 
       <div className="mb-5.5">
         <div className="font-mono text-[10px] font-semibold tracking-[0.06em] uppercase text-ink-300 px-2.5 pb-2">
-          // Main
+          {"// Main"}
         </div>
         {visibleMain.map((item) => (
           <Link
@@ -77,7 +77,7 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
       {visibleAdmin.length > 0 ? (
         <div className="mb-5.5">
           <div className="font-mono text-[10px] font-semibold tracking-[0.06em] uppercase text-ink-300 px-2.5 pb-2">
-            // Admin
+            {"// Admin"}
           </div>
           {visibleAdmin.map((item) => (
             <Link
@@ -117,7 +117,7 @@ export function Sidebar({ userRole, userName }: SidebarProps) {
               {userName}
             </div>
             <div className="font-mono text-[10px] text-ink-400 tracking-[0.04em] uppercase">
-              // {userRole.toLowerCase()}
+              {"// "}{userRole.toLowerCase()}
             </div>
           </div>
         </div>

@@ -79,7 +79,7 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-[-0.025em] text-ink-900">Estimates</h1>
-          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">// {estimates.length} {statusFilter ? statusFilter.toLowerCase() : "total"}</p>
+          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">{"// "}{estimates.length} {statusFilter ? statusFilter.toLowerCase() : "total"}</p>
         </div>
         <Button asChild size="sm">
           <Link href="/estimates/new">
@@ -162,6 +162,7 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
               const total = calcTotal(estimate);
               const sym = currencySymbol(estimate.currency);
               const isSentLong = estimate.status === "SENT" &&
+                // eslint-disable-next-line react-hooks/purity
                 (Date.now() - new Date(estimate.updatedAt).getTime()) > 3 * 86400000;
 
               return (

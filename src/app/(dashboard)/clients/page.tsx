@@ -24,7 +24,7 @@ export default async function ClientsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-[-0.025em] text-ink-900">Clients</h1>
-          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">// {clients.length} total</p>
+          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">{"// "}{clients.length} total</p>
         </div>
         <Button asChild size="sm">
           <Link href="/clients/new">

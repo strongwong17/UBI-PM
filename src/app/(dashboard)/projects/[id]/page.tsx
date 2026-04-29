@@ -365,7 +365,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
       >
         <div className="flex items-center justify-between mb-3.5">
           <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase m-0">
-            // DELIVERABLES & TEAM TRACKING
+            {"// DELIVERABLES & TEAM TRACKING"}
           </p>
           <span
             className="font-mono text-[9px] font-bold text-white px-2 py-0.5 rounded-full tracking-[0.06em] uppercase"

@@ -58,6 +58,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const completionProjects = allProjectsWithTotals.filter((p) => p.status === "DELIVERED");
   const archiveProjects = allProjectsWithTotals.filter((p) => p.status === "CLOSED");
 
+  // eslint-disable-next-line react-hooks/purity
   const staleCutoff = new Date(Date.now() - STALE_DAYS * 86_400_000);
   const inquiryStale = inquiryProjects.filter(
     (p) => p.status === "ESTIMATING" && p.updatedAt < staleCutoff,
@@ -104,7 +105,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             Hi, <span style={{ color: "var(--color-accent-rd)" }}>{userName}</span>
           </h1>
           <p className="font-mono text-[11px] text-ink-500 tracking-[0.02em]">
-            // {new Date().toISOString().slice(0, 19).replace("T", " · ")} · 4 hubs active
+            {"// "}{new Date().toISOString().slice(0, 19).replace("T", " · ")} · 4 hubs active
           </p>
         </div>
       </div>

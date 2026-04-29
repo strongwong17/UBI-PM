@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { Cockpit, Readout, StatusRow } from "@/components/redesign/cockpit";
 import { GrayToolCard } from "@/components/redesign/gray-tool-card";
-import { currencySymbol } from "@/lib/currency";
 
 interface InvoiceLite {
   id: string;
@@ -89,7 +88,7 @@ export function HubCompletion({ projects }: Props) {
         tagColor="var(--color-s-delivered-fg)"
         context={
           <>
-            // all <strong className="text-ink-900 font-bold">{projects.length} PROJECTS</strong> below have delivered work
+            {"// all "}<strong className="text-ink-900 font-bold">{projects.length} PROJECTS</strong> below have delivered work
           </>
         }
       >
@@ -136,7 +135,7 @@ export function HubCompletion({ projects }: Props) {
             }}
           >
             <div className="flex items-center justify-between mb-3.5">
-              <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase m-0">// COMPLETION-STAGE TOOLS</p>
+              <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase m-0">{"// COMPLETION-STAGE TOOLS"}</p>
               <span className="font-mono text-[9px] font-bold text-white px-2 py-0.5 rounded-full tracking-[0.06em] uppercase" style={{ background: "var(--color-ink-300)" }}>
                 UNDER DEVELOPMENT
               </span>
@@ -156,7 +155,7 @@ export function HubCompletion({ projects }: Props) {
           <div className="bg-card-rd border border-hairline rounded-2xl p-4.5 mb-4 shadow-sm">
             <p className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500 m-0 mb-3.5 flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--color-s-delivered)" }} />
-              // HUB STATS · LIVE
+              {"// HUB STATS · LIVE"}
             </p>
             {[
               ["Delivered value", fmtUSD(deliveredValue)],
@@ -198,7 +197,7 @@ function CompletionGroup({
       </p>
       {projects.length === 0 ? (
         <div className="rounded-xl p-4.5 text-center font-mono text-[11px] text-ink-400 tracking-[0.04em]" style={{ background: "#FAFAF6", border: "1px dashed var(--color-hairline-strong)" }}>
-          // STDBY
+          {"// STDBY"}
         </div>
       ) : (
         <div className="bg-card-rd border border-hairline rounded-xl shadow-sm overflow-hidden">
@@ -237,7 +236,7 @@ function VarianceChip({ variance: v }: { variance: ReturnType<typeof projectVari
   if (v.pending) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full font-mono text-[10px] font-bold tracking-[0.02em]" style={{ border: "1px dashed var(--color-ink-300)", color: "var(--color-ink-400)" }}>
-        // pending
+        {"// pending"}
       </span>
     );
   }

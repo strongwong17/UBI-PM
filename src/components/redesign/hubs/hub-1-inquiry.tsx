@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { Cockpit, Readout, StatusRow } from "@/components/redesign/cockpit";
 import { GrayToolCard } from "@/components/redesign/gray-tool-card";
-import { statusTokens } from "@/lib/redesign-tokens";
 import { currencySymbol } from "@/lib/currency";
 
 interface ProjectLite {
@@ -45,6 +44,7 @@ export function HubInquiry({ projects, staleProjects }: Props) {
     .reduce((sum, e) => sum + e.total, 0);
   const oldestStale = staleProjects.reduce(
     (max, p) =>
+      // eslint-disable-next-line react-hooks/purity
       Math.max(max, Math.floor((Date.now() - p.updatedAt.getTime()) / 86_400_000)),
     0,
   );
@@ -57,13 +57,13 @@ export function HubInquiry({ projects, staleProjects }: Props) {
         tagColor="var(--color-s-estimating-fg)"
         context={
           <>
-            // <strong className="text-ink-900 font-bold">{projects.length - drafts.length} ACTIVE</strong>
+            {"// "}<strong className="text-ink-900 font-bold">{projects.length - drafts.length} ACTIVE</strong>
             {drafts.length > 0 ? (
               <Link
                 href="/projects?status=NEW"
                 className="text-s-estimating-fg tracking-[0.04em] hover:underline"
               >
-                // {drafts.length} drafts pending brief →
+                {"// "}{drafts.length} drafts pending brief →
               </Link>
             ) : null}
           </>
@@ -193,7 +193,7 @@ export function HubInquiry({ projects, staleProjects }: Props) {
                 {staleProjects.length}
               </div>
               <p className="text-[11px] text-warn-fg/80 mb-3">
-                {fmtUSD(stalePipelineValue)} in pipeline · oldest {oldestStale}d · most won't convert
+                {fmtUSD(stalePipelineValue)} in pipeline · oldest {oldestStale}d · most won&apos;t convert
               </p>
               <button
                 type="button"

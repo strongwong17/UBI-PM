@@ -7,7 +7,7 @@ export function showUnderDevToast(featureName: string) {
   toast(
     <div>
       <div className="font-medium">{featureName} is under development.</div>
-      <div className="text-[11px] text-white/60 font-mono mt-0.5">// Coming in a future release</div>
+      <div className="text-[11px] text-white/60 font-mono mt-0.5">{"// Coming in a future release"}</div>
     </div>,
     {
       duration: 2400,
