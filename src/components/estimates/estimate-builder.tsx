@@ -3,12 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -16,8 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Loader2, GripVertical, ChevronDown, ChevronUp, Layers } from "lucide-react";
+import { Trash2, Loader2, ChevronDown, ChevronUp, Layers, Plus } from "lucide-react";
 import { TemplatePicker } from "./template-picker";
+import { currencySymbol } from "@/lib/currency";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -416,7 +413,10 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
   const total = subtotal + taxAmount - discount;
 
   const fmt = (n: number) =>
-    new Intl.NumberFormat("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+    new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+
+  const sym = currencySymbol(currency);
+  const totalLineCount = phases.reduce((s, p) => s + p.lineItems.length, 0);
 
   // ── Submit ─────────────────────────────────────────────────────────────────
 
@@ -511,20 +511,28 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
+  const monoLabel =
+    "block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500 mb-1.5";
+
+  const gridCols = "1fr 110px 90px 110px 110px 32px";
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic Info */}
+      {/* ─── ESTIMATE DETAILS ──────────────────────────────────────────── */}
       <div>
-        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-2">
+        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
           {"// ESTIMATE DETAILS"}
         </p>
-      <Card>
-        <CardHeader>
-          <CardTitle>Basic Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
+        <div
+          className="bg-card-rd rounded-[14px] p-5 space-y-4"
+          style={{
+            border: "1px solid var(--color-hairline)",
+            boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+            background: "var(--color-card-rd)",
+          }}
+        >
+          <div>
+            <label htmlFor="title" className={monoLabel}>{"// TITLE *"}</label>
             <Input
               id="title"
               value={title}
@@ -534,8 +542,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="label">Label / Sub-name</Label>
+          <div>
+            <label htmlFor="label" className={monoLabel}>{"// LABEL / SUB-NAME"}</label>
             <Input
               id="label"
               value={label}
@@ -544,8 +552,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="projectName">Project Name</Label>
+          <div>
+            <label htmlFor="projectName" className={monoLabel}>{"// PROJECT NAME"}</label>
             <Input
               id="projectName"
               value={projectName}
@@ -554,8 +562,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="address">Client Address</Label>
+          <div>
+            <label htmlFor="address" className={monoLabel}>{"// CLIENT ADDRESS"}</label>
             <Textarea
               id="address"
               value={address}
@@ -566,8 +574,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label>Pricing Model</Label>
+            <div>
+              <label className={monoLabel}>{"// PRICING MODEL"}</label>
               <Select value={pricingModel} onValueChange={setPricingModel}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -579,8 +587,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Currency</Label>
+            <div>
+              <label className={monoLabel}>{"// CURRENCY"}</label>
               <Select value={currency} onValueChange={setCurrency}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -590,8 +598,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="taxRate">Tax Rate (%)</Label>
+            <div>
+              <label htmlFor="taxRate" className={monoLabel}>{"// TAX RATE (%)"}</label>
               <Input
                 id="taxRate"
                 type="number"
@@ -603,8 +611,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="discount">Discount</Label>
+            <div>
+              <label htmlFor="discount" className={monoLabel}>{"// DISCOUNT"}</label>
               <Input
                 id="discount"
                 type="number"
@@ -616,8 +624,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="validUntil">Valid Until</Label>
+          <div>
+            <label htmlFor="validUntil" className={monoLabel}>{"// VALID UNTIL"}</label>
             <Input
               id="validUntil"
               type="date"
@@ -626,345 +634,397 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
               className="w-48"
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
       </div>
 
-      {/* Phases */}
+      {/* ─── PHASES & LINE ITEMS ───────────────────────────────────────── */}
       <div className="space-y-4">
-        <div>
-          <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-2">
-            {"// PHASES & LINE ITEMS"}
-          </p>
-        </div>
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-ink-900">Phases & Line Items</h2>
-          <div className="flex items-center gap-2">
-            <Button
+        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+          {"// PHASES & LINE ITEMS"}
+        </p>
+
+        {/* Action header */}
+        <div
+          className="flex items-start justify-between gap-4 flex-wrap pb-[18px]"
+          style={{ borderBottom: "1px solid var(--color-hairline)" }}
+        >
+          <div>
+            <h2 className="text-[20px] font-bold tracking-[-0.02em] m-0 mb-1 text-ink-900">
+              Phases &amp; line items
+            </h2>
+            <p className="text-[13px] text-ink-500 m-0 max-w-[520px]">
+              Group line items into execution phases. Total auto-calculates as you edit.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <button
               type="button"
-              variant="outline"
-              size="sm"
               onClick={() => setTemplatePickerOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+              style={{
+                background: "var(--color-canvas-cool)",
+                border: "1px solid var(--color-hairline-strong)",
+              }}
             >
-              <Layers className="h-4 w-4 mr-2" />
-              Use Template
-            </Button>
-            <Button type="button" variant="outline" size="sm" onClick={addPhase}>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Phase
-            </Button>
+              <Layers className="h-3.5 w-3.5" /> Use template
+            </button>
+            <button
+              type="button"
+              onClick={addPhase}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+              style={{
+                background: "var(--color-canvas-cool)",
+                border: "1px solid var(--color-hairline-strong)",
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" /> Add phase
+            </button>
           </div>
         </div>
 
         {phases.map((phase, phaseIdx) => (
-          <Card key={phase._key}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <GripVertical className="h-4 w-4 text-ink-200 shrink-0" />
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Input
-                    value={phase.name}
-                    onChange={(e) => updatePhase(phase._key, "name", e.target.value)}
-                    placeholder={`Phase ${phaseIdx + 1} name`}
-                    className="font-medium"
-                  />
-                  <Input
-                    value={phase.description}
-                    onChange={(e) => updatePhase(phase._key, "description", e.target.value)}
-                    placeholder="Description (optional)"
-                  />
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-sm font-medium font-mono text-ink-700 mr-2">
-                    <span className="text-ink-400 mr-1">{currency}</span>{fmt(phaseTotal(phase, phases))}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => togglePhase(phase._key)}
-                  >
-                    {phase.collapsed ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronUp className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removePhase(phase._key)}
-                    className="hover:text-warn-fg hover:bg-warn-bg"
-                    disabled={phases.length === 1}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+          <div
+            key={phase._key}
+            className="bg-card-rd rounded-[14px] overflow-hidden"
+            style={{
+              border: "1px solid var(--color-hairline)",
+              boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+              background: "var(--color-card-rd)",
+            }}
+          >
+            {/* Phase head */}
+            <div
+              className="px-5 py-3.5 flex items-center gap-3"
+              style={{
+                borderBottom: "1px solid var(--color-hairline)",
+                background: "linear-gradient(180deg, #FCFAF6 0%, #FFFFFF 100%)",
+              }}
+            >
+              <span
+                className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                style={{ background: "var(--color-ink-300)" }}
+              />
+              <span
+                className="font-mono text-[11px] font-bold tracking-[0.06em] uppercase text-ink-500 flex-shrink-0"
+              >
+                Phase {phaseIdx + 1}
+              </span>
+              <input
+                value={phase.name}
+                onChange={(e) => updatePhase(phase._key, "name", e.target.value)}
+                placeholder={`Phase ${phaseIdx + 1} name`}
+                className="font-semibold text-[14px] text-ink-900 bg-transparent border-0 outline-none focus:ring-0 placeholder:text-ink-300 px-0 flex-1 min-w-0"
+              />
+              <span
+                className="ml-auto font-mono text-[11px] tracking-[0.02em] flex-shrink-0"
+                style={{ color: "var(--color-ink-500)" }}
+              >
+                {phase.lineItems.length} {phase.lineItems.length === 1 ? "line" : "lines"} ·{" "}
+                {sym}
+                <strong className="text-ink-900 font-bold rd-tabular">
+                  {fmt(phaseTotal(phase, phases))}
+                </strong>
+              </span>
+              <button
+                type="button"
+                onClick={() => togglePhase(phase._key)}
+                className="p-1.5 rounded-md text-ink-400 hover:text-ink-700 hover:bg-[rgba(15,23,41,0.04)] flex-shrink-0"
+                aria-label={phase.collapsed ? "Expand phase" : "Collapse phase"}
+              >
+                {phase.collapsed ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronUp className="h-4 w-4" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => removePhase(phase._key)}
+                disabled={phases.length === 1}
+                className="p-1.5 rounded-md text-ink-400 hover:text-warn-fg hover:bg-warn-bg disabled:opacity-40 disabled:hover:text-ink-400 disabled:hover:bg-transparent flex-shrink-0"
+                aria-label="Delete phase"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Phase description (quieter, full-width) */}
+            {!phase.collapsed && (
+              <div
+                className="px-5 py-2"
+                style={{ borderBottom: "1px solid var(--color-hairline)" }}
+              >
+                <input
+                  value={phase.description}
+                  onChange={(e) => updatePhase(phase._key, "description", e.target.value)}
+                  placeholder="Phase description (optional)"
+                  className="w-full text-[12px] text-ink-500 italic bg-transparent border-0 outline-none focus:ring-0 placeholder:text-ink-300 px-0"
+                />
               </div>
-            </CardHeader>
+            )}
 
             {!phase.collapsed && (
-              <CardContent className="pt-0">
-                <Separator className="mb-4" />
-
-                {/* Column headers */}
-                <div className="grid grid-cols-12 gap-2 mb-2 px-1">
-                  <div className="col-span-4 text-xs font-medium text-ink-500 font-mono uppercase tracking-[0.04em]">DESCRIPTION</div>
-                  <div className="col-span-2 text-xs font-medium text-ink-500 font-mono uppercase tracking-[0.04em]">UNIT</div>
-                  <div className="col-span-2 text-xs font-medium text-ink-500 font-mono uppercase tracking-[0.04em]">QTY</div>
-                  <div className="col-span-2 text-xs font-medium text-ink-500 font-mono uppercase tracking-[0.04em]">UNIT PRICE</div>
-                  <div className="col-span-1 text-xs font-medium text-ink-500 font-mono uppercase tracking-[0.04em] text-right">TOTAL</div>
-                  <div className="col-span-1" />
-                </div>
-
-                <div className="space-y-2">
-                  {phase.lineItems.map((item) => {
-                    const isPercent = item.percentageBasis !== "";
-                    const computedTotal = resolveItemTotal(item, phases);
-
-                    return (
-                      <div key={item._key} className="space-y-1">
-                        <div className="grid grid-cols-12 gap-2 items-center">
-                          {/* Description */}
-                          <div className="col-span-4">
-                            <Input
-                              value={item.description}
-                              onChange={(e) =>
-                                updateLineItem(phase._key, item._key, "description", e.target.value)
-                              }
-                              placeholder="Line item description"
-                              className="text-sm"
-                            />
-                          </div>
-
-                          {/* Unit Select — always shown; "% of..." enables percentage mode */}
-                          <div className="col-span-2">
-                            <Select
-                              value={isPercent ? "% of..." : item.unit}
-                              onValueChange={(v) => {
-                                if (v === "% of...") {
-                                  enablePercentageMode(phase._key, item._key);
-                                } else {
-                                  disablePercentageMode(phase._key, item._key);
-                                  updateLineItem(phase._key, item._key, "unit", v);
-                                }
-                              }}
-                            >
-                              <SelectTrigger className="text-sm">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="hours">hours</SelectItem>
-                                <SelectItem value="days">days</SelectItem>
-                                <SelectItem value="sessions">sessions</SelectItem>
-                                <SelectItem value="pieces">pieces</SelectItem>
-                                <SelectItem value="participants">participants</SelectItem>
-                                <SelectItem value="units">units</SelectItem>
-                                <SelectItem value="lump sum">lump sum</SelectItem>
-                                <SelectItem value="% of...">% of...</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          {isPercent ? (
-                            <>
-                              {/* Qty + Unit Price columns empty for alignment */}
-                              <div className="col-span-4" />
-
-                              {/* Computed total — same position as normal total */}
-                              <div className="col-span-1 text-right">
-                                <span className="text-sm font-medium text-blue-700">
-                                  {fmt(computedTotal)}
-                                </span>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              {/* Qty */}
-                              <div className="col-span-2">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.5"
-                                  value={item.quantity}
-                                  onChange={(e) =>
-                                    updateLineItem(
-                                      phase._key,
-                                      item._key,
-                                      "quantity",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                  className="text-sm"
-                                />
-                              </div>
-
-                              {/* Unit price */}
-                              <div className="col-span-2">
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  step="0.01"
-                                  value={item.unitPrice}
-                                  onChange={(e) =>
-                                    updateLineItem(
-                                      phase._key,
-                                      item._key,
-                                      "unitPrice",
-                                      parseFloat(e.target.value) || 0
-                                    )
-                                  }
-                                  className="text-sm"
-                                />
-                              </div>
-
-                              {/* Total */}
-                              <div className="col-span-1 text-right">
-                                <span className="text-sm font-medium font-mono text-ink-700">
-                                  {fmt(item.quantity * item.unitPrice)}
-                                </span>
-                              </div>
-                            </>
-                          )}
-
-                          {/* Actions: delete only */}
-                          <div className="col-span-1 flex justify-end">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => removeLineItem(phase._key, item._key)}
-                              className="h-7 w-7 text-ink-400 hover:text-warn-fg hover:bg-warn-bg"
-                              disabled={phase.lineItems.length === 1}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        </div>
-
-                        {/* Percentage controls — second row, indented under description */}
-                        {isPercent && (
-                          <div className="grid grid-cols-12 gap-2 items-center">
-                            <div className="col-span-4" />
-                            <div className="col-span-2 flex items-center gap-1">
-                              <Input
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="0.5"
-                                value={item.percentageRate}
-                                onChange={(e) =>
-                                  updateLineItem(
-                                    phase._key,
-                                    item._key,
-                                    "percentageRate",
-                                    parseFloat(e.target.value) || 0
-                                  )
-                                }
-                                className="text-sm"
-                                placeholder="Rate"
-                              />
-                              <span className="text-xs text-ink-400 shrink-0">%</span>
-                            </div>
-                            <div className="col-span-3">
-                              <Select
-                                value={
-                                  item.percentageBasis === "SUBTOTAL"
-                                    ? "SUBTOTAL"
-                                    : item.percentageBasis === "LINE_ITEM"
-                                    ? `ITEM:${item.basisLineItemKey}`
-                                    : `PHASE:${item.basisPhaseName}`
-                                }
-                                onValueChange={(v) => {
-                                  setPhases((prev) =>
-                                    prev.map((p) =>
-                                      p._key === phase._key
-                                        ? {
-                                            ...p,
-                                            lineItems: p.lineItems.map((li) => {
-                                              if (li._key !== item._key) return li;
-                                              if (v === "SUBTOTAL") {
-                                                return { ...li, percentageBasis: "SUBTOTAL" as const, basisPhaseName: "", basisLineItemKey: "", basisLineItemDesc: "" };
-                                              }
-                                              if (v.startsWith("ITEM:")) {
-                                                const targetKey = v.replace(/^ITEM:/, "");
-                                                let desc = "";
-                                                for (const ph of prev) {
-                                                  const found = ph.lineItems.find((x) => x._key === targetKey);
-                                                  if (found) { desc = found.description; break; }
-                                                }
-                                                return { ...li, percentageBasis: "LINE_ITEM" as const, basisPhaseName: "", basisLineItemKey: targetKey, basisLineItemDesc: desc };
-                                              }
-                                              const phaseName = v.replace(/^PHASE:/, "");
-                                              return { ...li, percentageBasis: "PHASE" as const, basisPhaseName: phaseName, basisLineItemKey: "", basisLineItemDesc: "" };
-                                            }),
-                                          }
-                                        : p
-                                    )
-                                  );
-                                }}
-                              >
-                                <SelectTrigger className="text-sm">
-                                  <SelectValue placeholder="of…" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="SUBTOTAL">Estimate subtotal</SelectItem>
-                                  {phases
-                                    .filter((p) => p.name.trim() !== "")
-                                    .map((p) => (
-                                      <SelectItem key={`phase-${p._key}`} value={`PHASE:${p.name}`}>
-                                        Phase: {p.name}
-                                      </SelectItem>
-                                    ))}
-                                  {phases.flatMap((p) =>
-                                    p.lineItems
-                                      .filter((li) => li._key !== item._key && li.description.trim() !== "" && !li.percentageBasis)
-                                      .map((li) => (
-                                        <SelectItem key={`item-${li._key}`} value={`ITEM:${li._key}`}>
-                                          Item: {li.description}
-                                        </SelectItem>
-                                      ))
-                                  )}
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div className="col-span-3" />
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="mt-3 text-ink-500 font-mono text-[11px] tracking-[0.04em] uppercase"
-                  onClick={() => addLineItem(phase._key)}
+              <>
+                {/* Column header band */}
+                <div
+                  className="grid gap-3 px-5 py-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.06em]"
+                  style={{
+                    gridTemplateColumns: gridCols,
+                    background: "#FAFAF6",
+                    borderBottom: "1px solid var(--color-hairline)",
+                    color: "var(--color-ink-400)",
+                  }}
                 >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add line item
-                </Button>
-              </CardContent>
+                  <span>Description</span>
+                  <span>Unit</span>
+                  <span className="text-right">Qty</span>
+                  <span className="text-right">Unit price</span>
+                  <span className="text-right">Total</span>
+                  <span></span>
+                </div>
+
+                {/* Line item rows */}
+                {phase.lineItems.map((item) => {
+                  const isPercent = item.percentageBasis !== "";
+                  const computedTotal = resolveItemTotal(item, phases);
+
+                  return (
+                    <div key={item._key}>
+                      <div
+                        className="grid gap-3 items-center px-5 py-3.5 transition-colors hover:bg-[#FCFAF6]"
+                        style={{
+                          gridTemplateColumns: gridCols,
+                          borderBottom: "1px solid var(--color-hairline)",
+                        }}
+                      >
+                        {/* Description */}
+                        <Input
+                          value={item.description}
+                          onChange={(e) =>
+                            updateLineItem(phase._key, item._key, "description", e.target.value)
+                          }
+                          placeholder="Line item description"
+                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 px-0 h-auto py-0 text-[13px] text-ink-900 font-medium placeholder:text-ink-300"
+                        />
+
+                        {/* Unit Select — "% of..." enables percentage mode */}
+                        <Select
+                          value={isPercent ? "% of..." : item.unit}
+                          onValueChange={(v) => {
+                            if (v === "% of...") {
+                              enablePercentageMode(phase._key, item._key);
+                            } else {
+                              disablePercentageMode(phase._key, item._key);
+                              updateLineItem(phase._key, item._key, "unit", v);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="text-[12px] h-8 bg-transparent border-hairline">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="hours">hours</SelectItem>
+                            <SelectItem value="days">days</SelectItem>
+                            <SelectItem value="sessions">sessions</SelectItem>
+                            <SelectItem value="pieces">pieces</SelectItem>
+                            <SelectItem value="participants">participants</SelectItem>
+                            <SelectItem value="units">units</SelectItem>
+                            <SelectItem value="lump sum">lump sum</SelectItem>
+                            <SelectItem value="% of...">% of...</SelectItem>
+                          </SelectContent>
+                        </Select>
+
+                        {isPercent ? (
+                          <>
+                            <span className="text-right text-[13px] text-ink-300 rd-tabular">—</span>
+                            <span className="text-right text-[13px] text-ink-300 rd-tabular">—</span>
+                            <span
+                              className="text-right text-[13px] font-medium rd-tabular"
+                              style={{ color: "var(--color-accent-rd)" }}
+                            >
+                              {sym}{fmt(computedTotal)}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            {/* Qty */}
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.5"
+                              value={item.quantity}
+                              onChange={(e) =>
+                                updateLineItem(
+                                  phase._key,
+                                  item._key,
+                                  "quantity",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="text-[13px] text-right rd-tabular text-ink-700 bg-transparent border-0 shadow-none focus-visible:ring-0 px-0 h-auto py-0"
+                            />
+
+                            {/* Unit price */}
+                            <Input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={item.unitPrice}
+                              onChange={(e) =>
+                                updateLineItem(
+                                  phase._key,
+                                  item._key,
+                                  "unitPrice",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="text-[13px] text-right rd-tabular text-ink-700 bg-transparent border-0 shadow-none focus-visible:ring-0 px-0 h-auto py-0"
+                            />
+
+                            {/* Total */}
+                            <span className="text-right text-[13px] font-medium rd-tabular text-ink-900">
+                              {sym}{fmt(item.quantity * item.unitPrice)}
+                            </span>
+                          </>
+                        )}
+
+                        {/* Delete */}
+                        <button
+                          type="button"
+                          onClick={() => removeLineItem(phase._key, item._key)}
+                          disabled={phase.lineItems.length === 1}
+                          className="p-1.5 rounded-md text-ink-300 hover:text-warn-fg hover:bg-warn-bg disabled:opacity-40 disabled:hover:text-ink-300 disabled:hover:bg-transparent justify-self-end"
+                          aria-label="Delete line item"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+
+                      {/* Percentage controls — sub-row beneath the line */}
+                      {isPercent && (
+                        <div
+                          className="px-5 pb-3 pt-1 flex items-center gap-3 text-[11px] text-ink-500"
+                          style={{ borderBottom: "1px solid var(--color-hairline)" }}
+                        >
+                          <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400">
+                            {"//"}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="0.5"
+                              value={item.percentageRate}
+                              onChange={(e) =>
+                                updateLineItem(
+                                  phase._key,
+                                  item._key,
+                                  "percentageRate",
+                                  parseFloat(e.target.value) || 0
+                                )
+                              }
+                              className="text-[11px] h-7 w-20 rd-tabular"
+                              placeholder="Rate"
+                            />
+                            <span className="text-ink-400">%</span>
+                          </div>
+                          <span className="text-ink-400">of</span>
+                          <Select
+                            value={
+                              item.percentageBasis === "SUBTOTAL"
+                                ? "SUBTOTAL"
+                                : item.percentageBasis === "LINE_ITEM"
+                                ? `ITEM:${item.basisLineItemKey}`
+                                : `PHASE:${item.basisPhaseName}`
+                            }
+                            onValueChange={(v) => {
+                              setPhases((prev) =>
+                                prev.map((p) =>
+                                  p._key === phase._key
+                                    ? {
+                                        ...p,
+                                        lineItems: p.lineItems.map((li) => {
+                                          if (li._key !== item._key) return li;
+                                          if (v === "SUBTOTAL") {
+                                            return { ...li, percentageBasis: "SUBTOTAL" as const, basisPhaseName: "", basisLineItemKey: "", basisLineItemDesc: "" };
+                                          }
+                                          if (v.startsWith("ITEM:")) {
+                                            const targetKey = v.replace(/^ITEM:/, "");
+                                            let desc = "";
+                                            for (const ph of prev) {
+                                              const found = ph.lineItems.find((x) => x._key === targetKey);
+                                              if (found) { desc = found.description; break; }
+                                            }
+                                            return { ...li, percentageBasis: "LINE_ITEM" as const, basisPhaseName: "", basisLineItemKey: targetKey, basisLineItemDesc: desc };
+                                          }
+                                          const phaseName = v.replace(/^PHASE:/, "");
+                                          return { ...li, percentageBasis: "PHASE" as const, basisPhaseName: phaseName, basisLineItemKey: "", basisLineItemDesc: "" };
+                                        }),
+                                      }
+                                    : p
+                                )
+                              );
+                            }}
+                          >
+                            <SelectTrigger className="text-[11px] h-7 w-[240px]">
+                              <SelectValue placeholder="of…" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="SUBTOTAL">Estimate subtotal</SelectItem>
+                              {phases
+                                .filter((p) => p.name.trim() !== "")
+                                .map((p) => (
+                                  <SelectItem key={`phase-${p._key}`} value={`PHASE:${p.name}`}>
+                                    Phase: {p.name}
+                                  </SelectItem>
+                                ))}
+                              {phases.flatMap((p) =>
+                                p.lineItems
+                                  .filter((li) => li._key !== item._key && li.description.trim() !== "" && !li.percentageBasis)
+                                  .map((li) => (
+                                    <SelectItem key={`item-${li._key}`} value={`ITEM:${li._key}`}>
+                                      Item: {li.description}
+                                    </SelectItem>
+                                  ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+
+                {/* Add line item */}
+                <button
+                  type="button"
+                  onClick={() => addLineItem(phase._key)}
+                  className="px-5 py-3 w-full text-left font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 hover:text-accent-rd hover:bg-[#FCFAF6]"
+                >
+                  + Add line item
+                </button>
+              </>
             )}
-          </Card>
+          </div>
         ))}
       </div>
 
-      {/* Notes */}
+      {/* ─── NOTES ─────────────────────────────────────────────────────── */}
       <div>
-        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-2">
+        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
           {"// NOTES"}
         </p>
-      <Card>
-        <CardHeader>
-          <CardTitle>Notes</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="notes">Internal Notes</Label>
+        <div
+          className="bg-card-rd rounded-[14px] p-5 space-y-4"
+          style={{
+            border: "1px solid var(--color-hairline)",
+            boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+            background: "var(--color-card-rd)",
+          }}
+        >
+          <div>
+            <label htmlFor="notes" className={monoLabel}>{"// INTERNAL NOTES"}</label>
             <Textarea
               id="notes"
               value={notes}
@@ -973,8 +1033,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
               rows={3}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="clientNotes">Client Notes</Label>
+          <div>
+            <label htmlFor="clientNotes" className={monoLabel}>{"// CLIENT NOTES"}</label>
             <Textarea
               id="clientNotes"
               value={clientNotes}
@@ -983,58 +1043,105 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
               rows={3}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
       </div>
 
-      {/* Totals */}
+      {/* ─── TOTALS ────────────────────────────────────────────────────── */}
       <div>
-        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-2">
+        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
           {"// TOTALS"}
         </p>
-      <Card>
-        <CardContent className="pt-6">
-          <div className="max-w-xs ml-auto space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-ink-700">Subtotal</span>
-              <span className="font-medium font-mono">{currency} {fmt(subtotal)}</span>
+        <div
+          className="bg-card-rd rounded-[14px] p-5"
+          style={{
+            border: "1px solid var(--color-hairline)",
+            boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+            background: "var(--color-card-rd)",
+          }}
+        >
+          <div className="max-w-xs ml-auto space-y-1.5">
+            <div className="flex justify-between items-baseline">
+              <span className="text-[12px] text-ink-500">Subtotal</span>
+              <span className="font-mono rd-tabular text-[13px] text-ink-700">
+                {sym}{fmt(subtotal)}
+              </span>
             </div>
             {taxRate > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-ink-700">Tax ({taxRate}%)</span>
-                <span className="font-medium font-mono">{currency} {fmt(taxAmount)}</span>
+              <div className="flex justify-between items-baseline">
+                <span className="text-[12px] text-ink-500">Tax ({taxRate}%)</span>
+                <span className="font-mono rd-tabular text-[13px] text-ink-700">
+                  {sym}{fmt(taxAmount)}
+                </span>
               </div>
             )}
             {discount > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-ink-700">Discount</span>
-                <span className="font-medium font-mono text-warn-fg">− {currency} {fmt(discount)}</span>
+              <div className="flex justify-between items-baseline">
+                <span className="text-[12px] text-ink-500">Discount</span>
+                <span className="font-mono rd-tabular text-[13px] text-warn-fg">
+                  − {sym}{fmt(discount)}
+                </span>
               </div>
             )}
-            <Separator />
-            <div className="flex justify-between">
-              <span className="font-semibold text-ink-900">Total</span>
-              <span className="font-bold text-lg font-mono text-accent-rd">{currency} {fmt(total)}</span>
+            <div
+              className="flex justify-between items-baseline pt-2 mt-2"
+              style={{ borderTop: "1px solid var(--color-hairline)" }}
+            >
+              <span className="text-[13px] font-bold text-ink-900">Total</span>
+              <span
+                className="font-mono rd-tabular text-[16px] font-bold"
+                style={{ color: "var(--color-accent-rd)" }}
+              >
+                {sym}{fmt(total)}
+              </span>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
       </div>
 
-      {/* Actions */}
-      <div className="flex justify-end gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.back()}
-          disabled={isSubmitting}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting} className="bg-accent-rd text-white hover:bg-accent-rd/90">
-          {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {mode === "create" ? "Create Estimate" : "Save Changes"}
-        </Button>
+      {/* ─── ACTION FOOTER ─────────────────────────────────────────────── */}
+      <div
+        className="flex items-center justify-between p-4 rounded-[14px] mt-5 sticky"
+        style={{
+          background: "var(--color-card-rd)",
+          border: "1px solid var(--color-hairline)",
+          boxShadow:
+            "0 6px 24px -6px rgba(15, 23, 41, 0.10), 0 2px 6px -2px rgba(15, 23, 41, 0.06)",
+          bottom: 16,
+          zIndex: 5,
+        }}
+      >
+        <div className="text-[12px] text-ink-500">
+          <strong className="text-ink-900 font-bold rd-tabular">{phases.length}</strong> phases ·{" "}
+          <strong className="text-ink-900 font-bold rd-tabular">{totalLineCount}</strong> lines · total{" "}
+          <strong
+            className="font-bold rd-tabular"
+            style={{ color: "var(--color-accent-rd)" }}
+          >
+            {sym}{fmt(total)}
+          </strong>
+        </div>
+        <div className="flex gap-2 items-center">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            disabled={isSubmitting}
+            className="px-3 py-2 rounded-lg text-[13px] font-medium text-ink-700 hover:bg-[rgba(15,23,41,0.04)] disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium text-white tracking-[-0.005em] disabled:opacity-50"
+            style={{
+              background: "var(--color-accent-rd)",
+              boxShadow: "0 4px 12px -2px rgba(217, 82, 43, 0.32)",
+            }}
+          >
+            {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+            {mode === "create" ? "Create estimate" : "Save changes"}
+          </button>
+        </div>
       </div>
 
       <TemplatePicker
