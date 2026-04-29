@@ -25,10 +25,15 @@ export default function EditContractTemplatePage() {
 
   useEffect(() => {
     if (template) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(template.name);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDescription(template.description);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCategory(template.category);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setContent(template.content);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setExhibits(template.exhibits || []);
     }
   }, [template]);

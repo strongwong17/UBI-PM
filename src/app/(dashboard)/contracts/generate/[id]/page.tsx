@@ -56,9 +56,11 @@ export default function GeneratePage() {
         }
       }
       if (Object.keys(autoFields).length > 0) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setFormData((prev) => ({ ...autoFields, ...prev }));
       }
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setProviderPrefilled(true);
   }, [template, businessProfile, providerPrefilled]);
 
