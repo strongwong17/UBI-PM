@@ -1,20 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { StatusBadge } from "@/components/shared/status-badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ArrowLeft, Edit, Calendar, User, Download, FileSpreadsheet } from "lucide-react";
+import { StatusPill } from "@/components/redesign/status-pill";
+import { ArrowLeft, Edit, Download, FileSpreadsheet } from "lucide-react";
 import { EstimateStatusChanger } from "@/components/estimates/estimate-status-changer";
 import { EstimateDuplicateButton } from "@/components/estimates/estimate-duplicate-button";
 import { EstimateApproveButton } from "@/components/estimates/estimate-approve-button";
@@ -56,297 +44,476 @@ export default async function EstimateDetailPage({
   const total = subtotal + taxAmount - estimate.discount;
 
   const fmt = (n: number) =>
-    n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const fmtMoney = (n: number) =>
+    `${symbol}${n.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Link href={`/projects/${estimate.project.id}?tab=estimates`}>
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Project
-            </Button>
-          </Link>
+      <div>
+        <Link
+          href={`/projects/${estimate.project.id}?tab=estimates`}
+          className="inline-flex items-center gap-1 text-[12px] text-ink-500 hover:text-ink-900 mb-3"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to project
+        </Link>
+
+        <div
+          className="flex items-start justify-between gap-4 flex-wrap pb-[18px]"
+          style={{ borderBottom: "1px solid var(--color-hairline)" }}
+        >
           <div>
-            <div className="flex items-center gap-1.5 text-sm text-gray-500 mb-1">
-              <Link href={`/clients/${estimate.project.client.id}`} className="hover:text-blue-600 hover:underline">
+            <div className="font-mono text-[11px] text-ink-500 tracking-[0.04em] mb-1.5">
+              <Link
+                href={`/clients/${estimate.project.client.id}`}
+                className="hover:text-accent-rd"
+              >
                 {estimate.project.client.company}
               </Link>
-              <span>/</span>
-              <Link href={`/projects/${estimate.project.id}`} className="hover:text-blue-600 hover:underline">
+              {" · "}
+              <Link
+                href={`/projects/${estimate.project.id}`}
+                className="hover:text-accent-rd"
+              >
                 {estimate.project.title}
               </Link>
-              <span>/</span>
-              <span className="text-gray-700 font-medium">{estimate.estimateNumber}</span>
+              {" · "}
+              <span className="text-ink-700">{estimate.estimateNumber}</span>
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">{estimate.title}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              <StatusBadge status={estimate.status} />
-              <Badge variant="outline">{estimate.estimateNumber}</Badge>
+            <h1 className="text-[24px] font-bold tracking-[-0.025em] text-ink-900 m-0 mb-2">
+              {estimate.title}
+            </h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatusPill status={estimate.status} />
+              <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                v.{estimate.version}
+              </span>
               {estimate.label && (
-                <Badge variant="secondary">{estimate.label}</Badge>
+                <span
+                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-[0.06em] uppercase"
+                  style={{
+                    background: "var(--color-canvas-cool)",
+                    color: "var(--color-ink-700)",
+                    border: "1px solid var(--color-hairline-strong)",
+                  }}
+                >
+                  {estimate.label}
+                </span>
               )}
               {estimate.isApproved && (
-                <Badge className="bg-green-100 text-green-800 border-green-300">Approved</Badge>
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-[0.06em] uppercase"
+                  style={{
+                    background: "var(--color-s-approved-bg)",
+                    color: "var(--color-s-approved-fg)",
+                  }}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ background: "var(--color-s-approved)" }}
+                  />
+                  Approved
+                </span>
               )}
               {estimate.parentEstimateId && (
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800">RMB Version</Badge>
+                <span
+                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-[0.06em] uppercase"
+                  style={{
+                    background: "var(--color-canvas-cool)",
+                    color: "var(--color-ink-700)",
+                    border: "1px solid var(--color-hairline-strong)",
+                  }}
+                >
+                  RMB
+                </span>
               )}
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
-          <EstimateStatusChanger estimateId={estimate.id} currentStatus={estimate.status} />
-          <EstimateApproveButton
-            estimateId={estimate.id}
-            isApproved={estimate.isApproved}
-            version={estimate.version}
-          />
-          <EstimateDuplicateButton estimateId={estimate.id} />
-          {!estimate.parentEstimateId && (
-            <CreateRmbEstimateButton
+
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <EstimateStatusChanger estimateId={estimate.id} currentStatus={estimate.status} />
+            <EstimateApproveButton
               estimateId={estimate.id}
-              estimateNumber={estimate.estimateNumber}
-              hasRmbDuplicate={!!estimate.rmbDuplicate}
+              isApproved={estimate.isApproved}
+              version={estimate.version}
             />
-          )}
-          <a href={`/api/estimates/${estimate.id}/pdf`} download>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              PDF
-            </Button>
-          </a>
-          <a href={`/api/estimates/${estimate.id}/excel`} download>
-            <Button variant="outline" size="sm">
-              <FileSpreadsheet className="h-4 w-4 mr-2" />
-              Excel
-            </Button>
-          </a>
-          <Link href={`/estimates/${estimate.id}/edit`}>
-            <Button variant="outline" size="sm">
-              <Edit className="h-4 w-4 mr-2" />
-              Edit
-            </Button>
-          </Link>
-          <EstimateDeleteButton
-            estimateId={estimate.id}
-            estimateTitle={estimate.title}
-            redirectTo={`/projects/${estimate.project.id}?tab=estimates`}
-          />
+            <EstimateDuplicateButton estimateId={estimate.id} />
+            {!estimate.parentEstimateId && (
+              <CreateRmbEstimateButton
+                estimateId={estimate.id}
+                estimateNumber={estimate.estimateNumber}
+                hasRmbDuplicate={!!estimate.rmbDuplicate}
+              />
+            )}
+            <a
+              href={`/api/estimates/${estimate.id}/pdf`}
+              download
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+              style={{
+                background: "var(--color-canvas-cool)",
+                border: "1px solid var(--color-hairline-strong)",
+              }}
+            >
+              <Download className="h-3.5 w-3.5" /> PDF
+            </a>
+            <a
+              href={`/api/estimates/${estimate.id}/excel`}
+              download
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+              style={{
+                background: "var(--color-canvas-cool)",
+                border: "1px solid var(--color-hairline-strong)",
+              }}
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" /> Excel
+            </a>
+            <Link
+              href={`/estimates/${estimate.id}/edit`}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+              style={{
+                background: "var(--color-canvas-cool)",
+                border: "1px solid var(--color-hairline-strong)",
+              }}
+            >
+              <Edit className="h-3.5 w-3.5" /> Edit
+            </Link>
+            <EstimateDeleteButton
+              estimateId={estimate.id}
+              estimateTitle={estimate.title}
+              redirectTo={`/projects/${estimate.project.id}?tab=estimates`}
+            />
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Phases & Line Items */}
-        <div className="lg:col-span-2 space-y-4">
-          {estimate.phases.map((phase) => {
-            const phaseTotal = phase.lineItems.reduce(
-              (sum, li) => sum + li.quantity * li.unitPrice,
-              0
-            );
-            return (
-              <Card key={phase.id}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-base">{phase.name}</CardTitle>
+        {/* Main */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Phases */}
+          <div>
+            <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+              {"// PHASES & LINE ITEMS"}
+            </p>
+            <div className="space-y-4">
+              {estimate.phases.map((phase, idx) => {
+                const phaseTotal = phase.lineItems.reduce(
+                  (sum, li) => sum + li.quantity * li.unitPrice,
+                  0
+                );
+                return (
+                  <div
+                    key={phase.id}
+                    className="bg-card-rd rounded-[14px] overflow-hidden"
+                    style={{
+                      border: "1px solid var(--color-hairline)",
+                      boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                    }}
+                  >
+                    {/* Head */}
+                    <div
+                      className="px-5 py-3.5 flex items-center gap-3"
+                      style={{
+                        borderBottom: "1px solid var(--color-hairline)",
+                        background:
+                          "linear-gradient(180deg, #FCFAF6 0%, #FFFFFF 100%)",
+                      }}
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                        style={{ background: "var(--color-ink-300)" }}
+                      />
+                      <h3 className="font-mono text-[11px] font-bold tracking-[0.06em] uppercase m-0 text-ink-900">
+                        Phase {idx + 1} · {phase.name}
+                      </h3>
                       {phase.description && (
-                        <p className="text-sm text-gray-500 mt-0.5">{phase.description}</p>
+                        <span className="text-[12px] text-ink-500 italic">
+                          — {phase.description}
+                        </span>
                       )}
+                      <span className="ml-auto font-mono text-[11px] tracking-[0.02em] text-ink-500">
+                        {phase.lineItems.length}{" "}
+                        {phase.lineItems.length === 1 ? "line" : "lines"} ·{" "}
+                        <strong className="text-ink-900 font-bold rd-tabular">
+                          {fmtMoney(phaseTotal)}
+                        </strong>
+                      </span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-700">
-                      {symbol} {fmt(phaseTotal)}
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Description</TableHead>
-                        <TableHead>Unit</TableHead>
-                        <TableHead className="text-right">Qty</TableHead>
-                        <TableHead className="text-right">Unit Price</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {phase.lineItems.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell>
-                            <div>
-                              <p className="font-medium text-sm">{item.description}</p>
-                              {item.notes && (
-                                <p className="text-xs text-gray-500 mt-0.5">{item.notes}</p>
-                              )}
+
+                    {/* Column header band */}
+                    <div
+                      className="grid gap-3 px-5 py-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.06em]"
+                      style={{
+                        gridTemplateColumns: "1fr 90px 70px 110px 110px",
+                        background: "#FAFAF6",
+                        borderBottom: "1px solid var(--color-hairline)",
+                        color: "var(--color-ink-400)",
+                      }}
+                    >
+                      <span>Description</span>
+                      <span>Unit</span>
+                      <span className="text-right">Qty</span>
+                      <span className="text-right">Unit price</span>
+                      <span className="text-right">Total</span>
+                    </div>
+
+                    {/* Lines */}
+                    {phase.lineItems.map((item, i) => (
+                      <div
+                        key={item.id}
+                        className="grid gap-3 items-center px-5 py-3 hover:bg-[#FCFAF6] transition-colors"
+                        style={{
+                          gridTemplateColumns: "1fr 90px 70px 110px 110px",
+                          borderBottom:
+                            i < phase.lineItems.length - 1
+                              ? "1px solid var(--color-hairline)"
+                              : "none",
+                        }}
+                      >
+                        <div>
+                          <div className="text-[13px] font-medium text-ink-900 leading-[1.3] tracking-[-0.005em]">
+                            {item.description}
+                          </div>
+                          {item.notes && (
+                            <div className="font-mono text-[10px] text-ink-300 mt-0.5 tracking-[0.02em]">
+                              {"// "}
+                              {item.notes}
                             </div>
-                          </TableCell>
-                          <TableCell className="text-sm text-gray-600">{item.unit}</TableCell>
-                          <TableCell className="text-right text-sm">{item.quantity}</TableCell>
-                          <TableCell className="text-right text-sm">
-                            {symbol} {fmt(item.unitPrice)}
-                          </TableCell>
-                          <TableCell className="text-right text-sm font-medium">
-                            {symbol} {fmt(item.quantity * item.unitPrice)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
-            );
-          })}
+                          )}
+                        </div>
+                        <div className="text-[12px] text-ink-700">{item.unit}</div>
+                        <div className="text-right text-[13px] text-ink-700 rd-tabular">
+                          {item.quantity}
+                        </div>
+                        <div className="text-right text-[13px] text-ink-700 rd-tabular">
+                          {fmtMoney(item.unitPrice)}
+                        </div>
+                        <div className="text-right text-[13px] font-medium text-ink-900 rd-tabular">
+                          {fmtMoney(item.quantity * item.unitPrice)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
           {/* Totals */}
-          <Card>
-            <CardContent className="pt-6">
-              <div className="max-w-xs ml-auto space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">{symbol} {fmt(subtotal)}</span>
+          <div>
+            <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+              {"// TOTALS"}
+            </p>
+            <div
+              className="bg-card-rd rounded-[14px] p-5"
+              style={{
+                border: "1px solid var(--color-hairline)",
+                boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+              }}
+            >
+              <div className="max-w-xs ml-auto space-y-1.5">
+                <div className="flex justify-between text-[12px]">
+                  <span className="text-ink-500">Subtotal</span>
+                  <span className="font-mono rd-tabular text-ink-700">
+                    {symbol}
+                    {fmt(subtotal)}
+                  </span>
                 </div>
                 {estimate.taxRate > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Tax ({estimate.taxRate}%)</span>
-                    <span className="font-medium">{symbol} {fmt(taxAmount)}</span>
+                  <div className="flex justify-between text-[12px]">
+                    <span className="text-ink-500">Tax ({estimate.taxRate}%)</span>
+                    <span className="font-mono rd-tabular text-ink-700">
+                      {symbol}
+                      {fmt(taxAmount)}
+                    </span>
                   </div>
                 )}
                 {estimate.discount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Discount</span>
-                    <span className="font-medium text-red-600">− {symbol} {fmt(estimate.discount)}</span>
+                  <div className="flex justify-between text-[12px]">
+                    <span className="text-ink-500">Discount</span>
+                    <span className="font-mono rd-tabular text-warn-fg">
+                      −{symbol}
+                      {fmt(estimate.discount)}
+                    </span>
                   </div>
                 )}
-                <Separator />
-                <div className="flex justify-between">
-                  <span className="font-semibold">Total</span>
-                  <span className="font-bold text-xl">{symbol} {fmt(total)}</span>
+                <div
+                  className="flex justify-between pt-2 mt-2"
+                  style={{ borderTop: "1px solid var(--color-hairline)" }}
+                >
+                  <span className="text-[13px] font-bold text-ink-900">Total</span>
+                  <span className="font-mono rd-tabular text-[16px] font-bold text-accent-rd">
+                    {symbol}
+                    {fmt(total)}
+                  </span>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader><CardTitle>Details</CardTitle></CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3">
-                <User className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs text-gray-500">Client</p>
-                  <Link
-                    href={`/clients/${estimate.project.client.id}`}
-                    className="text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    {estimate.project.client.company}
-                  </Link>
+          {/* Details */}
+          <div>
+            <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+              {"// DETAILS"}
+            </p>
+            <div
+              className="bg-card-rd rounded-[14px] p-5 space-y-3"
+              style={{
+                border: "1px solid var(--color-hairline)",
+                boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+              }}
+            >
+              <div>
+                <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                  {"// CLIENT"}
                 </div>
+                <Link
+                  href={`/clients/${estimate.project.client.id}`}
+                  className="text-[13px] font-medium text-ink-900 hover:text-accent-rd"
+                >
+                  {estimate.project.client.company}
+                </Link>
               </div>
 
-              <div className="flex items-start gap-3">
-                <User className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs text-gray-500">Project</p>
-                  <Link
-                    href={`/projects/${estimate.project.id}`}
-                    className="text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    {estimate.project.title}
-                  </Link>
+              <div>
+                <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                  {"// PROJECT"}
                 </div>
+                <Link
+                  href={`/projects/${estimate.project.id}`}
+                  className="text-[13px] font-medium text-ink-900 hover:text-accent-rd"
+                >
+                  {estimate.project.title}
+                </Link>
               </div>
 
               {estimate.validUntil && (
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">Valid Until</p>
-                    <p className="text-sm font-medium">
-                      {new Date(estimate.validUntil).toLocaleDateString()}
-                    </p>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// VALID UNTIL"}
+                  </div>
+                  <div className="text-[13px] text-ink-900">
+                    {new Date(estimate.validUntil).toLocaleDateString()}
                   </div>
                 </div>
               )}
 
               {estimate.exchangeRate && (
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">Exchange Rate</p>
-                    <p className="text-sm font-medium">1 USD = {estimate.exchangeRate} CNY</p>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// EXCHANGE RATE"}
+                  </div>
+                  <div className="text-[13px] text-ink-900 font-mono rd-tabular">
+                    1 USD = {estimate.exchangeRate} CNY
                   </div>
                 </div>
               )}
 
               {estimate.parentEstimate && (
-                <div className="flex items-start gap-3">
-                  <User className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">Original Estimate</p>
-                    <Link
-                      href={`/estimates/${estimate.parentEstimate.id}`}
-                      className="text-sm font-medium text-blue-600 hover:underline"
-                    >
-                      {estimate.parentEstimate.estimateNumber}
-                    </Link>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// ORIGINAL"}
                   </div>
+                  <Link
+                    href={`/estimates/${estimate.parentEstimate.id}`}
+                    className="text-[13px] font-medium text-ink-900 hover:text-accent-rd font-mono"
+                  >
+                    {estimate.parentEstimate.estimateNumber}
+                  </Link>
                 </div>
               )}
 
               {estimate.rmbDuplicate && (
-                <div className="flex items-start gap-3">
-                  <User className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">RMB Version</p>
-                    <Link
-                      href={`/estimates/${estimate.rmbDuplicate.id}`}
-                      className="text-sm font-medium text-blue-600 hover:underline"
-                    >
-                      {estimate.rmbDuplicate.estimateNumber}
-                    </Link>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// RMB VERSION"}
                   </div>
+                  <Link
+                    href={`/estimates/${estimate.rmbDuplicate.id}`}
+                    className="text-[13px] font-medium text-ink-900 hover:text-accent-rd font-mono"
+                  >
+                    {estimate.rmbDuplicate.estimateNumber}
+                  </Link>
                 </div>
               )}
 
-              <Separator />
-              <div>
-                <p className="text-xs text-gray-500">Created by</p>
-                <p className="text-sm">{estimate.createdBy.name}</p>
+              <div
+                className="pt-3 mt-1 space-y-3"
+                style={{ borderTop: "1px solid var(--color-hairline)" }}
+              >
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// CREATED BY"}
+                  </div>
+                  <div className="text-[12px] text-ink-700">
+                    {estimate.createdBy.name}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// LAST MODIFIED"}
+                  </div>
+                  <div className="text-[12px] text-ink-700">
+                    {new Date(estimate.updatedAt).toLocaleDateString()}
+                  </div>
+                </div>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// CREATED"}
+                  </div>
+                  <div className="text-[12px] text-ink-700">
+                    {new Date(estimate.createdAt).toLocaleDateString()}
+                  </div>
+                </div>
               </div>
-              <div>
-                <p className="text-xs text-gray-500">Last Modified</p>
-                <p className="text-sm">{new Date(estimate.updatedAt).toLocaleDateString()}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Created</p>
-                <p className="text-sm">{new Date(estimate.createdAt).toLocaleDateString()}</p>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
+          {/* Notes */}
           {(estimate.notes || estimate.clientNotes) && (
-            <Card>
-              <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
+            <div>
+              <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+                {"// NOTES"}
+              </p>
+              <div
+                className="bg-card-rd rounded-[14px] p-5 space-y-3"
+                style={{
+                  border: "1px solid var(--color-hairline)",
+                  boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                }}
+              >
                 {estimate.notes && (
                   <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">Internal</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{estimate.notes}</p>
+                    <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-1">
+                      {"// INTERNAL"}
+                    </div>
+                    <div className="text-[12px] text-ink-700 whitespace-pre-wrap leading-[1.5]">
+                      {estimate.notes}
+                    </div>
                   </div>
+                )}
+                {estimate.notes && estimate.clientNotes && (
+                  <div
+                    style={{ borderTop: "1px dashed var(--color-hairline)" }}
+                    className="pt-3"
+                  />
                 )}
                 {estimate.clientNotes && (
                   <div>
-                    <p className="text-xs font-medium text-gray-500 mb-1">Client-facing</p>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{estimate.clientNotes}</p>
+                    <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-1">
+                      {"// CLIENT-FACING"}
+                    </div>
+                    <div className="text-[12px] text-ink-700 whitespace-pre-wrap leading-[1.5]">
+                      {estimate.clientNotes}
+                    </div>
                   </div>
                 )}
-              </CardContent>
-            </Card>
+              </div>
+            </div>
           )}
         </div>
       </div>

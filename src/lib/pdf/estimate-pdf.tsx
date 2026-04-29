@@ -8,7 +8,7 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansSC",
     fontSize: 10,
     padding: 40,
-    color: "#1a1a1a",
+    color: "#0F1729",
     backgroundColor: "#ffffff",
   },
   // Header
@@ -20,11 +20,11 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: 20,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#111827",
+    color: "#0F1729",
   },
   companyDetail: {
     fontSize: 9,
-    color: "#6b7280",
+    color: "#82869C",
     marginTop: 1,
   },
   docTitle: {
@@ -33,87 +33,87 @@ const styles = StyleSheet.create({
   docTitleText: {
     fontSize: 18,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#374151",
+    color: "#D9522B",
+    letterSpacing: 0.6,
   },
   docMeta: {
     fontSize: 9,
-    color: "#6b7280",
+    color: "#82869C",
     marginTop: 4,
     textAlign: "right",
   },
   docNumber: {
     fontSize: 11,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#111827",
+    color: "#0F1729",
     marginTop: 4,
     textAlign: "right",
   },
   // Client info
   clientSection: {
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#F0EDE5",
     padding: 12,
-    borderRadius: 4,
+    borderRadius: 8,
     marginBottom: 24,
     flexDirection: "row",
     justifyContent: "space-between",
   },
   clientLabel: {
     fontSize: 8,
-    color: "#6b7280",
+    color: "#82869C",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     marginBottom: 3,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
   },
   clientName: {
     fontSize: 12,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#111827",
+    color: "#0F1729",
   },
   clientSub: {
     fontSize: 9,
-    color: "#374151",
+    color: "#525873",
     marginTop: 2,
   },
   // Phase
   phaseHeader: {
-    backgroundColor: "#1f2937",
+    backgroundColor: "#FAFAF6",
     padding: "8 10",
     marginTop: 16,
     marginBottom: 0,
     flexDirection: "row",
     justifyContent: "space-between",
+    borderTopWidth: 1,
+    borderTopColor: "#E8E5DD",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E8E5DD",
   },
   phaseName: {
     fontSize: 10,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#ffffff",
+    color: "#0F1729",
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
   },
   phaseTotal: {
     fontSize: 10,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#ffffff",
+    color: "#0F1729",
   },
   // Table
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "#FAFAF6",
     padding: "6 10",
     borderBottomWidth: 1,
-    borderBottomColor: "#e5e7eb",
+    borderBottomColor: "#E8E5DD",
   },
   tableRow: {
     flexDirection: "row",
     padding: "6 10",
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
-  },
-  tableRowAlt: {
-    flexDirection: "row",
-    padding: "6 10",
-    backgroundColor: "#fafafa",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    borderBottomColor: "#E8E5DD",
   },
   colDesc: { flex: 4, paddingRight: 8 },
   colUnit: { flex: 1.5, paddingRight: 4 },
@@ -123,13 +123,13 @@ const styles = StyleSheet.create({
   headerCell: {
     fontSize: 8,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#374151",
+    color: "#A4A6B5",
     textTransform: "uppercase",
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
-  cellText: { fontSize: 9, color: "#374151" },
-  cellNote: { fontSize: 8, color: "#9ca3af", marginTop: 2 },
-  cellBold: { fontSize: 9, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#111827" },
+  cellText: { fontSize: 9, color: "#525873" },
+  cellNote: { fontSize: 8, color: "#A4A6B5", marginTop: 2 },
+  cellBold: { fontSize: 9, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#0F1729" },
   // Totals
   totalsSection: {
     marginTop: 24,
@@ -139,8 +139,8 @@ const styles = StyleSheet.create({
   totalsBox: {
     width: 220,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 4,
+    borderColor: "#E8E5DD",
+    borderRadius: 8,
     overflow: "hidden",
   },
   totalsRow: {
@@ -148,75 +148,79 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: "6 12",
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    borderBottomColor: "#E8E5DD",
   },
-  totalsLabel: { fontSize: 9, color: "#6b7280" },
-  totalsValue: { fontSize: 9, color: "#374151", fontFamily: "Helvetica-Bold" },
+  totalsLabel: { fontSize: 9, color: "#82869C" },
+  totalsValue: { fontSize: 9, color: "#525873", fontFamily: "Helvetica-Bold" },
   totalsFinalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     padding: "10 12",
-    backgroundColor: "#1f2937",
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#D8D4C8",
   },
-  totalsFinalLabel: { fontSize: 11, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#ffffff" },
-  totalsFinalValue: { fontSize: 11, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#ffffff" },
+  totalsFinalLabel: { fontSize: 11, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#0F1729" },
+  totalsFinalValue: { fontSize: 12, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#D9522B" },
   // Wiring
   wiringSection: {
     marginTop: 24,
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+    borderTopColor: "#E8E5DD",
     paddingTop: 16,
   },
   wiringBox: {
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 4,
+    borderColor: "#E8E5DD",
+    borderRadius: 8,
     overflow: "hidden",
   },
   wiringBoxHeader: {
-    backgroundColor: "#1f2937",
+    backgroundColor: "#FAFAF6",
     padding: "6 10",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E8E5DD",
   },
   wiringBoxTitle: {
     fontSize: 9,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#ffffff",
+    color: "#0F1729",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   wiringRow: {
     flexDirection: "row",
     padding: "4 10",
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    borderBottomColor: "#E8E5DD",
   },
   wiringLabel: {
     fontSize: 8,
-    color: "#6b7280",
+    color: "#82869C",
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     width: 100,
   },
   wiringValue: {
     fontSize: 8,
-    color: "#374151",
+    color: "#525873",
     flex: 1,
   },
   // Notes
   notesSection: {
     marginTop: 24,
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+    borderTopColor: "#E8E5DD",
     paddingTop: 16,
   },
   notesTitle: {
     fontSize: 9,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#374151",
+    color: "#0F1729",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     marginBottom: 6,
   },
-  notesText: { fontSize: 9, color: "#6b7280", lineHeight: 1.5 },
+  notesText: { fontSize: 9, color: "#525873", lineHeight: 1.5 },
   // Footer
   footer: {
     position: "absolute",
@@ -226,10 +230,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+    borderTopColor: "#E8E5DD",
     paddingTop: 8,
   },
-  footerText: { fontSize: 8, color: "#9ca3af" },
+  footerText: { fontSize: 8, color: "#A4A6B5" },
 });
 
 export interface BusinessProfileData {
@@ -367,7 +371,7 @@ export function EstimatePDF({ estimate, business }: { estimate: EstimatePDFData;
                 <Text style={[styles.headerCell, styles.colTotal]}>Total</Text>
               </View>
               {phase.lineItems.map((item, i) => (
-                <View key={i} style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+                <View key={i} style={styles.tableRow}>
                   <View style={styles.colDesc}>
                     <Text style={styles.cellText}>{item.description}</Text>
                     {item.notes && <Text style={styles.cellNote}>{item.notes}</Text>}
@@ -402,7 +406,7 @@ export function EstimatePDF({ estimate, business }: { estimate: EstimatePDFData;
             {estimate.discount > 0 && (
               <View style={styles.totalsRow}>
                 <Text style={styles.totalsLabel}>Discount</Text>
-                <Text style={[styles.totalsValue, { color: "#ef4444" }]}>
+                <Text style={[styles.totalsValue, { color: "#A85614" }]}>
                   − {fmt(estimate.discount, estimate.currency)}
                 </Text>
               </View>
