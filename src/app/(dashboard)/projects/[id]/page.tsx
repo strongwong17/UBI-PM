@@ -107,41 +107,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
     .reduce((sum, est) => sum + estimateTotal(est), 0);
   const billing = computeBillingState(project);
 
-  const estimatesForSheet = approvedEstimates
-    .filter((e) => !e.parentEstimateId)
-    .map((est) => {
-      const totalEstimateValue = est.phases.reduce(
-        (s, p) => s + p.lineItems.reduce((ss, l) => ss + l.quantity * l.unitPrice, 0),
-        0
-      );
-      return {
-        id: est.id,
-        estimateNumber: est.estimateNumber,
-        title: est.title,
-        label: est.label ?? null,
-        currency: est.currency,
-        taxRate: est.taxRate,
-        totalEstimateValue,
-        lines: est.phases.flatMap((p) =>
-          p.lineItems.map((l) => {
-            const invoicedQuantity = project.invoices
-              .filter((inv) => !inv.deletedAt)
-              .flatMap((inv) => inv.lineItems)
-              .filter((li) => li.estimateLineItemId === l.id)
-              .reduce((s, li) => s + li.quantity, 0);
-            return {
-              id: l.id,
-              description: l.description,
-              unit: l.unit,
-              quantity: l.quantity,
-              unitPrice: l.unitPrice,
-              deliveredQuantity: l.deliveredQuantity ?? null,
-              invoicedQuantity,
-            };
-          })
-        ),
-      };
-    });
+  const hasApprovedEstimate = approvedEstimates.some((e) => !e.parentEstimateId);
 
   const invoiceRows = project.invoices.map((inv) => ({
     id: inv.id,
@@ -349,7 +315,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
       projectId={project.id}
       billing={billing}
       invoices={invoiceRows}
-      estimatesForSheet={estimatesForSheet}
+      hasApprovedEstimate={hasApprovedEstimate}
     />
   );
 

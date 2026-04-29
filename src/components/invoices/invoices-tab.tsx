@@ -1,14 +1,12 @@
 // src/components/invoices/invoices-tab.tsx
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { BillingMeter } from "@/components/invoices/billing-meter";
-import { NewInvoiceSheet, type SheetEstimate } from "@/components/invoices/new-invoice-sheet";
 import { InvoiceStatusChanger } from "@/components/invoices/invoice-status-changer";
 import { CreateRmbInvoiceButton } from "@/components/invoices/create-rmb-invoice-button";
 import type { BillingState } from "@/lib/billing";
@@ -33,57 +31,67 @@ interface Props {
   projectId: string;
   billing: BillingState;
   invoices: InvoiceRow[];
-  estimatesForSheet: SheetEstimate[];
+  hasApprovedEstimate: boolean;
 }
 
-export function InvoicesTab({ projectId, billing, invoices, estimatesForSheet }: Props) {
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const canCreate = estimatesForSheet.length > 0;
+export function InvoicesTab({ projectId, billing, invoices, hasApprovedEstimate }: Props) {
   const uninvoicedRemaining = billing.delivered - billing.invoiced;
+  const confirmActualsHref = `/projects/${projectId}?tab=confirm-actuals`;
 
   return (
     <div className="space-y-4">
-      <BillingMeter
-        state={billing}
-        showNewInvoiceButton={canCreate}
-        onNewInvoice={() => setSheetOpen(true)}
-      />
+      <BillingMeter state={billing} />
 
       {invoices.length === 0 ? (
         <Card>
           <CardContent className="py-8 text-center space-y-3">
-            <p className="text-gray-500">No invoices yet.</p>
-            {canCreate ? (
-              <Button onClick={() => setSheetOpen(true)} size="sm">+ New Invoice</Button>
+            <p className="text-ink-500">No invoices yet.</p>
+            {hasApprovedEstimate ? (
+              <Button asChild size="sm">
+                <Link href={confirmActualsHref}>Go to Confirm actuals</Link>
+              </Button>
             ) : (
-              <p className="text-sm text-gray-400">Approve an estimate to enable invoicing.</p>
+              <p className="text-sm text-ink-400">Approve an estimate to enable invoicing.</p>
             )}
+            <p className="text-[12px] text-ink-400 max-w-md mx-auto">
+              Invoices are generated from confirmed actuals — confirm what was delivered against the
+              approved estimate, then send.
+            </p>
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
           {invoices.map((invoice) => (
-            <Card key={invoice.id} className={invoice.parentInvoiceId ? "border-amber-300 bg-amber-50/30" : ""}>
+            <Card
+              key={invoice.id}
+              className={invoice.parentInvoiceId ? "border-amber-300 bg-amber-50/30" : ""}
+            >
               <CardHeader>
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
                     <div className="flex items-center gap-2">
                       <CardTitle>{invoice.invoiceNumber}</CardTitle>
                       {invoice.parentInvoiceId && (
-                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">RMB Duplicate</Badge>
+                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
+                          RMB Duplicate
+                        </Badge>
                       )}
                       {invoice.currency !== "USD" && (
-                        <Badge variant="outline" className="text-xs">{invoice.currency}</Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {invoice.currency}
+                        </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Total: {currencySymbol(invoice.currency)}{invoice.total.toLocaleString()}
+                    <p className="text-sm text-ink-500 mt-1">
+                      Total: {currencySymbol(invoice.currency)}
+                      {invoice.total.toLocaleString()}
                     </p>
                     {invoice.estimate && (
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-ink-400 mt-0.5">
                         From: {invoice.estimate.estimateNumber} v{invoice.estimate.version}
                         {invoice.estimate.label ? ` — ${invoice.estimate.label}` : ""}
-                        {" · "}{invoice.lineCount} line{invoice.lineCount === 1 ? "" : "s"}
+                        {" · "}
+                        {invoice.lineCount} line{invoice.lineCount === 1 ? "" : "s"}
                       </p>
                     )}
                     {invoice.exchangeRate && (
@@ -106,15 +114,27 @@ export function InvoicesTab({ projectId, billing, invoices, estimatesForSheet }:
                       <Link href={`/invoices/${invoice.id}`}>View</Link>
                     </Button>
                     <Button asChild variant="outline" size="sm">
-                      <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank" rel="noopener noreferrer">PDF</a>
+                      <a
+                        href={`/api/invoices/${invoice.id}/pdf`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        PDF
+                      </a>
                     </Button>
                   </div>
                 </div>
               </CardHeader>
               {invoice.dueDate || invoice.paidDate ? (
-                <CardContent className="text-sm text-gray-500 pt-0">
-                  {invoice.dueDate && <p>Due: {new Date(invoice.dueDate).toLocaleDateString()}</p>}
-                  {invoice.paidDate && <p className="text-emerald-700">Paid: {new Date(invoice.paidDate).toLocaleDateString()}</p>}
+                <CardContent className="text-sm text-ink-500 pt-0">
+                  {invoice.dueDate && (
+                    <p>Due: {new Date(invoice.dueDate).toLocaleDateString()}</p>
+                  )}
+                  {invoice.paidDate && (
+                    <p className="text-emerald-700">
+                      Paid: {new Date(invoice.paidDate).toLocaleDateString()}
+                    </p>
+                  )}
                 </CardContent>
               ) : null}
             </Card>
@@ -122,18 +142,20 @@ export function InvoicesTab({ projectId, billing, invoices, estimatesForSheet }:
         </div>
       )}
 
-      {uninvoicedRemaining > 0 && billing.invoiced > 0 && (
-        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-          💡 <strong>{currencySymbol(billing.primaryCurrency)}{uninvoicedRemaining.toLocaleString()}</strong> still uninvoiced — create another invoice to bill the remainder.
+      {uninvoicedRemaining > 0 && billing.invoiced > 0 && hasApprovedEstimate && (
+        <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 flex items-center justify-between gap-3 flex-wrap">
+          <span>
+            💡 <strong>
+              {currencySymbol(billing.primaryCurrency)}
+              {uninvoicedRemaining.toLocaleString()}
+            </strong>{" "}
+            still uninvoiced — confirm more actuals to bill the remainder.
+          </span>
+          <Button asChild size="sm" variant="outline">
+            <Link href={confirmActualsHref}>Confirm actuals</Link>
+          </Button>
         </div>
       )}
-
-      <NewInvoiceSheet
-        projectId={projectId}
-        estimates={estimatesForSheet}
-        open={sheetOpen}
-        onOpenChange={setSheetOpen}
-      />
     </div>
   );
 }
