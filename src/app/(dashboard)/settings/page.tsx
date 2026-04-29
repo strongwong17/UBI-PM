@@ -2,11 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, Save } from "lucide-react";
 
 interface BusinessProfile {
@@ -19,7 +16,7 @@ interface BusinessProfile {
 }
 
 export default function SettingsPage() {
-  const [profile, setProfile] = useState<BusinessProfile | null>(null);
+  const [, setProfile] = useState<BusinessProfile | null>(null);
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
@@ -79,29 +76,45 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-40">
-        <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+        <Loader2 className="h-5 w-5 animate-spin text-ink-400" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Manage your business profile used on estimates and invoices.</p>
+    <div className="space-y-6">
+      <div
+        className="flex items-start justify-between gap-4 flex-wrap pb-[18px]"
+        style={{ borderBottom: "1px solid var(--color-hairline)" }}
+      >
+        <div>
+          <h1 className="text-[24px] font-bold tracking-[-0.025em] m-0 mb-1 text-ink-900">
+            Settings
+          </h1>
+          <p className="text-[13px] text-ink-500 m-0 max-w-[520px]">
+            Manage the business profile that appears on generated estimates, invoices, and
+            contracts.
+          </p>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Business Profile</CardTitle>
-          <CardDescription>This information appears on generated PDFs sent to clients.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSave} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Business Name *</Label>
+      <form onSubmit={handleSave} className="space-y-6">
+        <div>
+          <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+            {"// BUSINESS PROFILE"}
+          </p>
+          <div
+            className="bg-card-rd rounded-[14px] p-5 space-y-4"
+            style={{
+              border: "1px solid var(--color-hairline)",
+              boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+            }}
+          >
+            <div className="space-y-1.5">
+              <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                {"// BUSINESS NAME *"}
+              </label>
               <Input
-                id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="UBInsights LLC"
@@ -109,20 +122,22 @@ export default function SettingsPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="tagline">Tagline</Label>
+            <div className="space-y-1.5">
+              <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                {"// TAGLINE"}
+              </label>
               <Input
-                id="tagline"
                 value={tagline}
                 onChange={(e) => setTagline(e.target.value)}
                 placeholder="UX Research Consulting"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
+            <div className="space-y-1.5">
+              <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                {"// ADDRESS"}
+              </label>
               <Textarea
-                id="address"
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder={"28016 Ridgebluff Ct\nRancho Palos Verdes, CA 90275"}
@@ -131,40 +146,63 @@ export default function SettingsPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+              <div className="space-y-1.5">
+                <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                  {"// EMAIL"}
+                </label>
                 <Input
-                  id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="yushi@ubinsights.com"
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone">Phone</Label>
+              <div className="space-y-1.5">
+                <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                  {"// PHONE"}
+                </label>
                 <Input
-                  id="phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="310 906 5677"
                 />
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className="flex justify-end pt-2">
-              <Button type="submit" disabled={isSaving}>
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <Save className="h-4 w-4 mr-2" />
-                )}
-                Save Changes
-              </Button>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+        <div
+          className="flex items-center justify-between p-4 rounded-[14px] mt-5 sticky"
+          style={{
+            background: "var(--color-card-rd)",
+            border: "1px solid var(--color-hairline)",
+            boxShadow:
+              "0 6px 24px -6px rgba(15, 23, 41, 0.10), 0 2px 6px -2px rgba(15, 23, 41, 0.06)",
+            bottom: 16,
+            zIndex: 5,
+          }}
+        >
+          <div className="text-[12px] text-ink-500">
+            Changes apply to all future generated documents.
+          </div>
+          <button
+            type="submit"
+            disabled={isSaving}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium text-white tracking-[-0.005em] disabled:opacity-50"
+            style={{
+              background: "var(--color-accent-rd)",
+              boxShadow: "0 4px 12px -2px rgba(217, 82, 43, 0.32)",
+            }}
+          >
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
+            Save changes
+          </button>
+        </div>
+      </form>
     </div>
   );
 }
