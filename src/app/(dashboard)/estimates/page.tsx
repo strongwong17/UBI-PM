@@ -81,12 +81,16 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
           <h1 className="text-2xl font-bold tracking-[-0.025em] text-ink-900">Estimates</h1>
           <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">{"// "}{estimates.length} {statusFilter ? statusFilter.toLowerCase() : "total"}</p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/estimates/new">
-            <Plus className="h-4 w-4 mr-1.5" />
-            New Estimate
-          </Link>
-        </Button>
+        <Link
+          href="/estimates/new"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium text-white"
+          style={{
+            background: "var(--color-accent-rd)",
+            boxShadow: "0 4px 12px -2px rgba(217, 82, 43, 0.32)",
+          }}
+        >
+          <Plus className="h-3.5 w-3.5" /> New estimate
+        </Link>
       </div>
 
       {/* Filter area — unified with projects page pattern */}
@@ -147,12 +151,16 @@ export default async function EstimatesPage({ searchParams }: PageProps) {
                 {statusFilter ? "Try a different filter" : "Create your first estimate to get started"}
               </p>
               {!statusFilter && (
-                <Button asChild className="mt-4" size="sm" variant="outline">
-                  <Link href="/estimates/new">
-                    <Plus className="h-4 w-4 mr-1.5" />
-                    New Estimate
-                  </Link>
-                </Button>
+                <Link
+                  href="/estimates/new"
+                  className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+                  style={{
+                    background: "var(--color-canvas-cool)",
+                    border: "1px solid var(--color-hairline-strong)",
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" /> New estimate
+                </Link>
               )}
             </CardContent>
           </Card>
