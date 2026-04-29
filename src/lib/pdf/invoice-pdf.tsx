@@ -8,7 +8,7 @@ const styles = StyleSheet.create({
     fontFamily: "NotoSansSC",
     fontSize: 10,
     padding: 40,
-    color: "#1a1a1a",
+    color: "#0F1729",
     backgroundColor: "#ffffff",
   },
   header: {
@@ -19,29 +19,30 @@ const styles = StyleSheet.create({
   companyName: {
     fontSize: 20,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#111827",
+    color: "#0F1729",
   },
   companyDetail: {
     fontSize: 9,
-    color: "#6b7280",
+    color: "#82869C",
     marginTop: 1,
   },
   invoiceTitle: {
     fontSize: 18,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#374151",
+    color: "#D9522B",
     textAlign: "right",
+    letterSpacing: 0.6,
   },
   invoiceNumber: {
     fontSize: 11,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#111827",
+    color: "#0F1729",
     textAlign: "right",
     marginTop: 4,
   },
   metaText: {
     fontSize: 9,
-    color: "#6b7280",
+    color: "#82869C",
     textAlign: "right",
     marginTop: 2,
   },
@@ -50,46 +51,43 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 28,
-    backgroundColor: "#f9fafb",
+    backgroundColor: "#F0EDE5",
     padding: 14,
-    borderRadius: 4,
+    borderRadius: 8,
   },
   billingLabel: {
     fontSize: 8,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#6b7280",
+    color: "#82869C",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     marginBottom: 4,
   },
   billingName: {
     fontSize: 12,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#111827",
+    color: "#0F1729",
   },
   billingText: {
     fontSize: 9,
-    color: "#374151",
+    color: "#525873",
     marginTop: 2,
   },
   // Table
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#1f2937",
+    backgroundColor: "#FAFAF6",
     padding: "8 10",
+    borderTopWidth: 1,
+    borderTopColor: "#E8E5DD",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E8E5DD",
   },
   tableRow: {
     flexDirection: "row",
     padding: "7 10",
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
-  },
-  tableRowAlt: {
-    flexDirection: "row",
-    padding: "7 10",
-    backgroundColor: "#f9fafb",
-    borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    borderBottomColor: "#E8E5DD",
   },
   colDesc: { flex: 5, paddingRight: 8 },
   colQty: { flex: 1, textAlign: "right", paddingRight: 4 },
@@ -98,12 +96,12 @@ const styles = StyleSheet.create({
   headerCell: {
     fontSize: 8,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#ffffff",
+    color: "#A4A6B5",
     textTransform: "uppercase",
-    letterSpacing: 0.3,
+    letterSpacing: 0.5,
   },
-  cellText: { fontSize: 9, color: "#374151" },
-  cellBold: { fontSize: 9, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#111827" },
+  cellText: { fontSize: 9, color: "#525873" },
+  cellBold: { fontSize: 9, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#0F1729" },
   // Totals
   totalsSection: {
     marginTop: 24,
@@ -113,8 +111,8 @@ const styles = StyleSheet.create({
   totalsBox: {
     width: 220,
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 4,
+    borderColor: "#E8E5DD",
+    borderRadius: 8,
     overflow: "hidden",
   },
   totalsRow: {
@@ -122,73 +120,77 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     padding: "6 12",
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    borderBottomColor: "#E8E5DD",
   },
-  totalsLabel: { fontSize: 9, color: "#6b7280" },
-  totalsValue: { fontSize: 9, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#374151" },
+  totalsLabel: { fontSize: 9, color: "#82869C" },
+  totalsValue: { fontSize: 9, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#525873" },
   totalsFinalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     padding: "10 12",
-    backgroundColor: "#1f2937",
+    backgroundColor: "#FFFFFF",
+    borderTopWidth: 1,
+    borderTopColor: "#D8D4C8",
   },
-  totalsFinalLabel: { fontSize: 11, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#ffffff" },
-  totalsFinalValue: { fontSize: 11, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#ffffff" },
+  totalsFinalLabel: { fontSize: 11, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#0F1729" },
+  totalsFinalValue: { fontSize: 12, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#D9522B" },
   // Notes
   notesSection: {
     marginTop: 20,
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+    borderTopColor: "#E8E5DD",
     paddingTop: 14,
   },
   notesTitle: {
     fontSize: 9,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#374151",
+    color: "#0F1729",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
     marginBottom: 5,
   },
-  notesText: { fontSize: 9, color: "#6b7280", lineHeight: 1.5 },
+  notesText: { fontSize: 9, color: "#525873", lineHeight: 1.5 },
   // Wiring
   wiringSection: {
     marginTop: 20,
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+    borderTopColor: "#E8E5DD",
     paddingTop: 14,
   },
   wiringBox: {
     borderWidth: 1,
-    borderColor: "#e5e7eb",
-    borderRadius: 4,
+    borderColor: "#E8E5DD",
+    borderRadius: 8,
     overflow: "hidden",
   },
   wiringBoxHeader: {
-    backgroundColor: "#1f2937",
+    backgroundColor: "#FAFAF6",
     padding: "6 10",
+    borderBottomWidth: 1,
+    borderBottomColor: "#E8E5DD",
   },
   wiringBoxTitle: {
     fontSize: 9,
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#ffffff",
+    color: "#0F1729",
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   wiringRow: {
     flexDirection: "row",
     padding: "4 10",
     borderBottomWidth: 1,
-    borderBottomColor: "#f3f4f6",
+    borderBottomColor: "#E8E5DD",
   },
   wiringLabel: {
     fontSize: 8,
-    color: "#6b7280",
+    color: "#82869C",
     fontFamily: "NotoSansSC", fontWeight: "bold" as const,
     width: 100,
   },
   wiringValue: {
     fontSize: 8,
-    color: "#374151",
+    color: "#525873",
     flex: 1,
   },
   // Footer
@@ -200,10 +202,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "#e5e7eb",
+    borderTopColor: "#E8E5DD",
     paddingTop: 8,
   },
-  footerText: { fontSize: 8, color: "#9ca3af" },
+  footerText: { fontSize: 8, color: "#A4A6B5" },
 });
 
 export interface BusinessProfileData {
@@ -335,7 +337,7 @@ export function InvoicePDF({
           <Text style={[styles.headerCell, styles.colTotal]}>Total</Text>
         </View>
         {invoice.lineItems.map((item, i) => (
-          <View key={i} style={i % 2 === 0 ? styles.tableRow : styles.tableRowAlt}>
+          <View key={i} style={styles.tableRow}>
             <Text style={[styles.cellText, styles.colDesc]}>{item.description}</Text>
             <Text style={[styles.cellText, styles.colQty]}>{item.quantity}</Text>
             <Text style={[styles.cellText, styles.colPrice]}>{fmt(item.unitPrice, currency)}</Text>
@@ -353,7 +355,7 @@ export function InvoicePDF({
             {invoice.discount > 0 && (
               <View style={styles.totalsRow}>
                 <Text style={styles.totalsLabel}>Discount</Text>
-                <Text style={[styles.totalsValue, { color: "#dc2626" }]}>-{fmt(invoice.discount, currency)}</Text>
+                <Text style={[styles.totalsValue, { color: "#A85614" }]}>-{fmt(invoice.discount, currency)}</Text>
               </View>
             )}
             {invoice.taxRate > 0 && (

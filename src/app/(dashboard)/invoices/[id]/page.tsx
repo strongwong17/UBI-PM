@@ -2,23 +2,11 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { currencySymbol } from "@/lib/currency";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { StatusBadge } from "@/components/shared/status-badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { ArrowLeft, Calendar, User, FolderKanban, Mail, Download, ArrowRight } from "lucide-react";
+import { StatusPill } from "@/components/redesign/status-pill";
+import { ArrowLeft, Download } from "lucide-react";
 import { InvoiceStatusChanger } from "@/components/invoices/invoice-status-changer";
 import { CreateRmbInvoiceButton } from "@/components/invoices/create-rmb-invoice-button";
 import { InvoiceLineEditor } from "@/components/invoices/invoice-line-editor";
-import { Badge } from "@/components/ui/badge";
 
 export default async function InvoiceDetailPage({
   params,
@@ -48,66 +36,113 @@ export default async function InvoiceDetailPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/invoices">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
-            </Button>
-          </Link>
+      <div>
+        <Link
+          href="/invoices"
+          className="inline-flex items-center gap-1 text-[12px] text-ink-500 hover:text-ink-900 mb-3"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to invoices
+        </Link>
+
+        <div
+          className="flex items-start justify-between gap-4 flex-wrap pb-[18px]"
+          style={{ borderBottom: "1px solid var(--color-hairline)" }}
+        >
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold text-gray-900">{invoice.invoiceNumber}</h1>
-              {invoice.parentInvoiceId && (
-                <Badge variant="secondary" className="bg-amber-100 text-amber-800">
-                  RMB Duplicate
-                </Badge>
-              )}
+            <div className="font-mono text-[11px] text-ink-500 tracking-[0.04em] mb-1.5">
+              <Link
+                href={`/clients/${invoice.project.client.id}`}
+                className="hover:text-accent-rd"
+              >
+                {invoice.project.client.company}
+              </Link>
+              {" · "}
+              <Link
+                href={`/projects/${invoice.project.id}?tab=invoice`}
+                className="hover:text-accent-rd"
+              >
+                {invoice.project.title}
+              </Link>
             </div>
-            <div className="flex items-center gap-2 mt-1">
-              <StatusBadge status={invoice.status} />
+            <h1 className="text-[24px] font-bold tracking-[-0.025em] text-ink-900 m-0 mb-2 font-mono">
+              {invoice.invoiceNumber}
+            </h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <StatusPill status={invoice.status} />
               {invoice.currency !== "USD" && (
-                <Badge variant="outline">{invoice.currency}</Badge>
+                <span
+                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-[0.06em] uppercase"
+                  style={{
+                    background: "var(--color-canvas-cool)",
+                    color: "var(--color-ink-700)",
+                    border: "1px solid var(--color-hairline-strong)",
+                  }}
+                >
+                  {invoice.currency}
+                </span>
+              )}
+              {invoice.parentInvoiceId && (
+                <span
+                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-[0.06em] uppercase"
+                  style={{
+                    background: "var(--color-canvas-cool)",
+                    color: "var(--color-ink-700)",
+                    border: "1px solid var(--color-hairline-strong)",
+                  }}
+                >
+                  RMB
+                </span>
               )}
               {isDraft && (
-                <span className="text-xs text-blue-600 font-medium">Editable</span>
+                <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-accent-rd">
+                  Editable
+                </span>
               )}
             </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <InvoiceStatusChanger invoiceId={invoice.id} currentStatus={invoice.status} />
-          {!invoice.parentInvoiceId && (
-            <CreateRmbInvoiceButton
-              invoiceId={invoice.id}
-              invoiceNumber={invoice.invoiceNumber}
-              hasRmbDuplicate={!!invoice.rmbDuplicate}
-            />
-          )}
-          <a href={`/api/invoices/${invoice.id}/pdf`} download>
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              PDF
-            </Button>
-          </a>
+
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <InvoiceStatusChanger invoiceId={invoice.id} currentStatus={invoice.status} />
+            {!invoice.parentInvoiceId && (
+              <CreateRmbInvoiceButton
+                invoiceId={invoice.id}
+                invoiceNumber={invoice.invoiceNumber}
+                hasRmbDuplicate={!!invoice.rmbDuplicate}
+              />
+            )}
+            <a
+              href={`/api/invoices/${invoice.id}/pdf`}
+              download
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+              style={{
+                background: "var(--color-canvas-cool)",
+                border: "1px solid var(--color-hairline-strong)",
+              }}
+            >
+              <Download className="h-3.5 w-3.5" /> PDF
+            </a>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Line Items */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>Line Items</CardTitle>
-                {isDraft && (
-                  <span className="text-xs text-gray-500">Adjust quantities and discount before sending</span>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {isDraft ? (
+        {/* Main column */}
+        <div className="lg:col-span-2 space-y-6">
+          {isDraft ? (
+            <div>
+              <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+                {"// LINE ITEMS · DRAFT"}
+              </p>
+              <div
+                className="bg-card-rd rounded-[14px] p-5"
+                style={{
+                  border: "1px solid var(--color-hairline)",
+                  boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                }}
+              >
+                <div className="text-[12px] text-ink-500 mb-3">
+                  Adjust quantities and discount before sending.
+                </div>
                 <InvoiceLineEditor
                   invoiceId={invoice.id}
                   lineItems={invoice.lineItems.map((li) => ({
@@ -122,201 +157,277 @@ export default async function InvoiceDetailPage({
                   taxRate={invoice.taxRate}
                   currencySymbol={sym}
                 />
-              ) : (
-                <>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Description</TableHead>
-                        <TableHead className="text-right">Qty</TableHead>
-                        <TableHead className="text-right">Unit Price</TableHead>
-                        <TableHead className="text-right">Total</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {invoice.lineItems.map((item) => (
-                        <TableRow key={item.id}>
-                          <TableCell className="font-medium text-sm">{item.description}</TableCell>
-                          <TableCell className="text-right text-sm">{item.quantity}</TableCell>
-                          <TableCell className="text-right text-sm">{sym}{fmt(item.unitPrice)}</TableCell>
-                          <TableCell className="text-right text-sm font-medium">
-                            {sym}{fmt(item.total)}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+                  {"// LINE ITEMS"}
+                </p>
+                <div
+                  className="bg-card-rd rounded-[14px] overflow-hidden"
+                  style={{
+                    border: "1px solid var(--color-hairline)",
+                    boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                  }}
+                >
+                  {/* Column header band */}
+                  <div
+                    className="grid gap-3 px-5 py-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.06em]"
+                    style={{
+                      gridTemplateColumns: "1fr 70px 110px 120px",
+                      background: "#FAFAF6",
+                      borderBottom: "1px solid var(--color-hairline)",
+                      color: "var(--color-ink-400)",
+                    }}
+                  >
+                    <span>Description</span>
+                    <span className="text-right">Qty</span>
+                    <span className="text-right">Unit price</span>
+                    <span className="text-right">Total</span>
+                  </div>
 
-                  {/* Totals */}
-                  <div className="mt-6 pt-4 border-t">
-                    <div className="max-w-xs ml-auto space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Subtotal</span>
-                        <span className="font-medium">{sym}{fmt(invoice.subtotal)}</span>
+                  {/* Lines */}
+                  {invoice.lineItems.map((item, i) => (
+                    <div
+                      key={item.id}
+                      className="grid gap-3 items-center px-5 py-3 hover:bg-[#FCFAF6] transition-colors"
+                      style={{
+                        gridTemplateColumns: "1fr 70px 110px 120px",
+                        borderBottom:
+                          i < invoice.lineItems.length - 1
+                            ? "1px solid var(--color-hairline)"
+                            : "none",
+                      }}
+                    >
+                      <div className="text-[13px] font-medium text-ink-900 leading-[1.3] tracking-[-0.005em]">
+                        {item.description}
                       </div>
-                      {invoice.discount > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Discount</span>
-                          <span className="font-medium text-red-600">-{sym}{fmt(invoice.discount)}</span>
-                        </div>
-                      )}
-                      {invoice.taxRate > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600">Tax ({invoice.taxRate}%)</span>
-                          <span className="font-medium">{sym}{fmt(invoice.tax)}</span>
-                        </div>
-                      )}
-                      <Separator />
-                      <div className="flex justify-between">
-                        <span className="font-semibold">Total</span>
-                        <span className="font-bold text-xl">{sym}{fmt(invoice.total)}</span>
+                      <div className="text-right text-[13px] text-ink-700 rd-tabular">
+                        {item.quantity}
+                      </div>
+                      <div className="text-right text-[13px] text-ink-700 rd-tabular">
+                        {sym}{fmt(item.unitPrice)}
+                      </div>
+                      <div className="text-right text-[13px] font-medium text-ink-900 rd-tabular">
+                        {sym}{fmt(item.total)}
                       </div>
                     </div>
-                  </div>
-                </>
-              )}
-
-              {invoice.notes && (
-                <div className="mt-6 pt-4 border-t">
-                  <p className="text-sm font-medium text-gray-500 mb-2">Notes</p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{invoice.notes}</p>
+                  ))}
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </div>
+
+              {/* Totals */}
+              <div>
+                <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+                  {"// TOTALS"}
+                </p>
+                <div
+                  className="bg-card-rd rounded-[14px] p-5"
+                  style={{
+                    border: "1px solid var(--color-hairline)",
+                    boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                  }}
+                >
+                  <div className="max-w-xs ml-auto space-y-1.5">
+                    <div className="flex justify-between text-[12px]">
+                      <span className="text-ink-500">Subtotal</span>
+                      <span className="font-mono rd-tabular text-ink-700">
+                        {sym}{fmt(invoice.subtotal)}
+                      </span>
+                    </div>
+                    {invoice.discount > 0 && (
+                      <div className="flex justify-between text-[12px]">
+                        <span className="text-ink-500">Discount</span>
+                        <span className="font-mono rd-tabular text-warn-fg">
+                          −{sym}{fmt(invoice.discount)}
+                        </span>
+                      </div>
+                    )}
+                    {invoice.taxRate > 0 && (
+                      <div className="flex justify-between text-[12px]">
+                        <span className="text-ink-500">Tax ({invoice.taxRate}%)</span>
+                        <span className="font-mono rd-tabular text-ink-700">
+                          {sym}{fmt(invoice.tax)}
+                        </span>
+                      </div>
+                    )}
+                    <div
+                      className="flex justify-between pt-2 mt-2"
+                      style={{ borderTop: "1px solid var(--color-hairline)" }}
+                    >
+                      <span className="text-[13px] font-bold text-ink-900">Total</span>
+                      <span className="font-mono rd-tabular text-[16px] font-bold text-accent-rd">
+                        {sym}{fmt(invoice.total)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {invoice.notes && (
+            <div>
+              <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+                {"// NOTES"}
+              </p>
+              <div
+                className="bg-card-rd rounded-[14px] p-5"
+                style={{
+                  border: "1px solid var(--color-hairline)",
+                  boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                }}
+              >
+                <div className="text-[12px] text-ink-700 whitespace-pre-wrap leading-[1.5]">
+                  {invoice.notes}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3">
-                <User className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs text-gray-500">Client</p>
-                  <Link
-                    href={`/clients/${invoice.project.client.id}`}
-                    className="text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    {invoice.project.client.company}
-                  </Link>
+          <div>
+            <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+              {"// DETAILS"}
+            </p>
+            <div
+              className="bg-card-rd rounded-[14px] p-5 space-y-3"
+              style={{
+                border: "1px solid var(--color-hairline)",
+                boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+              }}
+            >
+              <div>
+                <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                  {"// CLIENT"}
                 </div>
+                <Link
+                  href={`/clients/${invoice.project.client.id}`}
+                  className="text-[13px] font-medium text-ink-900 hover:text-accent-rd"
+                >
+                  {invoice.project.client.company}
+                </Link>
               </div>
 
-              <div className="flex items-start gap-3">
-                <FolderKanban className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs text-gray-500">Project</p>
-                  <Link
-                    href={`/projects/${invoice.project.id}?tab=invoice`}
-                    className="text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    {invoice.project.projectNumber}
-                  </Link>
-                  <p className="text-xs text-gray-500 mt-0.5">{invoice.project.title}</p>
+              <div>
+                <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                  {"// PROJECT"}
                 </div>
+                <Link
+                  href={`/projects/${invoice.project.id}?tab=invoice`}
+                  className="text-[13px] font-medium text-ink-900 hover:text-accent-rd font-mono"
+                >
+                  {invoice.project.projectNumber}
+                </Link>
+                <div className="text-[12px] text-ink-500 mt-0.5">{invoice.project.title}</div>
               </div>
 
               {invoice.contactEmail && (
-                <div className="flex items-start gap-3">
-                  <Mail className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">Contact Email</p>
-                    <a
-                      href={`mailto:${invoice.contactEmail}`}
-                      className="text-sm text-blue-600 hover:underline"
-                    >
-                      {invoice.contactEmail}
-                    </a>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// CONTACT EMAIL"}
                   </div>
+                  <a
+                    href={`mailto:${invoice.contactEmail}`}
+                    className="text-[12px] text-ink-700 hover:text-accent-rd"
+                  >
+                    {invoice.contactEmail}
+                  </a>
                 </div>
               )}
 
               {invoice.issuedDate && (
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">Issued</p>
-                    <p className="text-sm">{new Date(invoice.issuedDate).toLocaleDateString()}</p>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// ISSUED"}
+                  </div>
+                  <div className="text-[13px] text-ink-900">
+                    {new Date(invoice.issuedDate).toLocaleDateString()}
                   </div>
                 </div>
               )}
 
               {invoice.dueDate && (
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">Due</p>
-                    <p className="text-sm font-medium">
-                      {new Date(invoice.dueDate).toLocaleDateString()}
-                    </p>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// DUE"}
+                  </div>
+                  <div className="text-[13px] text-ink-900 font-medium">
+                    {new Date(invoice.dueDate).toLocaleDateString()}
                   </div>
                 </div>
               )}
 
               {invoice.paidDate && (
-                <div className="flex items-start gap-3">
-                  <Calendar className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">Paid</p>
-                    <p className="text-sm font-medium text-green-700">
-                      {new Date(invoice.paidDate).toLocaleDateString()}
-                    </p>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// PAID"}
+                  </div>
+                  <div
+                    className="text-[13px] font-medium"
+                    style={{ color: "var(--color-s-delivered-fg)" }}
+                  >
+                    {new Date(invoice.paidDate).toLocaleDateString()}
                   </div>
                 </div>
               )}
 
               {invoice.exchangeRate && (
-                <div className="flex items-start gap-3">
-                  <ArrowRight className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">Exchange Rate</p>
-                    <p className="text-sm font-medium">1 USD = {invoice.exchangeRate} CNY</p>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// EXCHANGE RATE"}
+                  </div>
+                  <div className="text-[13px] text-ink-900 font-mono rd-tabular">
+                    1 USD = {invoice.exchangeRate} CNY
                   </div>
                 </div>
               )}
 
               {invoice.parentInvoice && (
-                <div className="flex items-start gap-3">
-                  <FolderKanban className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">Original Invoice</p>
-                    <Link
-                      href={`/invoices/${invoice.parentInvoice.id}`}
-                      className="text-sm font-medium text-blue-600 hover:underline"
-                    >
-                      {invoice.parentInvoice.invoiceNumber}
-                    </Link>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// ORIGINAL"}
                   </div>
+                  <Link
+                    href={`/invoices/${invoice.parentInvoice.id}`}
+                    className="text-[13px] font-medium text-ink-900 hover:text-accent-rd font-mono"
+                  >
+                    {invoice.parentInvoice.invoiceNumber}
+                  </Link>
                 </div>
               )}
 
               {invoice.rmbDuplicate && (
-                <div className="flex items-start gap-3">
-                  <FolderKanban className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-xs text-gray-500">RMB Duplicate</p>
-                    <Link
-                      href={`/invoices/${invoice.rmbDuplicate.id}`}
-                      className="text-sm font-medium text-blue-600 hover:underline"
-                    >
-                      {invoice.rmbDuplicate.invoiceNumber}
-                    </Link>
+                <div>
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// RMB DUPLICATE"}
                   </div>
+                  <Link
+                    href={`/invoices/${invoice.rmbDuplicate.id}`}
+                    className="text-[13px] font-medium text-ink-900 hover:text-accent-rd font-mono"
+                  >
+                    {invoice.rmbDuplicate.invoiceNumber}
+                  </Link>
                 </div>
               )}
 
-              <Separator />
-
-              <div>
-                <p className="text-xs text-gray-500">Created</p>
-                <p className="text-sm">{new Date(invoice.createdAt).toLocaleDateString()}</p>
+              <div
+                className="pt-3 mt-1"
+                style={{ borderTop: "1px solid var(--color-hairline)" }}
+              >
+                <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                  {"// CREATED"}
+                </div>
+                <div className="text-[12px] text-ink-700">
+                  {new Date(invoice.createdAt).toLocaleDateString()}
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       </div>
     </div>
