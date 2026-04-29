@@ -6,42 +6,59 @@ import { FileText, Plus, Pencil, Trash2, Zap } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-export default function TemplatesPage() {
+export default function ContractTemplatesPage() {
   const templates = useContractStore((s) => s.templates);
   const deleteTemplate = useContractStore((s) => s.deleteTemplate);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   return (
-    <>
-      <div className="mb-6 flex items-center justify-between">
+    <div className="space-y-6">
+      <div
+        className="flex items-start justify-between gap-4 flex-wrap pb-[18px]"
+        style={{ borderBottom: "1px solid var(--color-hairline)" }}
+      >
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-            Templates
+          <h1 className="text-[24px] font-bold tracking-[-0.025em] m-0 mb-1 text-ink-900">
+            Contract templates
           </h1>
-          <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Manage your contract templates.
+          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">
+            {"// "}{templates.length} {templates.length === 1 ? "template" : "templates"}
           </p>
         </div>
         <Link
           href="/contract-templates/new"
-          className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium text-white"
+          style={{
+            background: "var(--color-accent-rd)",
+            boxShadow: "0 4px 12px -2px rgba(217, 82, 43, 0.32)",
+          }}
         >
-          <Plus className="h-4 w-4" />
-          New Template
+          <Plus className="h-3.5 w-3.5" /> New template
         </Link>
       </div>
 
       {templates.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-zinc-300 bg-white py-16 dark:border-zinc-700 dark:bg-zinc-950">
-          <FileText className="mb-4 h-10 w-10 text-zinc-300 dark:text-zinc-600" />
-          <p className="mb-2 text-sm font-medium text-zinc-500 dark:text-zinc-400">
-            No templates yet
+        <div
+          className="bg-card-rd rounded-[14px] py-16 text-center"
+          style={{
+            border: "1px solid var(--color-hairline)",
+            boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+          }}
+        >
+          <FileText className="mb-4 h-10 w-10 text-ink-300 mx-auto" />
+          <h3 className="text-[15px] font-medium text-ink-900 mb-1">No templates yet</h3>
+          <p className="text-[13px] text-ink-500 mb-5 max-w-sm mx-auto">
+            Build a contract template once, then generate signed contracts in seconds.
           </p>
           <Link
             href="/contract-templates/new"
-            className="text-sm text-blue-600 hover:text-blue-700"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+            style={{
+              background: "var(--color-canvas-cool)",
+              border: "1px solid var(--color-hairline-strong)",
+            }}
           >
-            Create your first template
+            <Plus className="h-3.5 w-3.5" /> Create your first template
           </Link>
         </div>
       ) : (
@@ -49,51 +66,59 @@ export default function TemplatesPage() {
           {templates.map((template) => (
             <div
               key={template.id}
-              className="group rounded-xl border border-zinc-200 bg-white p-5 transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950"
+              className="bg-card-rd rounded-[14px] p-5"
+              style={{
+                border: "1px solid var(--color-hairline)",
+                boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+              }}
             >
               <div className="mb-3 flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="rounded-lg bg-blue-50 p-2 dark:bg-blue-950">
-                    <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                <div className="flex items-center gap-3">
+                  <div
+                    className="rounded-lg p-2"
+                    style={{ background: "var(--color-canvas-cool)" }}
+                  >
+                    <FileText className="h-4 w-4 text-accent-rd" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
-                      {template.name}
-                    </h3>
-                    <span className="text-xs text-zinc-400">
+                    <h3 className="text-[14px] font-semibold text-ink-900">{template.name}</h3>
+                    <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
                       {CATEGORY_LABELS[template.category]}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <p className="mb-4 line-clamp-2 text-sm text-zinc-500 dark:text-zinc-400">
+              <p className="mb-4 line-clamp-2 text-[12px] text-ink-500">
                 {template.description}
               </p>
 
-              <div className="mb-4 flex items-center gap-2 text-xs text-zinc-400">
-                <span>{template.placeholders.length} fields</span>
-                <span>&middot;</span>
-                <span>
-                  Updated{" "}
-                  {new Date(template.updatedAt).toLocaleDateString()}
-                </span>
+              <div className="mb-4 font-mono text-[11px] text-ink-400 tracking-[0.02em]">
+                {"// "}
+                {template.placeholders.length} fields · updated{" "}
+                {new Date(template.updatedAt).toLocaleDateString()}
               </div>
 
               <div className="flex items-center gap-2">
                 <Link
                   href={`/contracts/generate/${template.id}`}
-                  className="flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-700"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-white"
+                  style={{
+                    background: "var(--color-accent-rd)",
+                    boxShadow: "0 4px 12px -2px rgba(217, 82, 43, 0.32)",
+                  }}
                 >
-                  <Zap className="h-3 w-3" />
-                  Generate
+                  <Zap className="h-3 w-3" /> Generate
                 </Link>
                 <Link
                   href={`/contract-templates/${template.id}`}
-                  className="flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+                  style={{
+                    background: "var(--color-canvas-cool)",
+                    border: "1px solid var(--color-hairline-strong)",
+                  }}
                 >
-                  <Pencil className="h-3 w-3" />
-                  Edit
+                  <Pencil className="h-3 w-3" /> Edit
                 </Link>
                 {deleteConfirm === template.id ? (
                   <div className="ml-auto flex items-center gap-1">
@@ -102,13 +127,18 @@ export default function TemplatesPage() {
                         deleteTemplate(template.id);
                         setDeleteConfirm(null);
                       }}
-                      className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700"
+                      className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-white"
+                      style={{ background: "var(--color-warn-fg)" }}
                     >
                       Confirm
                     </button>
                     <button
                       onClick={() => setDeleteConfirm(null)}
-                      className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-500 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+                      className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+                      style={{
+                        background: "var(--color-canvas-cool)",
+                        border: "1px solid var(--color-hairline-strong)",
+                      }}
                     >
                       Cancel
                     </button>
@@ -116,10 +146,9 @@ export default function TemplatesPage() {
                 ) : (
                   <button
                     onClick={() => setDeleteConfirm(template.id)}
-                    className="ml-auto flex items-center gap-1.5 rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 dark:border-zinc-700 dark:hover:bg-red-950"
+                    className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-300 hover:text-warn-fg hover:bg-warn-bg"
                   >
-                    <Trash2 className="h-3 w-3" />
-                    Delete
+                    <Trash2 className="h-3 w-3" /> Delete
                   </button>
                 )}
               </div>
@@ -127,6 +156,6 @@ export default function TemplatesPage() {
           ))}
         </div>
       )}
-    </>
+    </div>
   );
 }

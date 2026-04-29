@@ -1,6 +1,6 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import { useContractStore } from "@/lib/contract-store";
 import { exportToDocx } from "@/lib/export-docx";
 import { openStyledPrintWindow } from "@/lib/export-pdf";
@@ -21,13 +21,10 @@ import { logClientActivity } from "@/lib/log-client-activity";
 
 export default function ContractViewPage() {
   const params = useParams();
-  const router = useRouter();
   const getContract = useContractStore((s) => s.getContract);
-  const getTemplate = useContractStore((s) => s.getTemplate);
   const updateContract = useContractStore((s) => s.updateContract);
 
   const contract = getContract(params.id as string);
-  const template = contract ? getTemplate(contract.templateId) : undefined;
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editContent, setEditContent] = useState("");
@@ -35,11 +32,14 @@ export default function ContractViewPage() {
 
   if (!contract) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full items-center justify-center py-16">
         <div className="text-center">
-          <p className="text-zinc-500">Contract not found</p>
-          <Link href="/contracts" className="mt-2 text-sm text-blue-600 hover:text-blue-700">
-            Back to Contracts
+          <p className="text-[13px] text-ink-500">Contract not found</p>
+          <Link
+            href="/contracts"
+            className="mt-2 inline-block text-[13px] text-accent-rd hover:underline"
+          >
+            Back to contracts
           </Link>
         </div>
       </div>
@@ -102,21 +102,39 @@ export default function ContractViewPage() {
     setEditName("");
   };
 
+  const secondaryBtn =
+    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd";
+  const secondaryStyle: React.CSSProperties = {
+    background: "var(--color-canvas-cool)",
+    border: "1px solid var(--color-hairline-strong)",
+  };
+  const primaryBtn =
+    "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-[12px] font-medium text-white";
+  const primaryStyle: React.CSSProperties = {
+    background: "var(--color-accent-rd)",
+    boxShadow: "0 4px 12px -2px rgba(217, 82, 43, 0.32)",
+  };
+
   return (
-    <>
-      <div className="mb-6">
+    <div className="space-y-6">
+      <div>
         <Link
           href="/contracts"
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          className="inline-flex items-center gap-1 text-[12px] text-ink-500 hover:text-ink-900 mb-3"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Contracts
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to contracts
         </Link>
 
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-blue-50 p-2 dark:bg-blue-950">
-              <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+        <div
+          className="flex items-start justify-between gap-4 flex-wrap pb-[18px]"
+          style={{ borderBottom: "1px solid var(--color-hairline)" }}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className="rounded-lg p-2"
+              style={{ background: "var(--color-canvas-cool)" }}
+            >
+              <FileText className="h-4 w-4 text-accent-rd" />
             </div>
             <div>
               {editing ? (
@@ -124,29 +142,42 @@ export default function ContractViewPage() {
                   type="text"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className="rounded-lg border border-blue-300 bg-white px-3 py-1 text-2xl font-bold text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-blue-700 dark:bg-zinc-900 dark:text-zinc-100"
+                  className="rounded-md px-3 py-1 text-[24px] font-bold text-ink-900 outline-none focus:ring-2 focus:ring-accent-rd/40"
+                  style={{
+                    background: "var(--color-card-rd)",
+                    border: "1px solid var(--color-accent-rd)",
+                  }}
                 />
               ) : (
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
+                <h1 className="text-[24px] font-bold tracking-[-0.025em] text-ink-900 m-0">
                   {contract.name}
                 </h1>
               )}
-              <div className="mt-1 flex items-center gap-2 text-sm text-zinc-500 dark:text-zinc-400">
+              <div className="mt-1.5 flex items-center gap-2 flex-wrap font-mono text-[11px] text-ink-500 tracking-[0.04em]">
                 <span>{contract.templateName}</span>
-                <span>&middot;</span>
-                <span>
-                  Created {new Date(contract.createdAt).toLocaleDateString()}
-                </span>
-                <span>&middot;</span>
+                <span>·</span>
+                <span>Created {new Date(contract.createdAt).toLocaleDateString()}</span>
+                <span>·</span>
                 <button
                   onClick={toggleStatus}
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${
-                    contract.status === "final"
-                      ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950 dark:text-emerald-300"
-                      : "bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950 dark:text-amber-300"
-                  }`}
+                  title="Click to toggle"
+                  className="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-mono font-bold tracking-[0.06em] uppercase transition-colors"
+                  style={{
+                    background:
+                      contract.status === "final"
+                        ? "var(--color-s-approved-bg)"
+                        : "var(--color-canvas-cool)",
+                    color:
+                      contract.status === "final"
+                        ? "var(--color-s-approved-fg)"
+                        : "var(--color-ink-700)",
+                    border:
+                      contract.status === "final"
+                        ? "none"
+                        : "1px solid var(--color-hairline-strong)",
+                  }}
                 >
-                  {contract.status === "final" ? "Final" : "Draft"} (click to toggle)
+                  {contract.status === "final" ? "Final" : "Draft"}
                 </button>
               </div>
             </div>
@@ -154,118 +185,117 @@ export default function ContractViewPage() {
         </div>
       </div>
 
-      <div className="mb-4 flex items-center gap-2">
+      {/* Action toolbar */}
+      <div className="flex items-center gap-2 flex-wrap">
         {editing ? (
           <>
-            <button
-              onClick={saveEdits}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-            >
-              <Save className="h-3.5 w-3.5" />
-              Save Changes
+            <button onClick={saveEdits} className={primaryBtn} style={primaryStyle}>
+              <Save className="h-3.5 w-3.5" /> Save changes
             </button>
-            <button
-              onClick={cancelEditing}
-              className="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-            >
-              <X className="h-3.5 w-3.5" />
-              Cancel
+            <button onClick={cancelEditing} className={secondaryBtn} style={secondaryStyle}>
+              <X className="h-3.5 w-3.5" /> Cancel
             </button>
-            <div className="mx-2 h-4 w-px bg-zinc-200 dark:bg-zinc-700" />
+            <div className="mx-1 h-4 w-px bg-hairline" />
           </>
         ) : (
           isDraft && (
-            <button
-              onClick={startEditing}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-              Edit Draft
+            <button onClick={startEditing} className={primaryBtn} style={primaryStyle}>
+              <Pencil className="h-3.5 w-3.5" /> Edit draft
             </button>
           )
         )}
-        <button
-          onClick={handleExportWord}
-          className="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          <FileDown className="h-3.5 w-3.5" />
-          Export Word
+        <button onClick={handleExportWord} className={secondaryBtn} style={secondaryStyle}>
+          <FileDown className="h-3.5 w-3.5" /> Export Word
         </button>
-        <button
-          onClick={handlePrint}
-          className="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          <Download className="h-3.5 w-3.5" />
-          Print / PDF
+        <button onClick={handlePrint} className={secondaryBtn} style={secondaryStyle}>
+          <Download className="h-3.5 w-3.5" /> Print / PDF
         </button>
-        <button
-          onClick={handleCopy}
-          className="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
+        <button onClick={handleCopy} className={secondaryBtn} style={secondaryStyle}>
           {copied ? (
             <>
-              <Check className="h-3.5 w-3.5 text-emerald-600" />
-              Copied!
+              <Check className="h-3.5 w-3.5 text-s-approved-fg" /> Copied
             </>
           ) : (
             <>
-              <Copy className="h-3.5 w-3.5" />
-              Copy Text
+              <Copy className="h-3.5 w-3.5" /> Copy text
             </>
           )}
         </button>
         {!editing && (
           <Link
             href={`/contracts/generate/${contract.templateId}`}
-            className="flex items-center gap-2 rounded-lg border border-zinc-200 px-3 py-1.5 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            className={secondaryBtn}
+            style={secondaryStyle}
           >
-            <Pencil className="h-3.5 w-3.5" />
-            Generate New
+            <Pencil className="h-3.5 w-3.5" /> Generate new
           </Link>
         )}
       </div>
 
-      <div className="rounded-xl border border-zinc-200 bg-white p-8 dark:border-zinc-800 dark:bg-zinc-950">
-        <div className="mx-auto max-w-2xl">
-          {editing ? (
-            <textarea
-              value={editContent}
-              onChange={(e) => setEditContent(e.target.value)}
-              className="w-full min-h-[600px] rounded-lg border border-zinc-200 bg-white px-4 py-3 font-serif text-sm leading-relaxed text-zinc-800 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200"
-              style={{ resize: "vertical" }}
-            />
-          ) : (
-            <pre className="whitespace-pre-wrap font-serif text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">
-              {contract.content}
-            </pre>
-          )}
+      {/* Document */}
+      <div>
+        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+          {"// CONTRACT BODY"}
+        </p>
+        <div
+          className="bg-card-rd rounded-[14px] p-8"
+          style={{
+            border: "1px solid var(--color-hairline)",
+            boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+          }}
+        >
+          <div className="mx-auto max-w-2xl">
+            {editing ? (
+              <textarea
+                value={editContent}
+                onChange={(e) => setEditContent(e.target.value)}
+                className="w-full min-h-[600px] rounded-md px-4 py-3 font-serif text-[14px] leading-relaxed text-ink-900 outline-none focus:ring-2 focus:ring-ink-900/10"
+                style={{
+                  background: "var(--color-card-rd)",
+                  border: "1px solid var(--color-hairline)",
+                  resize: "vertical",
+                }}
+              />
+            ) : (
+              <pre className="whitespace-pre-wrap font-serif text-[14px] leading-relaxed text-ink-900">
+                {contract.content}
+              </pre>
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Field values */}
       {!editing && Object.keys(contract.data).length > 0 && (
-        <div className="mt-6 rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-          <h2 className="mb-4 text-sm font-semibold text-zinc-700 dark:text-zinc-300">
-            Field Values Used
-          </h2>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {Object.entries(contract.data).map(([key, value]) => (
-              <div
-                key={key}
-                className="rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-900"
-              >
-                <p className="text-xs font-medium text-zinc-400">
-                  {key
-                    .replace(/_/g, " ")
-                    .replace(/\b\w/g, (c) => c.toUpperCase())}
-                </p>
-                <p className="mt-0.5 text-sm text-zinc-700 dark:text-zinc-300">
-                  {value || "—"}
-                </p>
-              </div>
-            ))}
+        <div>
+          <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+            {"// FIELD VALUES USED"}
+          </p>
+          <div
+            className="bg-card-rd rounded-[14px] p-5"
+            style={{
+              border: "1px solid var(--color-hairline)",
+              boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+            }}
+          >
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {Object.entries(contract.data).map(([key, value]) => (
+                <div
+                  key={key}
+                  className="rounded-md px-3 py-2"
+                  style={{ background: "#FAFAF6" }}
+                >
+                  <div className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 mb-0.5">
+                    {"// "}
+                    {key.replace(/_/g, " ").toUpperCase()}
+                  </div>
+                  <div className="text-[13px] text-ink-900">{value || "—"}</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
