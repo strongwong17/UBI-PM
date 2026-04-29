@@ -84,13 +84,13 @@ export function TemplatePicker({ open, onOpenChange, onSelect }: TemplatePickerP
 
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-ink-400" />
           </div>
         ) : templates.length === 0 ? (
           <div className="text-center py-12">
-            <Layers className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm text-gray-500">No templates available.</p>
-            <p className="text-xs text-gray-400 mt-1">
+            <Layers className="h-10 w-10 text-ink-300 mx-auto mb-3" />
+            <p className="text-sm text-ink-500">No templates available.</p>
+            <p className="text-xs text-ink-400 mt-1">
               Create templates from the Templates section in Admin settings.
             </p>
           </div>
@@ -101,29 +101,29 @@ export function TemplatePicker({ open, onOpenChange, onSelect }: TemplatePickerP
                 key={template.id}
                 onClick={() => handleSelect(template)}
                 disabled={selectedId === template.id}
-                className="w-full text-left p-4 rounded-lg border hover:bg-gray-50 transition-colors disabled:opacity-50"
+                className="w-full text-left p-4 rounded-lg border border-hairline hover:bg-canvas transition-colors disabled:opacity-50"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-sm text-gray-900 truncate">{template.name}</p>
+                      <p className="font-medium text-sm text-ink-900 truncate">{template.name}</p>
                       <Badge variant="outline" className="text-xs shrink-0">
                         {template.pricingModel}
                       </Badge>
                     </div>
                     {template.description && (
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">
+                      <p className="text-xs text-ink-500 mt-1 line-clamp-2">
                         {template.description}
                       </p>
                     )}
-                    <p className="text-xs text-gray-400 mt-1">
+                    <p className="text-xs text-ink-400 mt-1">
                       {template._count.phases} phase{template._count.phases !== 1 ? "s" : ""}
                     </p>
                   </div>
                   {selectedId === template.id ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-gray-400 shrink-0 mt-0.5" />
+                    <Loader2 className="h-4 w-4 animate-spin text-ink-400 shrink-0 mt-0.5" />
                   ) : (
-                    <CheckCircle2 className="h-4 w-4 text-gray-300 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="h-4 w-4 text-ink-300 shrink-0 mt-0.5" />
                   )}
                 </div>
               </button>

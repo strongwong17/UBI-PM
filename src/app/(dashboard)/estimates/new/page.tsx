@@ -27,8 +27,8 @@ export default async function NewEstimatePage({ searchParams }: PageProps) {
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">New Estimate</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Build a detailed project estimate</p>
+          <h1 className="text-2xl font-bold text-ink-900 tracking-[-0.025em]">New Estimate</h1>
+          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">{"// new estimate"}</p>
         </div>
       </div>
       <EstimateBuilder mode="create" defaultProjectId={projectId} />

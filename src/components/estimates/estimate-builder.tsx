@@ -514,6 +514,10 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Basic Info */}
+      <div>
+        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-2">
+          {"// ESTIMATE DETAILS"}
+        </p>
       <Card>
         <CardHeader>
           <CardTitle>Basic Information</CardTitle>
@@ -624,11 +628,17 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
           </div>
         </CardContent>
       </Card>
+      </div>
 
       {/* Phases */}
       <div className="space-y-4">
+        <div>
+          <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-2">
+            {"// PHASES & LINE ITEMS"}
+          </p>
+        </div>
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Phases & Line Items</h2>
+          <h2 className="text-lg font-semibold text-ink-900">Phases & Line Items</h2>
           <div className="flex items-center gap-2">
             <Button
               type="button"
@@ -650,7 +660,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
           <Card key={phase._key}>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-3">
-                <GripVertical className="h-4 w-4 text-gray-300 shrink-0" />
+                <GripVertical className="h-4 w-4 text-ink-200 shrink-0" />
                 <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Input
                     value={phase.name}
@@ -665,8 +675,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                   />
                 </div>
                 <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-sm font-medium text-gray-600 mr-2">
-                    {currency} {fmt(phaseTotal(phase, phases))}
+                  <span className="text-sm font-medium font-mono text-ink-700 mr-2">
+                    <span className="text-ink-400 mr-1">{currency}</span>{fmt(phaseTotal(phase, phases))}
                   </span>
                   <Button
                     type="button"
@@ -685,7 +695,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                     variant="ghost"
                     size="icon"
                     onClick={() => removePhase(phase._key)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                    className="hover:text-warn-fg hover:bg-warn-bg"
                     disabled={phases.length === 1}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -700,11 +710,11 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
 
                 {/* Column headers */}
                 <div className="grid grid-cols-12 gap-2 mb-2 px-1">
-                  <div className="col-span-4 text-xs font-medium text-gray-500">Description</div>
-                  <div className="col-span-2 text-xs font-medium text-gray-500">Unit</div>
-                  <div className="col-span-2 text-xs font-medium text-gray-500">Qty</div>
-                  <div className="col-span-2 text-xs font-medium text-gray-500">Unit Price</div>
-                  <div className="col-span-1 text-xs font-medium text-gray-500 text-right">Total</div>
+                  <div className="col-span-4 text-xs font-medium text-ink-500 font-mono uppercase tracking-[0.04em]">DESCRIPTION</div>
+                  <div className="col-span-2 text-xs font-medium text-ink-500 font-mono uppercase tracking-[0.04em]">UNIT</div>
+                  <div className="col-span-2 text-xs font-medium text-ink-500 font-mono uppercase tracking-[0.04em]">QTY</div>
+                  <div className="col-span-2 text-xs font-medium text-ink-500 font-mono uppercase tracking-[0.04em]">UNIT PRICE</div>
+                  <div className="col-span-1 text-xs font-medium text-ink-500 font-mono uppercase tracking-[0.04em] text-right">TOTAL</div>
                   <div className="col-span-1" />
                 </div>
 
@@ -811,7 +821,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
 
                               {/* Total */}
                               <div className="col-span-1 text-right">
-                                <span className="text-sm font-medium text-gray-700">
+                                <span className="text-sm font-medium font-mono text-ink-700">
                                   {fmt(item.quantity * item.unitPrice)}
                                 </span>
                               </div>
@@ -825,7 +835,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                               variant="ghost"
                               size="icon"
                               onClick={() => removeLineItem(phase._key, item._key)}
-                              className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
+                              className="h-7 w-7 text-ink-400 hover:text-warn-fg hover:bg-warn-bg"
                               disabled={phase.lineItems.length === 1}
                             >
                               <Trash2 className="h-3 w-3" />
@@ -855,7 +865,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                                 className="text-sm"
                                 placeholder="Rate"
                               />
-                              <span className="text-xs text-gray-400 shrink-0">%</span>
+                              <span className="text-xs text-ink-400 shrink-0">%</span>
                             </div>
                             <div className="col-span-3">
                               <Select
@@ -931,7 +941,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="mt-3 text-gray-500"
+                  className="mt-3 text-ink-500 font-mono text-[11px] tracking-[0.04em] uppercase"
                   onClick={() => addLineItem(phase._key)}
                 >
                   <Plus className="h-4 w-4 mr-1" />
@@ -944,6 +954,10 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
       </div>
 
       {/* Notes */}
+      <div>
+        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-2">
+          {"// NOTES"}
+        </p>
       <Card>
         <CardHeader>
           <CardTitle>Notes</CardTitle>
@@ -971,35 +985,41 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
           </div>
         </CardContent>
       </Card>
+      </div>
 
       {/* Totals */}
+      <div>
+        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-2">
+          {"// TOTALS"}
+        </p>
       <Card>
         <CardContent className="pt-6">
           <div className="max-w-xs ml-auto space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium">{currency} {fmt(subtotal)}</span>
+              <span className="text-ink-700">Subtotal</span>
+              <span className="font-medium font-mono">{currency} {fmt(subtotal)}</span>
             </div>
             {taxRate > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Tax ({taxRate}%)</span>
-                <span className="font-medium">{currency} {fmt(taxAmount)}</span>
+                <span className="text-ink-700">Tax ({taxRate}%)</span>
+                <span className="font-medium font-mono">{currency} {fmt(taxAmount)}</span>
               </div>
             )}
             {discount > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Discount</span>
-                <span className="font-medium text-red-600">− {currency} {fmt(discount)}</span>
+                <span className="text-ink-700">Discount</span>
+                <span className="font-medium font-mono text-warn-fg">− {currency} {fmt(discount)}</span>
               </div>
             )}
             <Separator />
             <div className="flex justify-between">
-              <span className="font-semibold">Total</span>
-              <span className="font-bold text-lg">{currency} {fmt(total)}</span>
+              <span className="font-semibold text-ink-900">Total</span>
+              <span className="font-bold text-lg font-mono text-accent-rd">{currency} {fmt(total)}</span>
             </div>
           </div>
         </CardContent>
       </Card>
+      </div>
 
       {/* Actions */}
       <div className="flex justify-end gap-3">
@@ -1011,7 +1031,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
         >
           Cancel
         </Button>
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting} className="bg-accent-rd text-white hover:bg-accent-rd/90">
           {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
           {mode === "create" ? "Create Estimate" : "Save Changes"}
         </Button>
