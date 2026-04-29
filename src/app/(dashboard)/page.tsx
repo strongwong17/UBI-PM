@@ -1,346 +1,126 @@
-import Link from "next/link";
+// src/app/(dashboard)/page.tsx
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/shared/status-badge";
-import { cn } from "@/lib/utils";
-import {
-  Plus,
-  ArrowRight,
-  FolderKanban,
-  Calculator,
-  Receipt,
-  Users,
-  Clock,
-  AlertCircle,
-} from "lucide-react";
+import { HubTabBar, type HubKey } from "@/components/redesign/hub-tab-bar";
+import { HubInquiry } from "@/components/redesign/hubs/hub-1-inquiry";
+import { HubInProgress } from "@/components/redesign/hubs/hub-2-in-progress";
+import { HubCompletion } from "@/components/redesign/hubs/hub-3-completion";
+import { HubArchive } from "@/components/redesign/hubs/hub-4-archive";
 
-function timeAgo(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  if (diffDays === 1) return "yesterday";
-  if (diffDays < 30) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
+export const dynamic = "force-dynamic";
+
+const STALE_DAYS = 30;
+
+interface PageProps {
+  searchParams: Promise<{ hub?: string }>;
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: PageProps) {
   const session = await auth();
+  if (!session?.user) redirect("/login");
 
-  const [
-    // Actionable counts
-    estimatesSent,
-    activeProjects,
-    unpaidInvoices,
-    newInquiries,
-    completedNeedInvoice,
-    // Pipeline counts
-    statusCounts,
-    // Work queue items
-    sentEstimateProjects,
-    inProgressProjects,
-    invoicedProjects,
-    // Recent activity
-    recentActivity,
-  ] = await Promise.all([
-    // Estimates sent but not yet approved
-    prisma.estimate.count({ where: { status: "SENT", isApproved: false, deletedAt: null } }),
-    // Active projects
-    prisma.project.count({ where: { status: "IN_PROGRESS" } }),
-    // Unpaid invoices (SENT or OVERDUE)
-    prisma.invoice.count({ where: { status: { in: ["SENT", "OVERDUE"] }, deletedAt: null } }),
-    // New inquiries not yet worked on
-    prisma.project.count({ where: { status: "INQUIRY_RECEIVED" } }),
-    // Completed but not yet invoiced
-    prisma.project.count({ where: { status: "COMPLETED" } }),
-    // Pipeline
-    prisma.project.groupBy({ by: ["status"], _count: { _all: true } }),
-    // Work queue: estimates awaiting response
-    prisma.project.findMany({
-      where: { status: "ESTIMATE_SENT" },
-      include: { client: { select: { company: true } } },
-      orderBy: { updatedAt: "asc" },
-      take: 5,
-    }),
-    // Work queue: in progress
-    prisma.project.findMany({
-      where: { status: "IN_PROGRESS" },
-      include: { client: { select: { company: true } } },
-      orderBy: { updatedAt: "desc" },
-      take: 5,
-    }),
-    // Work queue: invoiced, awaiting payment
-    prisma.project.findMany({
-      where: { status: "INVOICED" },
-      include: { client: { select: { company: true } } },
-      orderBy: { updatedAt: "asc" },
-      take: 5,
-    }),
-    // Recent activity log
-    prisma.activityLog.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 8,
-      include: { user: { select: { name: true } } },
-    }),
-  ]);
+  const { hub: hubParam } = await searchParams;
+  const active: HubKey = (["inquiry", "in-progress", "completion", "archive"] as const).find(
+    (k) => k === hubParam,
+  ) ?? "inquiry";
 
-  const statusMap = Object.fromEntries(
-    statusCounts.map((s) => [s.status, s._count._all])
+  const allProjects = await prisma.project.findMany({
+    include: {
+      client: { select: { company: true } },
+      estimates: {
+        where: { deletedAt: null },
+        include: { phases: { include: { lineItems: true } } },
+      },
+      invoices: { where: { deletedAt: null } },
+      completion: { select: { internalCompleted: true, clientAcknowledged: true } },
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  const allProjectsWithTotals = allProjects.map((p) => ({
+    ...p,
+    estimates: p.estimates.map((e) => {
+      const subtotal = e.phases.reduce(
+        (s, ph) => s + ph.lineItems.reduce((ss, li) => ss + li.quantity * li.unitPrice, 0),
+        0,
+      );
+      const taxable = subtotal - (e.discount ?? 0);
+      const tax = taxable * ((e.taxRate ?? 0) / 100);
+      return { ...e, total: taxable + tax };
+    }),
+  }));
+
+  const inquiryProjects = allProjectsWithTotals.filter((p) =>
+    ["NEW", "BRIEFED", "ESTIMATING", "APPROVED"].includes(p.status),
+  );
+  const inProgressProjects = allProjectsWithTotals.filter((p) => p.status === "IN_PROGRESS");
+  const completionProjects = allProjectsWithTotals.filter((p) => p.status === "DELIVERED");
+  const archiveProjects = allProjectsWithTotals.filter((p) => p.status === "CLOSED");
+
+  // eslint-disable-next-line react-hooks/purity
+  const staleCutoff = new Date(Date.now() - STALE_DAYS * 86_400_000);
+  const inquiryStale = inquiryProjects.filter(
+    (p) => p.status === "ESTIMATING" && p.updatedAt < staleCutoff,
   );
 
-  // Build summary text
-  const summaryParts: string[] = [];
-  if (estimatesSent > 0) summaryParts.push(`${estimatesSent} estimate${estimatesSent > 1 ? "s" : ""} awaiting response`);
-  if (unpaidInvoices > 0) summaryParts.push(`${unpaidInvoices} invoice${unpaidInvoices > 1 ? "s" : ""} unpaid`);
-  if (newInquiries > 0) summaryParts.push(`${newInquiries} new inquir${newInquiries > 1 ? "ies" : "y"}`);
-  if (completedNeedInvoice > 0) summaryParts.push(`${completedNeedInvoice} project${completedNeedInvoice > 1 ? "s" : ""} need invoicing`);
+  const userName = session.user.name?.split(" ")[0] ?? "there";
 
-  // Pipeline stages with CTAs
-  const pipelineStages: { status: string; label: string; cta: string; href: string; color: string }[] = [
-    { status: "INQUIRY_RECEIVED", label: "New inquiries", cta: "Review", href: "/projects?status=INQUIRY_RECEIVED", color: "bg-sky-500" },
-    { status: "ESTIMATE_SENT", label: "Estimate sent", cta: "Follow up", href: "/projects?status=ESTIMATE_SENT", color: "bg-violet-500" },
-    { status: "IN_PROGRESS", label: "In progress", cta: "View", href: "/projects?status=IN_PROGRESS", color: "bg-amber-500" },
-    { status: "COMPLETED", label: "Completed", cta: "Invoice", href: "/projects?status=COMPLETED", color: "bg-teal-500" },
-    { status: "INVOICED", label: "Invoiced", cta: "Track", href: "/projects?status=INVOICED", color: "bg-purple-500" },
-  ];
-
-  // Work queue groups
-  const workGroups = [
+  const hubs = [
     {
-      title: "Awaiting client response",
-      items: sentEstimateProjects,
-      emptyText: "No estimates pending response",
-      actionLabel: "Follow up",
-      color: "text-violet-600",
+      key: "inquiry" as const,
+      label: "Inquiry",
+      count: inquiryProjects.length,
+      dotColor: "var(--color-s-estimating)",
+      activeGlow: "#67D9FF",
     },
     {
-      title: "In progress",
-      items: inProgressProjects,
-      emptyText: "No active projects",
-      actionLabel: "Open",
-      color: "text-amber-600",
+      key: "in-progress" as const,
+      label: "In Progress",
+      count: inProgressProjects.length,
+      dotColor: "var(--color-s-in-progress)",
+      activeGlow: "#B5BCF8",
     },
     {
-      title: "Awaiting payment",
-      items: invoicedProjects,
-      emptyText: "No invoices pending",
-      actionLabel: "View",
-      color: "text-purple-600",
+      key: "completion" as const,
+      label: "Completion",
+      count: completionProjects.length,
+      dotColor: "var(--color-s-delivered)",
+      activeGlow: "#6FE5BC",
+    },
+    {
+      key: "archive" as const,
+      label: "Archive",
+      count: archiveProjects.length,
+      dotColor: "var(--color-s-closed)",
+      activeGlow: "#C4C2BC",
     },
   ];
-
-  const totalWorkItems = sentEstimateProjects.length + inProgressProjects.length + invoicedProjects.length;
 
   return (
-    <div className="space-y-6 max-w-6xl">
-      {/* ─── Action bar ─────────────────────────────────────────── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
+    <div>
+      <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold text-gray-900">
-            {session?.user?.name ? `Hi, ${session.user.name}` : "Dashboard"}
+          <h1 className="text-2xl font-bold tracking-[-0.025em] leading-[1.2] mb-1">
+            Hi, <span style={{ color: "var(--color-accent-rd)" }}>{userName}</span>
           </h1>
-          {summaryParts.length > 0 ? (
-            <p className="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
-              <AlertCircle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-              {summaryParts.join(" · ")}
-            </p>
-          ) : (
-            <p className="text-sm text-gray-400 mt-0.5">All caught up</p>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
-          <Button asChild size="sm" variant="outline">
-            <Link href="/clients/new">
-              <Users className="h-3.5 w-3.5 mr-1.5" />
-              New Client
-            </Link>
-          </Button>
-          <Button asChild size="sm" variant="outline">
-            <Link href="/estimates/new">
-              <Calculator className="h-3.5 w-3.5 mr-1.5" />
-              New Estimate
-            </Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/projects/new">
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              New Project
-            </Link>
-          </Button>
+          <p className="font-mono text-[11px] text-ink-500 tracking-[0.02em]">
+            {"// "}{new Date().toISOString().slice(0, 19).replace("T", " · ")} · 4 hubs active
+          </p>
         </div>
       </div>
 
-      {/* ─── Interactive metrics ─────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          { label: "New inquiries", count: newInquiries, icon: FolderKanban, href: "/projects?status=INQUIRY_RECEIVED", color: "text-sky-600", bg: "bg-sky-50" },
-          { label: "Estimates pending", count: estimatesSent, icon: Calculator, href: "/estimates?status=SENT", color: "text-violet-600", bg: "bg-violet-50" },
-          { label: "Active projects", count: activeProjects, icon: Clock, href: "/projects?status=IN_PROGRESS", color: "text-amber-600", bg: "bg-amber-50" },
-          { label: "Invoices unpaid", count: unpaidInvoices, icon: Receipt, href: "/invoices?status=SENT", color: "text-red-600", bg: "bg-red-50" },
-        ].map((metric) => (
-          <Link key={metric.label} href={metric.href}>
-            <Card className={cn(
-              "transition-all duration-150 cursor-pointer hover:shadow-md border",
-              metric.count > 0 ? "hover:border-gray-300" : "opacity-60"
-            )}>
-              <CardContent className="py-4 px-4 flex items-center gap-3">
-                <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0", metric.bg)}>
-                  <metric.icon className={cn("h-4 w-4", metric.color)} />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-2xl font-bold tracking-tight leading-none">{metric.count}</p>
-                  <p className="text-xs text-gray-500 mt-1 truncate">{metric.label}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      <HubTabBar hubs={hubs} active={active} />
 
-      {/* ─── Main content: Work queue + Pipeline ─────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
-
-        {/* Work queue (3 cols) */}
-        <div className="lg:col-span-3 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-900">Work queue</h2>
-            {totalWorkItems > 0 && (
-              <Badge variant="secondary" className="text-xs">{totalWorkItems} items</Badge>
-            )}
-          </div>
-
-          {totalWorkItems === 0 ? (
-            <Card>
-              <CardContent className="py-10 text-center">
-                <FolderKanban className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                <p className="text-sm font-medium text-gray-500">No items need attention</p>
-                <p className="text-xs text-gray-400 mt-1">Create a project to get started</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-5">
-              {workGroups.map((group) => {
-                if (group.items.length === 0) return null;
-                return (
-                  <div key={group.title}>
-                    <p className={cn("text-xs font-medium mb-2", group.color)}>
-                      {group.title}
-                    </p>
-                    <div className="space-y-1.5">
-                      {group.items.map((project) => (
-                        <Link key={project.id} href={`/projects/${project.id}`} className="block group">
-                          <div className="flex items-center justify-between px-3 py-2.5 rounded-lg border border-transparent hover:border-gray-200 hover:bg-gray-50/80 transition-all duration-150">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <StatusBadge status={project.status} />
-                              <div className="min-w-0">
-                                <p className="text-sm font-medium text-gray-900 truncate">
-                                  {project.projectNumber}
-                                  <span className="font-normal text-gray-500 ml-1.5">{project.title}</span>
-                                </p>
-                                <p className="text-xs text-gray-400 mt-0.5">{project.client.company}</p>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-3 shrink-0">
-                              <span className="text-xs text-gray-400">{timeAgo(project.updatedAt)}</span>
-                              <ArrowRight className="h-3.5 w-3.5 text-gray-300 group-hover:text-gray-500 transition-colors" />
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Pipeline + Activity (2 cols) */}
-        <div className="lg:col-span-2 space-y-5">
-          {/* Actionable pipeline */}
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">Pipeline</h2>
-            <Card>
-              <CardContent className="py-1 px-1">
-                {pipelineStages.map((stage) => {
-                  const count = statusMap[stage.status] || 0;
-                  return (
-                    <Link
-                      key={stage.status}
-                      href={stage.href}
-                      className="flex items-center justify-between px-3 py-2.5 rounded-md hover:bg-gray-50 transition-colors duration-150 group"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <div className={cn("h-2 w-2 rounded-full shrink-0", stage.color)} />
-                        <span className="text-[13px] text-gray-700">{stage.label}</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={cn(
-                          "text-[13px] font-semibold tabular-nums",
-                          count > 0 ? "text-gray-900" : "text-gray-300"
-                        )}>
-                          {count}
-                        </span>
-                        {count > 0 && (
-                          <span className="text-[11px] text-gray-400 group-hover:text-blue-600 transition-colors">
-                            {stage.cta}
-                          </span>
-                        )}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Recent activity */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-sm font-semibold text-gray-900">Recent activity</h2>
-              <Link href="/activity" className="text-xs text-gray-400 hover:text-gray-600 transition-colors">
-                View all
-              </Link>
-            </div>
-            <Card>
-              <CardContent className="py-1 px-1">
-                {recentActivity.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-6">No activity yet</p>
-                ) : (
-                  <div>
-                    {recentActivity.map((log) => (
-                      <div
-                        key={log.id}
-                        className="flex items-start gap-2.5 px-3 py-2 rounded-md"
-                      >
-                        <div className="h-5 w-5 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                          <span className="text-[10px] font-medium text-gray-500">
-                            {log.user?.name?.[0]?.toUpperCase() || "?"}
-                          </span>
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-[12px] text-gray-600 leading-relaxed">
-                            <span className="font-medium text-gray-800">{log.user?.name || "System"}</span>
-                            {" "}
-                            <span className="text-gray-500">{log.description}</span>
-                          </p>
-                          <p className="text-[11px] text-gray-400 mt-0.5">{timeAgo(log.createdAt)}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </div>
+      {active === "inquiry" && (
+        <HubInquiry
+          projects={inquiryProjects}
+          staleProjects={inquiryStale}
+        />
+      )}
+      {active === "in-progress" && <HubInProgress projects={inProgressProjects} />}
+      {active === "completion" && <HubCompletion projects={completionProjects} />}
+      {active === "archive" && <HubArchive projects={archiveProjects} />}
     </div>
   );
 }

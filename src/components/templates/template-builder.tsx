@@ -3,12 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -16,7 +12,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Loader2, GripVertical, ChevronDown, ChevronUp } from "lucide-react";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  Plus,
+  Trash2,
+  Loader2,
+  GripVertical,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 interface TemplateLineItem {
   _key: string;
@@ -56,20 +75,84 @@ interface TemplateBuilderProps {
   mode: "create" | "edit";
 }
 
+const LINE_GRID = "24px 1fr 90px 90px 110px 110px 32px";
+
 function newKey() {
   return Math.random().toString(36).slice(2);
 }
 
 function newLineItem(): TemplateLineItem {
-  return { _key: newKey(), description: "", unit: "hours", defaultQuantity: 1, defaultPrice: 0 };
+  return {
+    _key: newKey(),
+    description: "",
+    unit: "hours",
+    defaultQuantity: 1,
+    defaultPrice: 0,
+  };
 }
 
 function newPhase(): TemplatePhase {
-  return { _key: newKey(), name: "", description: "", lineItems: [newLineItem()], collapsed: false };
+  return {
+    _key: newKey(),
+    name: "",
+    description: "",
+    lineItems: [newLineItem()],
+    collapsed: false,
+  };
 }
 
 function phaseTotal(phase: TemplatePhase) {
   return phase.lineItems.reduce((sum, li) => sum + li.defaultQuantity * li.defaultPrice, 0);
+}
+
+function SortablePhase({
+  phase,
+  children,
+}: {
+  phase: TemplatePhase;
+  children: (handle: {
+    listeners: ReturnType<typeof useSortable>["listeners"];
+    attributes: ReturnType<typeof useSortable>["attributes"];
+  }) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: phase._key,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children({ listeners, attributes })}
+    </div>
+  );
+}
+
+function SortableLine({
+  item,
+  children,
+}: {
+  item: TemplateLineItem;
+  children: (handle: {
+    listeners: ReturnType<typeof useSortable>["listeners"];
+    attributes: ReturnType<typeof useSortable>["attributes"];
+  }) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item._key,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children({ listeners, attributes })}
+    </div>
+  );
 }
 
 export function TemplateBuilder({ initialData, mode }: TemplateBuilderProps) {
@@ -99,51 +182,45 @@ export function TemplateBuilder({ initialData, mode }: TemplateBuilderProps) {
     return [newPhase()];
   });
 
-  // Phase helpers
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  );
+
   function addPhase() {
     setPhases((prev) => [...prev, newPhase()]);
   }
-
   function removePhase(key: string) {
     setPhases((prev) => prev.filter((p) => p._key !== key));
   }
-
   function updatePhase(key: string, field: "name" | "description", value: string) {
-    setPhases((prev) =>
-      prev.map((p) => (p._key === key ? { ...p, [field]: value } : p))
-    );
+    setPhases((prev) => prev.map((p) => (p._key === key ? { ...p, [field]: value } : p)));
   }
-
   function togglePhase(key: string) {
     setPhases((prev) =>
-      prev.map((p) => (p._key === key ? { ...p, collapsed: !p.collapsed } : p))
+      prev.map((p) => (p._key === key ? { ...p, collapsed: !p.collapsed } : p)),
     );
   }
-
-  // Line item helpers
   function addLineItem(phaseKey: string) {
     setPhases((prev) =>
       prev.map((p) =>
-        p._key === phaseKey ? { ...p, lineItems: [...p.lineItems, newLineItem()] } : p
-      )
+        p._key === phaseKey ? { ...p, lineItems: [...p.lineItems, newLineItem()] } : p,
+      ),
     );
   }
-
   function removeLineItem(phaseKey: string, itemKey: string) {
     setPhases((prev) =>
       prev.map((p) =>
         p._key === phaseKey
           ? { ...p, lineItems: p.lineItems.filter((li) => li._key !== itemKey) }
-          : p
-      )
+          : p,
+      ),
     );
   }
-
   function updateLineItem(
     phaseKey: string,
     itemKey: string,
     field: keyof Omit<TemplateLineItem, "_key">,
-    value: string | number
+    value: string | number,
   ) {
     setPhases((prev) =>
       prev.map((p) =>
@@ -151,18 +228,40 @@ export function TemplateBuilder({ initialData, mode }: TemplateBuilderProps) {
           ? {
               ...p,
               lineItems: p.lineItems.map((li) =>
-                li._key === itemKey ? { ...li, [field]: value } : li
+                li._key === itemKey ? { ...li, [field]: value } : li,
               ),
             }
-          : p
-      )
+          : p,
+      ),
+    );
+  }
+  function onPhaseDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    setPhases((prev) => {
+      const oldIdx = prev.findIndex((p) => p._key === active.id);
+      const newIdx = prev.findIndex((p) => p._key === over.id);
+      return arrayMove(prev, oldIdx, newIdx);
+    });
+  }
+  function onLineDragEnd(phaseKey: string, e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    setPhases((prev) =>
+      prev.map((p) => {
+        if (p._key !== phaseKey) return p;
+        const oldIdx = p.lineItems.findIndex((li) => li._key === active.id);
+        const newIdx = p.lineItems.findIndex((li) => li._key === over.id);
+        return { ...p, lineItems: arrayMove(p.lineItems, oldIdx, newIdx) };
+      }),
     );
   }
 
   const estimatedTotal = phases.reduce((sum, p) => sum + phaseTotal(p), 0);
+  const totalLines = phases.reduce((s, p) => s + p.lineItems.length, 0);
 
   const fmt = (n: number) =>
-    n.toLocaleString("zh-CN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -205,8 +304,7 @@ export function TemplateBuilder({ initialData, mode }: TemplateBuilderProps) {
     };
 
     try {
-      const url =
-        mode === "create" ? "/api/templates" : `/api/templates/${initialData?.id}`;
+      const url = mode === "create" ? "/api/templates" : `/api/templates/${initialData?.id}`;
       const method = mode === "create" ? "POST" : "PUT";
 
       const res = await fetch(url, {
@@ -233,36 +331,44 @@ export function TemplateBuilder({ initialData, mode }: TemplateBuilderProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Basic Info */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Template Information</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Name *</Label>
+      {/* Template info */}
+      <div>
+        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+          {"// TEMPLATE INFO"}
+        </p>
+        <div
+          className="bg-card-rd rounded-[14px] p-5 space-y-4"
+          style={{
+            border: "1px solid var(--color-hairline)",
+            boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+          }}
+        >
+          <div className="space-y-1.5">
+            <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+              {"// NAME *"}
+            </label>
             <Input
-              id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Standard UX Research Study"
               required
             />
           </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+          <div className="space-y-1.5">
+            <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+              {"// DESCRIPTION"}
+            </label>
             <Textarea
-              id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="What type of projects is this template for?"
+              placeholder="What kind of project is this template for?"
               rows={2}
             />
           </div>
-
-          <div className="space-y-2 w-48">
-            <Label>Pricing Model</Label>
+          <div className="space-y-1.5 w-48">
+            <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+              {"// PRICING MODEL"}
+            </label>
             <Select value={pricingModel} onValueChange={setPricingModel}>
               <SelectTrigger>
                 <SelectValue />
@@ -275,210 +381,348 @@ export function TemplateBuilder({ initialData, mode }: TemplateBuilderProps) {
               </SelectContent>
             </Select>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Phases */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Phases & Default Items</h2>
-          <Button type="button" variant="outline" size="sm" onClick={addPhase}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Phase
-          </Button>
+      <div>
+        <div
+          className="flex items-start justify-between gap-4 flex-wrap pb-3 mb-3"
+          style={{ borderBottom: "1px solid var(--color-hairline)" }}
+        >
+          <div>
+            <h2 className="text-[20px] font-bold tracking-[-0.02em] m-0 mb-1 text-ink-900">
+              Phases & default items
+            </h2>
+            <p className="text-[13px] text-ink-500 m-0 max-w-[520px]">
+              Drag to reorder. Default quantities and prices populate the estimate when this
+              template is applied.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={addPhase}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+            style={{
+              background: "var(--color-canvas-cool)",
+              border: "1px solid var(--color-hairline-strong)",
+            }}
+          >
+            <Plus className="h-3.5 w-3.5" /> Add phase
+          </button>
         </div>
 
-        {phases.map((phase, phaseIdx) => (
-          <Card key={phase._key}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <GripVertical className="h-4 w-4 text-gray-300 shrink-0" />
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Input
-                    value={phase.name}
-                    onChange={(e) => updatePhase(phase._key, "name", e.target.value)}
-                    placeholder={`Phase ${phaseIdx + 1} name`}
-                    className="font-medium"
-                  />
-                  <Input
-                    value={phase.description}
-                    onChange={(e) => updatePhase(phase._key, "description", e.target.value)}
-                    placeholder="Description (optional)"
-                  />
-                </div>
-                <div className="flex items-center gap-1 shrink-0">
-                  <span className="text-sm font-medium text-gray-600 mr-2">
-                    ${fmt(phaseTotal(phase))}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => togglePhase(phase._key)}
-                  >
-                    {phase.collapsed ? (
-                      <ChevronDown className="h-4 w-4" />
-                    ) : (
-                      <ChevronUp className="h-4 w-4" />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removePhase(phase._key)}
-                    className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                    disabled={phases.length === 1}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-
-            {!phase.collapsed && (
-              <CardContent className="pt-0">
-                <Separator className="mb-4" />
-
-                <div className="grid grid-cols-12 gap-2 mb-2 px-1">
-                  <div className="col-span-4 text-xs font-medium text-gray-500">Description</div>
-                  <div className="col-span-2 text-xs font-medium text-gray-500">Unit</div>
-                  <div className="col-span-2 text-xs font-medium text-gray-500">Default Qty</div>
-                  <div className="col-span-2 text-xs font-medium text-gray-500">Default Price</div>
-                  <div className="col-span-1 text-xs font-medium text-gray-500 text-right">Total</div>
-                  <div className="col-span-1" />
-                </div>
-
-                <div className="space-y-2">
-                  {phase.lineItems.map((item) => (
-                    <div key={item._key} className="grid grid-cols-12 gap-2 items-center">
-                      <div className="col-span-4">
-                        <Input
-                          value={item.description}
-                          onChange={(e) =>
-                            updateLineItem(phase._key, item._key, "description", e.target.value)
-                          }
-                          placeholder="Item description"
-                          className="text-sm"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Select
-                          value={item.unit}
-                          onValueChange={(v) =>
-                            updateLineItem(phase._key, item._key, "unit", v)
-                          }
-                        >
-                          <SelectTrigger className="text-sm">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="hours">hours</SelectItem>
-                            <SelectItem value="days">days</SelectItem>
-                            <SelectItem value="sessions">sessions</SelectItem>
-                            <SelectItem value="pieces">pieces</SelectItem>
-                            <SelectItem value="participants">participants</SelectItem>
-                            <SelectItem value="units">units</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="col-span-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.5"
-                          value={item.defaultQuantity}
-                          onChange={(e) =>
-                            updateLineItem(
-                              phase._key,
-                              item._key,
-                              "defaultQuantity",
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          className="text-sm"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.defaultPrice}
-                          onChange={(e) =>
-                            updateLineItem(
-                              phase._key,
-                              item._key,
-                              "defaultPrice",
-                              parseFloat(e.target.value) || 0
-                            )
-                          }
-                          className="text-sm"
-                        />
-                      </div>
-                      <div className="col-span-1 text-right">
-                        <span className="text-sm font-medium text-gray-700">
-                          {fmt(item.defaultQuantity * item.defaultPrice)}
-                        </span>
-                      </div>
-                      <div className="col-span-1 flex justify-end">
-                        <Button
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis]}
+          onDragEnd={onPhaseDragEnd}
+        >
+          <SortableContext
+            items={phases.map((p) => p._key)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-4">
+              {phases.map((phase, phaseIdx) => (
+                <SortablePhase key={phase._key} phase={phase}>
+                  {(phaseHandle) => (
+                    <div
+                      className="bg-card-rd rounded-[14px] overflow-hidden"
+                      style={{
+                        border: "1px solid var(--color-hairline)",
+                        boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                      }}
+                    >
+                      {/* Head */}
+                      <div
+                        className="px-5 py-3.5 flex items-center gap-3"
+                        style={{
+                          borderBottom: "1px solid var(--color-hairline)",
+                          background: "linear-gradient(180deg, #FCFAF6 0%, #FFFFFF 100%)",
+                        }}
+                      >
+                        <button
                           type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeLineItem(phase._key, item._key)}
-                          className="h-8 w-8 text-red-400 hover:text-red-600 hover:bg-red-50"
-                          disabled={phase.lineItems.length === 1}
+                          {...phaseHandle.listeners}
+                          {...phaseHandle.attributes}
+                          className="text-ink-200 hover:text-ink-500 cursor-grab active:cursor-grabbing -ml-1 px-1 py-1 rounded hover:bg-[#FCFAF6]"
+                          aria-label="Drag to reorder phase"
+                        >
+                          <GripVertical className="h-4 w-4" />
+                        </button>
+                        <span
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{ background: "var(--color-ink-300)" }}
+                        />
+                        <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                          {`Phase ${phaseIdx + 1}`}
+                        </span>
+                        <Input
+                          value={phase.name}
+                          onChange={(e) => updatePhase(phase._key, "name", e.target.value)}
+                          placeholder="Phase name"
+                          className="font-semibold text-[14px] text-ink-900 bg-transparent border-0 outline-none focus-visible:ring-0 px-0 placeholder:text-ink-300 shadow-none h-8"
+                        />
+                        <span className="ml-auto font-mono text-[11px] tracking-[0.02em] text-ink-500">
+                          {phase.lineItems.length}{" "}
+                          {phase.lineItems.length === 1 ? "line" : "lines"} ·{" "}
+                          <strong className="text-ink-900 font-bold rd-tabular">
+                            ${fmt(phaseTotal(phase))}
+                          </strong>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => togglePhase(phase._key)}
+                          className="h-8 w-8 flex items-center justify-center rounded-lg text-ink-500 hover:bg-[#FCFAF6]"
+                          aria-label={phase.collapsed ? "Expand" : "Collapse"}
+                        >
+                          {phase.collapsed ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronUp className="h-4 w-4" />
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removePhase(phase._key)}
+                          disabled={phases.length === 1}
+                          className="h-8 w-8 flex items-center justify-center rounded-lg text-ink-300 hover:text-warn-fg hover:bg-warn-bg disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label="Remove phase"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
+                        </button>
                       </div>
-                    </div>
-                  ))}
-                </div>
 
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="mt-3 text-gray-500"
-                  onClick={() => addLineItem(phase._key)}
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add item
-                </Button>
-              </CardContent>
-            )}
-          </Card>
-        ))}
+                      {/* Phase description */}
+                      <div
+                        className="px-5 py-2"
+                        style={{ borderBottom: "1px solid var(--color-hairline)" }}
+                      >
+                        <Input
+                          value={phase.description}
+                          onChange={(e) =>
+                            updatePhase(phase._key, "description", e.target.value)
+                          }
+                          placeholder="Phase description (optional)"
+                          className="text-[12px] text-ink-500 italic bg-transparent border-0 outline-none focus-visible:ring-0 px-0 placeholder:text-ink-300 shadow-none h-7"
+                        />
+                      </div>
+
+                      {!phase.collapsed && (
+                        <>
+                          {/* Column header band */}
+                          <div
+                            className="grid gap-3 px-5 py-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.06em]"
+                            style={{
+                              gridTemplateColumns: LINE_GRID,
+                              background: "#FAFAF6",
+                              borderBottom: "1px solid var(--color-hairline)",
+                              color: "var(--color-ink-400)",
+                            }}
+                          >
+                            <span></span>
+                            <span>Description</span>
+                            <span>Unit</span>
+                            <span className="text-right">Default qty</span>
+                            <span className="text-right">Default price</span>
+                            <span className="text-right">Total</span>
+                            <span></span>
+                          </div>
+
+                          <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            modifiers={[restrictToVerticalAxis]}
+                            onDragEnd={(e) => onLineDragEnd(phase._key, e)}
+                          >
+                            <SortableContext
+                              items={phase.lineItems.map((li) => li._key)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {phase.lineItems.map((item, i) => (
+                                <SortableLine key={item._key} item={item}>
+                                  {(lineHandle) => (
+                                    <div
+                                      className="grid gap-3 items-center px-5 py-2.5 hover:bg-[#FCFAF6] transition-colors"
+                                      style={{
+                                        gridTemplateColumns: LINE_GRID,
+                                        borderBottom:
+                                          i < phase.lineItems.length - 1
+                                            ? "1px solid var(--color-hairline)"
+                                            : "none",
+                                      }}
+                                    >
+                                      <button
+                                        type="button"
+                                        {...lineHandle.listeners}
+                                        {...lineHandle.attributes}
+                                        className="text-ink-200 hover:text-ink-500 cursor-grab active:cursor-grabbing -ml-1 px-1 py-1 rounded hover:bg-[#FCFAF6]"
+                                        aria-label="Drag to reorder line"
+                                      >
+                                        <GripVertical className="h-4 w-4" />
+                                      </button>
+                                      <Input
+                                        value={item.description}
+                                        onChange={(e) =>
+                                          updateLineItem(
+                                            phase._key,
+                                            item._key,
+                                            "description",
+                                            e.target.value,
+                                          )
+                                        }
+                                        placeholder="Item description"
+                                        className="bg-transparent border-0 outline-none focus-visible:ring-0 px-0 text-[13px] text-ink-900 font-medium placeholder:text-ink-300 shadow-none h-8"
+                                      />
+                                      <Select
+                                        value={item.unit}
+                                        onValueChange={(v) =>
+                                          updateLineItem(phase._key, item._key, "unit", v)
+                                        }
+                                      >
+                                        <SelectTrigger className="text-[12px] h-8">
+                                          <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="hours">hours</SelectItem>
+                                          <SelectItem value="days">days</SelectItem>
+                                          <SelectItem value="sessions">sessions</SelectItem>
+                                          <SelectItem value="pieces">pieces</SelectItem>
+                                          <SelectItem value="participants">
+                                            participants
+                                          </SelectItem>
+                                          <SelectItem value="units">units</SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.5"
+                                        value={item.defaultQuantity}
+                                        onChange={(e) =>
+                                          updateLineItem(
+                                            phase._key,
+                                            item._key,
+                                            "defaultQuantity",
+                                            parseFloat(e.target.value) || 0,
+                                          )
+                                        }
+                                        className="text-right text-[13px] text-ink-700 rd-tabular h-8"
+                                      />
+                                      <Input
+                                        type="number"
+                                        min="0"
+                                        step="0.01"
+                                        value={item.defaultPrice}
+                                        onChange={(e) =>
+                                          updateLineItem(
+                                            phase._key,
+                                            item._key,
+                                            "defaultPrice",
+                                            parseFloat(e.target.value) || 0,
+                                          )
+                                        }
+                                        className="text-right text-[13px] text-ink-700 rd-tabular h-8"
+                                      />
+                                      <div className="text-right text-[13px] font-medium text-ink-900 rd-tabular">
+                                        ${fmt(item.defaultQuantity * item.defaultPrice)}
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeLineItem(phase._key, item._key)}
+                                        disabled={phase.lineItems.length === 1}
+                                        className="h-8 w-8 flex items-center justify-center rounded-lg text-ink-300 hover:text-warn-fg hover:bg-warn-bg disabled:opacity-30 disabled:cursor-not-allowed"
+                                        aria-label="Remove line item"
+                                      >
+                                        <Trash2 className="h-3.5 w-3.5" />
+                                      </button>
+                                    </div>
+                                  )}
+                                </SortableLine>
+                              ))}
+                            </SortableContext>
+                          </DndContext>
+
+                          <button
+                            type="button"
+                            onClick={() => addLineItem(phase._key)}
+                            className="px-5 py-3 w-full text-left font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 hover:text-accent-rd hover:bg-[#FCFAF6]"
+                          >
+                            + Add line item
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </SortablePhase>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       </div>
 
       {/* Estimated total */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="max-w-xs ml-auto">
-            <div className="flex justify-between">
-              <span className="font-semibold text-gray-700">Estimated Default Total</span>
-              <span className="font-bold text-lg">${fmt(estimatedTotal)}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Actions */}
-      <div className="flex justify-end gap-3">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.back()}
-          disabled={isSubmitting}
+      <div>
+        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+          {"// ESTIMATED DEFAULT TOTAL"}
+        </p>
+        <div
+          className="bg-card-rd rounded-[14px] p-5"
+          style={{
+            border: "1px solid var(--color-hairline)",
+            boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+          }}
         >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          {mode === "create" ? "Create Template" : "Save Changes"}
-        </Button>
+          <div className="max-w-xs ml-auto flex justify-between items-center">
+            <span className="text-[13px] font-bold text-ink-900">Total</span>
+            <span className="font-mono rd-tabular text-[16px] font-bold text-accent-rd">
+              ${fmt(estimatedTotal)}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Sticky action footer */}
+      <div
+        className="flex items-center justify-between p-4 rounded-[14px] mt-5 sticky"
+        style={{
+          background: "var(--color-card-rd)",
+          border: "1px solid var(--color-hairline)",
+          boxShadow:
+            "0 6px 24px -6px rgba(15, 23, 41, 0.10), 0 2px 6px -2px rgba(15, 23, 41, 0.06)",
+          bottom: 16,
+          zIndex: 5,
+        }}
+      >
+        <div className="text-[12px] text-ink-500">
+          <strong className="text-ink-900 font-bold rd-tabular">{phases.length}</strong>{" "}
+          {phases.length === 1 ? "phase" : "phases"} ·{" "}
+          <strong className="text-ink-900 font-bold rd-tabular">{totalLines}</strong>{" "}
+          {totalLines === 1 ? "line" : "lines"} · default total{" "}
+          <strong className="text-accent-rd font-bold rd-tabular">${fmt(estimatedTotal)}</strong>
+        </div>
+        <div className="flex gap-2 items-center">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            disabled={isSubmitting}
+            className="px-3 py-2 rounded-lg text-[13px] font-medium text-ink-700 hover:bg-[rgba(15,23,41,0.04)] disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium text-white tracking-[-0.005em] disabled:opacity-50"
+            style={{
+              background: "var(--color-accent-rd)",
+              boxShadow: "0 4px 12px -2px rgba(217, 82, 43, 0.32)",
+            }}
+          >
+            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {mode === "create" ? "Create template" : "Save changes"}
+          </button>
+        </div>
       </div>
     </form>
   );

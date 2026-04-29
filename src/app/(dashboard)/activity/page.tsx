@@ -2,11 +2,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { History, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
+import { History, ChevronLeft, ChevronRight } from "lucide-react";
 import { RestoreButton } from "@/components/activity/restore-button";
 
 const PAGE_SIZE = 25;
@@ -31,29 +28,39 @@ const ACTION_CHIPS = [
   { value: "RESTORE", label: "Restore" },
 ];
 
-function actionColor(action: string) {
+function actionStyle(action: string): { bg: string; fg: string } {
   switch (action) {
-    case "CREATE": return "bg-green-50 text-green-700 border-green-200";
-    case "DELETE": return "bg-red-50 text-red-700 border-red-200";
-    case "UPDATE": return "bg-blue-50 text-blue-700 border-blue-200";
-    case "STATUS_CHANGE": return "bg-purple-50 text-purple-700 border-purple-200";
-    case "APPROVE": return "bg-emerald-50 text-emerald-700 border-emerald-200";
-    case "DUPLICATE": return "bg-amber-50 text-amber-700 border-amber-200";
-    case "GENERATE": return "bg-cyan-50 text-cyan-700 border-cyan-200";
-    case "RESTORE": return "bg-indigo-50 text-indigo-700 border-indigo-200";
-    default: return "bg-gray-50 text-gray-700 border-gray-200";
+    case "CREATE":
+    case "APPROVE":
+      return { bg: "var(--color-s-approved-bg)", fg: "var(--color-s-approved-fg)" };
+    case "DELETE":
+      return { bg: "var(--color-warn-bg)", fg: "var(--color-warn-fg)" };
+    case "UPDATE":
+    case "STATUS_CHANGE":
+    case "DUPLICATE":
+    case "GENERATE":
+    case "RESTORE":
+    default:
+      return { bg: "var(--color-canvas-cool)", fg: "var(--color-ink-700)" };
   }
 }
 
 function entityLink(entityType: string, entityId: string, projectId: string | null): string | null {
   switch (entityType) {
-    case "PROJECT": return `/projects/${entityId}`;
-    case "ESTIMATE": return `/estimates/${entityId}`;
-    case "INVOICE": return `/invoices/${entityId}`;
-    case "CLIENT": return `/clients/${entityId}`;
-    case "INQUIRY": return projectId ? `/projects/${projectId}?tab=overview` : null;
-    case "ATTACHMENT": return projectId ? `/projects/${projectId}` : null;
-    default: return null;
+    case "PROJECT":
+      return `/projects/${entityId}`;
+    case "ESTIMATE":
+      return `/estimates/${entityId}`;
+    case "INVOICE":
+      return `/invoices/${entityId}`;
+    case "CLIENT":
+      return `/clients/${entityId}`;
+    case "INQUIRY":
+      return projectId ? `/projects/${projectId}?tab=overview` : null;
+    case "ATTACHMENT":
+      return projectId ? `/projects/${projectId}` : null;
+    default:
+      return null;
   }
 }
 
@@ -80,7 +87,7 @@ export default async function ActivityPage({ searchParams }: PageProps) {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const role = (session.user as any).role;
+  const role = (session.user as { role?: string }).role;
   if (role !== "ADMIN" && role !== "MANAGER") redirect("/");
 
   const params = await searchParams;
@@ -108,23 +115,31 @@ export default async function ActivityPage({ searchParams }: PageProps) {
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
-  // Check which deleted entities are restorable
   const deleteLogIds = logs
-    .filter((l) => l.action === "DELETE" && (l.entityType === "ESTIMATE" || l.entityType === "INVOICE"))
+    .filter(
+      (l) =>
+        l.action === "DELETE" && (l.entityType === "ESTIMATE" || l.entityType === "INVOICE"),
+    )
     .map((l) => ({ entityType: l.entityType, entityId: l.entityId }));
 
   const restorableSet = new Set<string>();
   for (const { entityType, entityId } of deleteLogIds) {
     try {
       if (entityType === "ESTIMATE") {
-        const est = await prisma.estimate.findUnique({ where: { id: entityId }, select: { deletedAt: true } });
+        const est = await prisma.estimate.findUnique({
+          where: { id: entityId },
+          select: { deletedAt: true },
+        });
         if (est?.deletedAt) restorableSet.add(entityId);
       } else if (entityType === "INVOICE") {
-        const inv = await prisma.invoice.findUnique({ where: { id: entityId }, select: { deletedAt: true } });
+        const inv = await prisma.invoice.findUnique({
+          where: { id: entityId },
+          select: { deletedAt: true },
+        });
         if (inv?.deletedAt) restorableSet.add(entityId);
       }
     } catch {
-      // Entity may have been hard-deleted
+      // entity hard-deleted
     }
   }
 
@@ -145,21 +160,31 @@ export default async function ActivityPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-5">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Activity</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Track all actions across the system</p>
+      <div
+        className="flex items-start justify-between gap-4 flex-wrap pb-[18px]"
+        style={{ borderBottom: "1px solid var(--color-hairline)" }}
+      >
+        <div>
+          <h1 className="text-[24px] font-bold tracking-[-0.025em] m-0 mb-1 text-ink-900">
+            Activity
+          </h1>
+          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">
+            {"// "}{total} {total === 1 ? "entry" : "entries"} system-wide
+          </p>
+        </div>
       </div>
 
-      {/* Filter area — unified pattern */}
+      {/* Filters */}
       <div className="space-y-2">
         <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider w-12 shrink-0">Entity</span>
+          <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 w-12 shrink-0">
+            Entity
+          </span>
           <div className="flex items-center gap-1.5 flex-wrap">
             {entityTypeFilter && (
               <Link
                 href={buildFilterUrl("entityType", "")}
-                className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium text-gray-500 hover:text-gray-700 rounded-full border border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-150"
+                className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium text-ink-500 hover:text-ink-700 rounded-md border border-dashed border-hairline hover:border-hairline-strong transition-colors"
               >
                 Clear
               </Link>
@@ -167,12 +192,15 @@ export default async function ActivityPage({ searchParams }: PageProps) {
             {ENTITY_CHIPS.map((chip) => (
               <Link
                 key={chip.value}
-                href={buildFilterUrl("entityType", entityTypeFilter === chip.value ? "" : chip.value)}
+                href={buildFilterUrl(
+                  "entityType",
+                  entityTypeFilter === chip.value ? "" : chip.value,
+                )}
                 className={cn(
-                  "inline-flex items-center px-2.5 py-1 text-[12px] font-medium rounded-full border transition-all duration-150",
+                  "inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md transition-all",
                   entityTypeFilter === chip.value
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:text-gray-800"
+                    ? "bg-ink-900 text-white"
+                    : "bg-card-rd text-ink-700 border border-hairline hover:border-hairline-strong",
                 )}
               >
                 {chip.label}
@@ -182,12 +210,14 @@ export default async function ActivityPage({ searchParams }: PageProps) {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="text-xs font-medium text-gray-400 uppercase tracking-wider w-12 shrink-0">Action</span>
+          <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 w-12 shrink-0">
+            Action
+          </span>
           <div className="flex items-center gap-1.5 flex-wrap">
             {actionFilter && (
               <Link
                 href={buildFilterUrl("action", "")}
-                className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium text-gray-500 hover:text-gray-700 rounded-full border border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-150"
+                className="inline-flex items-center px-2.5 py-1 text-[12px] font-medium text-ink-500 hover:text-ink-700 rounded-md border border-dashed border-hairline hover:border-hairline-strong transition-colors"
               >
                 Clear
               </Link>
@@ -197,10 +227,10 @@ export default async function ActivityPage({ searchParams }: PageProps) {
                 key={chip.value}
                 href={buildFilterUrl("action", actionFilter === chip.value ? "" : chip.value)}
                 className={cn(
-                  "inline-flex items-center px-2.5 py-1 text-[12px] font-medium rounded-full border transition-all duration-150",
+                  "inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md transition-all",
                   actionFilter === chip.value
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:text-gray-800"
+                    ? "bg-ink-900 text-white"
+                    : "bg-card-rd text-ink-700 border border-hairline hover:border-hairline-strong",
                 )}
               >
                 {chip.label}
@@ -212,81 +242,101 @@ export default async function ActivityPage({ searchParams }: PageProps) {
 
       {/* Results */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
-            {hasFilters ? "Filtered activity" : "All activity"}
-            <Badge variant="secondary" className="text-xs">{total}</Badge>
-          </h2>
-        </div>
+        <h2 className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+          {hasFilters ? "// FILTERED ACTIVITY" : "// ALL ACTIVITY"}
+          {" · "}{total}
+        </h2>
 
         {logs.length === 0 ? (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <History className="h-10 w-10 mx-auto mb-3 text-gray-300" />
-              <p className="font-medium text-gray-500">No activity found</p>
-              <p className="text-sm text-gray-400 mt-1">
-                {hasFilters ? "Try adjusting your filters" : "Actions will appear here as you use the system"}
-              </p>
-            </CardContent>
-          </Card>
+          <div
+            className="bg-card-rd rounded-[14px] py-12 text-center"
+            style={{
+              border: "1px solid var(--color-hairline)",
+              boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+            }}
+          >
+            <History className="h-10 w-10 mx-auto mb-3 text-ink-300" />
+            <p className="font-medium text-ink-500">No activity found</p>
+            <p className="text-sm text-ink-400 mt-1">
+              {hasFilters
+                ? "Try adjusting your filters"
+                : "Actions will appear here as you use the system"}
+            </p>
+          </div>
         ) : (
           <div className="space-y-1">
             {logs.map((log) => {
               const link = entityLink(log.entityType, log.entityId, log.projectId);
               const isRestorable = restorableSet.has(log.entityId);
               const isDeleteAction = log.action === "DELETE";
-              const canRestore = isDeleteAction && (log.entityType === "ESTIMATE" || log.entityType === "INVOICE");
+              const canRestore =
+                isDeleteAction && (log.entityType === "ESTIMATE" || log.entityType === "INVOICE");
+              const aStyle = actionStyle(log.action);
 
               return (
                 <div
                   key={log.id}
                   className={cn(
                     "flex items-start gap-3 px-4 py-3 rounded-lg transition-colors duration-150",
-                    isDeleteAction ? "bg-red-50/40" : "hover:bg-gray-50/80"
+                    isDeleteAction ? "bg-warn-bg/40" : "hover:bg-[#FCFAF6]",
                   )}
                 >
-                  {/* Avatar */}
-                  <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0 mt-0.5">
-                    <span className="text-[11px] font-semibold text-gray-500">
+                  <div
+                    className="h-8 w-8 rounded-full flex items-center justify-center shrink-0 mt-0.5"
+                    style={{ background: "var(--color-canvas-cool)" }}
+                  >
+                    <span className="text-[11px] font-semibold text-ink-700">
                       {log.user.name?.[0]?.toUpperCase() || "?"}
                     </span>
                   </div>
 
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-[13px] font-medium text-gray-900">
-                        {log.user.name}
-                      </span>
-                      <Badge
-                        variant="outline"
-                        className={cn("text-[10px] py-0 px-1.5 font-medium", actionColor(log.action))}
+                      <span className="text-[13px] font-medium text-ink-900">{log.user.name}</span>
+                      <span
+                        className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-[0.06em] uppercase"
+                        style={{ background: aStyle.bg, color: aStyle.fg }}
                       >
                         {log.action.toLowerCase().replace(/_/g, " ")}
-                      </Badge>
-                      <Badge variant="outline" className="text-[10px] py-0 px-1.5 text-gray-500">
+                      </span>
+                      <span
+                        className="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-mono font-bold tracking-[0.06em] uppercase"
+                        style={{
+                          background: "var(--color-canvas-cool)",
+                          color: "var(--color-ink-500)",
+                          border: "1px solid var(--color-hairline-strong)",
+                        }}
+                      >
                         {log.entityType.toLowerCase()}
-                      </Badge>
+                      </span>
                     </div>
-                    <p className="text-[13px] text-gray-600 mt-0.5 leading-relaxed">
+                    <p className="text-[13px] text-ink-700 mt-0.5 leading-relaxed">
                       {log.description}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       {log.entityLabel && link && !isDeleteAction ? (
-                        <Link href={link} className="text-[12px] text-blue-600 hover:underline">
+                        <Link
+                          href={link}
+                          className="text-[12px] text-ink-900 hover:text-accent-rd"
+                        >
                           {log.entityLabel}
                         </Link>
                       ) : log.entityLabel ? (
-                        <span className={cn("text-[12px]", isDeleteAction ? "text-red-500 line-through" : "text-gray-400")}>
+                        <span
+                          className={cn(
+                            "text-[12px]",
+                            isDeleteAction ? "text-warn-fg line-through" : "text-ink-400",
+                          )}
+                        >
                           {log.entityLabel}
                         </span>
                       ) : null}
                       {log.project && (
                         <>
-                          {log.entityLabel && <span className="text-gray-300">·</span>}
+                          {log.entityLabel && <span className="text-ink-300">·</span>}
                           <Link
                             href={`/projects/${log.project.id}`}
-                            className="text-[12px] text-gray-400 hover:text-blue-600 transition-colors"
+                            className="text-[12px] text-ink-400 hover:text-accent-rd font-mono transition-colors"
                           >
                             {log.project.projectNumber}
                           </Link>
@@ -295,7 +345,6 @@ export default async function ActivityPage({ searchParams }: PageProps) {
                     </div>
                   </div>
 
-                  {/* Right: time + restore */}
                   <div className="flex items-center gap-2 shrink-0 mt-0.5">
                     {canRestore && isRestorable && (
                       <RestoreButton
@@ -305,9 +354,9 @@ export default async function ActivityPage({ searchParams }: PageProps) {
                       />
                     )}
                     {canRestore && !isRestorable && (
-                      <span className="text-[11px] text-gray-300 italic">gone</span>
+                      <span className="text-[11px] text-ink-300 italic">gone</span>
                     )}
-                    <span className="text-[12px] text-gray-400 w-20 text-right">
+                    <span className="text-[12px] text-ink-400 w-20 text-right font-mono tracking-[0.02em]">
                       {timeAgo(log.createdAt)}
                     </span>
                   </div>
@@ -317,41 +366,46 @@ export default async function ActivityPage({ searchParams }: PageProps) {
           </div>
         )}
 
-        {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
-            <p className="text-[13px] text-gray-400">
-              Page {page} of {totalPages}
-              <span className="text-gray-300 ml-1">({total} entries)</span>
+          <div
+            className="flex items-center justify-between mt-6 pt-4"
+            style={{ borderTop: "1px solid var(--color-hairline)" }}
+          >
+            <p className="text-[13px] text-ink-400 font-mono tracking-[0.02em]">
+              {"// "}Page {page} of {totalPages} · {total} entries
             </p>
             <div className="flex gap-1.5">
               {page > 1 && (
-                <Button size="sm" variant="outline" className="h-8 px-3" asChild>
-                  <Link
-                    href={`/activity?${new URLSearchParams({
-                      ...(entityTypeFilter ? { entityType: entityTypeFilter } : {}),
-                      ...(actionFilter ? { action: actionFilter } : {}),
-                      page: String(page - 1),
-                    }).toString()}`}
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5 mr-1" />
-                    Previous
-                  </Link>
-                </Button>
+                <Link
+                  href={`/activity?${new URLSearchParams({
+                    ...(entityTypeFilter ? { entityType: entityTypeFilter } : {}),
+                    ...(actionFilter ? { action: actionFilter } : {}),
+                    page: String(page - 1),
+                  }).toString()}`}
+                  className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+                  style={{
+                    background: "var(--color-canvas-cool)",
+                    border: "1px solid var(--color-hairline-strong)",
+                  }}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" /> Previous
+                </Link>
               )}
               {page < totalPages && (
-                <Button size="sm" variant="outline" className="h-8 px-3" asChild>
-                  <Link
-                    href={`/activity?${new URLSearchParams({
-                      ...(entityTypeFilter ? { entityType: entityTypeFilter } : {}),
-                      ...(actionFilter ? { action: actionFilter } : {}),
-                      page: String(page + 1),
-                    }).toString()}`}
-                  >
-                    Next
-                    <ChevronRight className="h-3.5 w-3.5 ml-1" />
-                  </Link>
-                </Button>
+                <Link
+                  href={`/activity?${new URLSearchParams({
+                    ...(entityTypeFilter ? { entityType: entityTypeFilter } : {}),
+                    ...(actionFilter ? { action: actionFilter } : {}),
+                    page: String(page + 1),
+                  }).toString()}`}
+                  className="inline-flex items-center gap-1 h-8 px-3 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+                  style={{
+                    background: "var(--color-canvas-cool)",
+                    border: "1px solid var(--color-hairline-strong)",
+                  }}
+                >
+                  Next <ChevronRight className="h-3.5 w-3.5" />
+                </Link>
               )}
             </div>
           </div>

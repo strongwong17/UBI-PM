@@ -11,14 +11,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FolderKanban, Plus, Archive } from "lucide-react";
+import { computeBillingState } from "@/lib/billing";
+import { currencySymbol } from "@/lib/currency";
+import { statusTokens } from "@/lib/redesign-tokens";
 
 const STATUS_CHIPS: { value: string; label: string }[] = [
-  { value: "INQUIRY_RECEIVED", label: "Inquiry received" },
-  { value: "ESTIMATE_SENT", label: "Estimate sent" },
-  { value: "APPROVED", label: "Approved" },
+  { value: "NEW",         label: "New" },
+  { value: "BRIEFED",     label: "Briefed" },
+  { value: "ESTIMATING",  label: "Estimating" },
+  { value: "APPROVED",    label: "Approved" },
   { value: "IN_PROGRESS", label: "In progress" },
-  { value: "COMPLETED", label: "Completed" },
-  { value: "INVOICED", label: "Invoiced" },
+  { value: "DELIVERED",   label: "Delivered" },
 ];
 
 interface PageProps {
@@ -50,7 +53,10 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
         primaryContact: { select: { name: true } },
         assignedTo: { select: { name: true } },
         _count: { select: { estimates: true } },
-        invoices: { where: { deletedAt: null }, select: { id: true, status: true }, take: 1 },
+        estimates: {
+          include: { phases: { include: { lineItems: true } } },
+        },
+        invoices: { where: { deletedAt: null } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -73,15 +79,19 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
       {/* Page header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Projects</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Manage all research projects</p>
+          <h1 className="text-2xl font-bold tracking-[-0.025em] text-ink-900">Projects</h1>
+          <p className="text-[13px] text-ink-500 mt-0.5 font-mono tracking-[0.02em]">{"// "}{projects.length} {view === "archived" ? "archived" : "active"}</p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/projects/new">
-            <Plus className="h-4 w-4 mr-1.5" />
-            New Project
-          </Link>
-        </Button>
+        <Link
+          href="/projects/new"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-[13px] font-medium text-white"
+          style={{
+            background: "var(--color-accent-rd)",
+            boxShadow: "0 4px 12px -2px rgba(217, 82, 43, 0.32)",
+          }}
+        >
+          <Plus className="h-3.5 w-3.5" /> New project
+        </Link>
       </div>
 
       {/* Filter area */}
@@ -131,10 +141,10 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
                 key={chip.value}
                 href={statusFilter === chip.value ? "/projects" : `/projects?status=${chip.value}`}
                 className={cn(
-                  "inline-flex items-center px-2.5 py-1 text-[12px] font-medium rounded-full border transition-all duration-150",
+                  "inline-flex items-center px-3 py-1.5 text-xs font-medium rounded-md transition-all",
                   statusFilter === chip.value
-                    ? "bg-gray-900 text-white border-gray-900"
-                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-400 hover:text-gray-800"
+                    ? "bg-ink-900 text-white"
+                    : "bg-card-rd text-ink-700 border border-hairline hover:border-hairline-strong",
                 )}
               >
                 {chip.label}
@@ -166,12 +176,16 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
                   : "Create your first project to get started"}
               </p>
               {!statusFilter && view === "active" && (
-                <Button asChild className="mt-4" size="sm" variant="outline">
-                  <Link href="/projects/new">
-                    <Plus className="h-4 w-4 mr-1.5" />
-                    New Project
-                  </Link>
-                </Button>
+                <Link
+                  href="/projects/new"
+                  className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+                  style={{
+                    background: "var(--color-canvas-cool)",
+                    border: "1px solid var(--color-hairline-strong)",
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5" /> New project
+                </Link>
               )}
             </div>
           ) : (
@@ -188,22 +202,41 @@ export default async function ProjectsPage({ searchParams }: PageProps) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {projects.map((project) => (
-                  <TableRow key={project.id} className={project.status === "CLOSED" ? "opacity-50" : ""}>
-                    <TableCell>
-                      <Link href={`/projects/${project.id}`} className="font-medium text-blue-600 hover:underline">
-                        {project.projectNumber}
-                      </Link>
-                      <p className="text-sm text-gray-500 mt-0.5 truncate max-w-[200px]">{project.title}</p>
-                    </TableCell>
-                    <TableCell className="text-gray-600 text-sm">{project.client.company}</TableCell>
-                    <TableCell className="text-sm text-gray-500">{project.primaryContact?.name || "-"}</TableCell>
-                    <TableCell><StatusBadge status={project.status} /></TableCell>
-                    <TableCell><Badge variant="secondary" className="text-xs">{project._count.estimates}</Badge></TableCell>
-                    <TableCell className="text-gray-500 text-sm">{project.assignedTo?.name || "-"}</TableCell>
-                    <TableCell className="text-sm text-gray-400">{new Date(project.createdAt).toLocaleDateString()}</TableCell>
-                  </TableRow>
-                ))}
+                {projects.map((project) => {
+                  const billing = computeBillingState(project);
+                  const pct = billing.estimated > 0 ? Math.min(100, (billing.invoiced / billing.estimated) * 100) : 0;
+                  return (
+                    <TableRow key={project.id} className={project.status === "CLOSED" ? "opacity-50" : ""}>
+                      <TableCell>
+                        <div className="flex gap-3">
+                          <span className="w-1 h-9 rounded-full shrink-0" style={{ background: statusTokens(project.status).dot }} />
+                          <div>
+                            <Link href={`/projects/${project.id}`} className="font-mono text-[11px] text-ink-300 tracking-[0.04em] no-underline">
+                              {project.projectNumber}
+                            </Link>
+                            <p className="text-[13px] font-medium text-ink-900 mt-0.5 truncate max-w-[260px]">{project.title}</p>
+                            {billing.estimated > 0 && (
+                              <div className="mt-1 max-w-[260px]">
+                                <div className="font-mono text-[11px] text-ink-400">
+                                  Invoiced <strong className="text-ink-700 font-semibold">{currencySymbol(billing.primaryCurrency)}{billing.invoiced.toLocaleString()}</strong> / {currencySymbol(billing.primaryCurrency)}{billing.estimated.toLocaleString()}
+                                </div>
+                                <div className="h-1 mt-1 bg-canvas-cool rounded">
+                                  <div className="h-full rounded" style={{ width: `${pct}%`, background: "var(--color-s-delivered)" }} />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-gray-600 text-sm">{project.client.company}</TableCell>
+                      <TableCell className="text-sm text-gray-500">{project.primaryContact?.name || "-"}</TableCell>
+                      <TableCell><StatusBadge status={project.status} /></TableCell>
+                      <TableCell><Badge variant="secondary" className="text-xs">{project._count.estimates}</Badge></TableCell>
+                      <TableCell className="text-gray-500 text-sm">{project.assignedTo?.name || "-"}</TableCell>
+                      <TableCell className="text-sm text-gray-400">{new Date(project.createdAt).toLocaleDateString()}</TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

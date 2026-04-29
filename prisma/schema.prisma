@@ -71,8 +71,8 @@ model Project {
   id             String    @id @default(cuid())
   projectNumber  String    @unique // PRJ-2026-001
   title          String
-  status         String    @default("INQUIRY_RECEIVED")
-  // INQUIRY_RECEIVED, ESTIMATE_SENT, APPROVED, IN_PROGRESS, COMPLETED, INVOICED, PAID, CLOSED
+  status         String    @default("NEW")
+  // NEW, BRIEFED, ESTIMATING, APPROVED, IN_PROGRESS, DELIVERED, CLOSED
   executionPhase String?   // RECRUITMENT, FIELDWORK, ANALYSIS, REPORTING
   startDate      DateTime?
   endDate        DateTime?
@@ -272,6 +272,8 @@ model EstimateLineItem {
   notes             String?
   serviceModuleType String?
 
+  deliveredQuantity Float?
+
   percentageBasis    String?  // null = fixed | "SUBTOTAL" | "PHASE" | "LINE_ITEM"
   percentageRate     Float?   // e.g. 15.0 for 15%
   basisPhaseName     String?  // phase name when percentageBasis = "PHASE"
@@ -279,6 +281,8 @@ model EstimateLineItem {
 
   phaseId String
   phase   EstimatePhase @relation(fields: [phaseId], references: [id], onDelete: Cascade)
+
+  invoiceLineItems InvoiceLineItem[]
 }
 
 // ─── ESTIMATE TEMPLATES ─────────────────────────────────
@@ -409,6 +413,9 @@ model InvoiceLineItem {
 
   invoiceId String
   invoice   Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  estimateLineItemId String?
+  estimateLineItem   EstimateLineItem? @relation(fields: [estimateLineItemId], references: [id], onDelete: SetNull)
 }
 
 // ─── ACTIVITY LOG ──────────────────────────────────────

@@ -6,20 +6,21 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { StatusPill } from "@/components/redesign/status-pill";
 import { ProjectStatusStepper } from "@/components/projects/project-status-stepper";
 import { ProjectHubTabs } from "@/components/projects/project-hub-tabs";
 import { InquiryBriefForm } from "@/components/projects/inquiry-brief-form";
-import { ProjectCompletionForm } from "@/components/projects/project-completion-form";
-import { GenerateInvoiceButton } from "@/components/projects/generate-invoice-button";
+import { DeliverySignoffTab } from "@/components/projects/delivery-signoff-tab";
+import { computeBillingState } from "@/lib/billing";
+import { InvoicesTab } from "@/components/invoices/invoices-tab";
 import { EstimateApproveButton } from "@/components/estimates/estimate-approve-button";
 import { EstimateCardActions } from "@/components/estimates/estimate-card-actions";
-import { InvoiceStatusChanger } from "@/components/invoices/invoice-status-changer";
-import { CreateRmbInvoiceButton } from "@/components/invoices/create-rmb-invoice-button";
 
 import { DeleteProjectButton } from "@/components/projects/delete-project-button";
 import { ClientSignalsPanel } from "@/components/projects/client-signals-panel";
+import { UnderDevButton } from "@/components/redesign/under-dev-button";
 
-import { ArrowLeft, Building2, User, Calendar, Plus } from "lucide-react";
+import { Building2, User, Calendar, Plus } from "lucide-react";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -104,8 +105,24 @@ export default async function ProjectHubPage({ params }: PageProps) {
   const approvedTotal = approvedEstimates
     .filter((est) => !est.parentEstimateId)
     .reduce((sum, est) => sum + estimateTotal(est), 0);
-  const fmtCurrency = (n: number) =>
-    n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const billing = computeBillingState(project);
+
+  const hasApprovedEstimate = approvedEstimates.some((e) => !e.parentEstimateId);
+
+  const invoiceRows = project.invoices.map((inv) => ({
+    id: inv.id,
+    invoiceNumber: inv.invoiceNumber,
+    status: inv.status,
+    total: inv.total,
+    currency: inv.currency,
+    dueDate: inv.dueDate?.toISOString() ?? null,
+    paidDate: inv.paidDate?.toISOString() ?? null,
+    exchangeRate: inv.exchangeRate ?? null,
+    parentInvoiceId: inv.parentInvoiceId ?? null,
+    rmbDuplicate: inv.rmbDuplicate ?? null,
+    estimate: inv.estimate ?? null,
+    lineCount: inv.lineItems.length,
+  }));
 
   // ── Tab contents ────────────────────────────────────────────
 
@@ -272,19 +289,19 @@ export default async function ProjectHubPage({ params }: PageProps) {
         </div>
       )}
 
-      {/* CTA: Proceed to completion when there are approved estimates without invoices */}
+      {/* CTA: when approved estimates have uninvoiced lines, point to the Delivery & Sign-off tab */}
       {hasUninvoicedApproved && (
         <Card className="border-green-300 bg-green-50/50">
           <CardContent className="py-5 flex items-center justify-between gap-4">
             <div>
-              <p className="font-medium text-green-900">Estimate approved — ready to complete project</p>
+              <p className="font-medium text-green-900">Estimate approved — ready for delivery</p>
               <p className="text-sm text-green-700 mt-0.5">
-                Review deliverables, adjust quantities, and generate the final invoice.
+                Record actuals and confirm sign-off. Invoices are created on the Invoices tab.
               </p>
             </div>
             <Button asChild className="bg-green-600 hover:bg-green-700 shrink-0">
               <Link href={`/projects/${project.id}?tab=completion`}>
-                Proceed to Completion
+                Open Delivery & Sign-off
               </Link>
             </Button>
           </CardContent>
@@ -294,215 +311,162 @@ export default async function ProjectHubPage({ params }: PageProps) {
   );
 
   const invoiceTab = (
+    <InvoicesTab
+      projectId={project.id}
+      billing={billing}
+      invoices={invoiceRows}
+      hasApprovedEstimate={hasApprovedEstimate}
+    />
+  );
+
+  const executionTab = (
     <div className="space-y-4">
-      {project.invoices.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center space-y-4">
-            <p className="text-gray-500">No invoices yet.</p>
-            {hasUninvoicedApproved ? (
-              <div>
-                <p className="text-sm text-gray-500 mb-3">Generate invoices through the Completion tab.</p>
-                <Button asChild variant="outline" size="sm">
-                  <Link href={`/projects/${project.id}?tab=completion`}>Go to Completion</Link>
-                </Button>
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400">Approve an estimate first, then use the Completion tab to generate invoices.</p>
-            )}
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-3">
-          {project.invoices.map((invoice) => (
-            <Card key={invoice.id} className={invoice.parentInvoiceId ? "border-amber-300 bg-amber-50/30" : ""}>
-              <CardHeader>
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <CardTitle>{invoice.invoiceNumber}</CardTitle>
-                      {invoice.parentInvoiceId && (
-                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
-                          RMB Duplicate
-                        </Badge>
-                      )}
-                      {invoice.currency !== "USD" && (
-                        <Badge variant="outline" className="text-xs">{invoice.currency}</Badge>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      Total: {invoice.currency === "CNY" ? "¥" : "$"}{invoice.total.toLocaleString()}
-                    </p>
-                    {invoice.estimate && (
-                      <p className="text-xs text-gray-400 mt-0.5">
-                        From: {invoice.estimate.estimateNumber} v{invoice.estimate.version}
-                        {invoice.estimate.label ? ` — ${invoice.estimate.label}` : ""}
-                      </p>
-                    )}
-                    {invoice.exchangeRate && (
-                      <p className="text-xs text-amber-600 mt-0.5">
-                        Exchange rate: 1 USD = {invoice.exchangeRate} CNY
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 flex-wrap">
-                    <StatusBadge status={invoice.status} />
-                    <InvoiceStatusChanger
-                      invoiceId={invoice.id}
-                      currentStatus={invoice.status}
-                    />
-                    {!invoice.parentInvoiceId && (
-                      <CreateRmbInvoiceButton
-                        invoiceId={invoice.id}
-                        invoiceNumber={invoice.invoiceNumber}
-                        hasRmbDuplicate={!!invoice.rmbDuplicate}
-                      />
-                    )}
-                    <Button asChild variant="outline" size="sm">
-                      <Link href={`/invoices/${invoice.id}`}>View</Link>
-                    </Button>
-                    <Button asChild variant="outline" size="sm">
-                      <a href={`/api/invoices/${invoice.id}/pdf`} target="_blank">
-                        PDF
-                      </a>
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              {invoice.lineItems.length > 0 && (
-                <CardContent>
-                  <div className="space-y-1">
-                    {invoice.lineItems.map((item) => (
-                      <div key={item.id} className="flex justify-between text-sm">
-                        <span className="text-gray-600">{item.description}</span>
-                        <span className="font-medium">{item.total.toLocaleString()}</span>
-                      </div>
-                    ))}
-                  </div>
-                  {invoice.dueDate && (
-                    <p className="text-sm text-gray-500 mt-3">
-                      Due: {new Date(invoice.dueDate).toLocaleDateString()}
-                    </p>
-                  )}
-                  {invoice.paidDate && (
-                    <p className="text-sm text-green-600 mt-1">
-                      Paid: {new Date(invoice.paidDate).toLocaleDateString()}
-                    </p>
-                  )}
-                </CardContent>
-              )}
-            </Card>
-          ))}
+      {/* Future: Deliverable & team management — gray placeholder */}
+      <div
+        className="rounded-2xl p-5 mt-4"
+        style={{
+          background: "linear-gradient(180deg, #F4F1E8 0%, #EFEAE0 100%)",
+          border: "1px dashed var(--color-hairline-strong)",
+        }}
+      >
+        <div className="flex items-center justify-between mb-3.5">
+          <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase m-0">
+            {"// DELIVERABLES & TEAM TRACKING"}
+          </p>
+          <span
+            className="font-mono text-[9px] font-bold text-white px-2 py-0.5 rounded-full tracking-[0.06em] uppercase"
+            style={{ background: "var(--color-ink-300)" }}
+          >
+            UNDER DEVELOPMENT
+          </span>
         </div>
-      )}
+        <p className="text-[12px] text-ink-500 mb-3 max-w-prose">
+          Auto-generate deliverables from the approved estimate&apos;s line items. Assign internal team
+          members or external vendors to each deliverable. Track per-line completion through
+          Recruitment → Fieldwork → Analysis → Reporting. The summary feeds into Confirm Actuals on
+          Stage 3.
+        </p>
+        <UnderDevButton label="Generate deliverables from estimate" />
+      </div>
     </div>
   );
 
+  // Default tab by lifecycle stage
+  const stage1 = ["NEW", "BRIEFED", "ESTIMATING", "APPROVED"].includes(project.status);
+  const stage3 = project.status === "DELIVERED";
+  const defaultTab =
+    stage3 ? "completion"
+    : stage1 ? "estimates"
+    : "overview";
+
   const completionTab = (
-    <ProjectCompletionForm
+    <DeliverySignoffTab
       projectId={project.id}
       projectStatus={project.status}
-      approvedEstimates={approvedEstimates.map((est) => ({
-        id: est.id,
-        estimateNumber: est.estimateNumber,
-        title: est.title,
-        label: est.label ?? null,
-        currency: est.currency,
-        taxRate: est.taxRate,
-        discount: est.discount,
-        parentEstimateId: est.parentEstimateId ?? null,
-        hasInvoice: invoicedEstimateIds.has(est.id),
-        phases: est.phases.map((phase) => ({
-          name: phase.name,
-          lineItems: phase.lineItems.map((li) => ({
-            description: li.description,
-            unit: li.unit,
-            quantity: li.quantity,
-            unitPrice: li.unitPrice,
-          })),
-        })),
-      }))}
+      estimates={approvedEstimates
+        .filter((e) => !e.parentEstimateId)
+        .map((est) => ({
+          id: est.id,
+          estimateNumber: est.estimateNumber,
+          title: est.title,
+          label: est.label ?? null,
+          currency: est.currency,
+          lines: est.phases.flatMap((p) =>
+            p.lineItems.map((l) => ({
+              id: l.id,
+              description: l.description,
+              serviceModuleType: l.serviceModuleType ?? null,
+              unit: l.unit,
+              quantity: l.quantity,
+              unitPrice: l.unitPrice,
+              deliveredQuantity: l.deliveredQuantity ?? null,
+            }))
+          ),
+        }))}
+      initialCompletion={
+        project.completion
+          ? {
+              internalCompleted: project.completion.internalCompleted,
+              internalCompletedAt: project.completion.internalCompletedAt?.toISOString() ?? null,
+              internalCompletedBy: project.completion.internalCompletedBy
+                ? { name: project.completion.internalCompletedBy.name }
+                : null,
+              internalNotes: project.completion.internalNotes,
+              clientAcknowledged: project.completion.clientAcknowledged,
+              clientAcknowledgedAt: project.completion.clientAcknowledgedAt?.toISOString() ?? null,
+              clientAcknowledgedBy: project.completion.clientAcknowledgedBy,
+              clientAcknowledgeNotes: project.completion.clientAcknowledgeNotes,
+              deliverablesNotes: project.completion.deliverablesNotes,
+            }
+          : null
+      }
+      billingSummary={{
+        estimated: billing.estimated,
+        invoiced: billing.invoiced,
+        primaryCurrency: billing.primaryCurrency,
+      }}
       hasInvoices={project.invoices.length > 0}
-      initialData={project.completion ? {
-        ...project.completion,
-        internalCompletedAt: project.completion.internalCompletedAt?.toISOString() ?? null,
-        clientAcknowledgedAt: project.completion.clientAcknowledgedAt?.toISOString() ?? null,
-      } : undefined}
     />
   );
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/projects">
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Projects
-          </Link>
-        </Button>
+      {/* Crumbs */}
+      <div className="font-mono text-[11px] text-ink-400 mb-3 tracking-[0.02em]">
+        <Link href="/projects" className="text-ink-400 hover:text-ink-700 no-underline">Projects</Link>
+        <span className="mx-1.5 text-ink-300">›</span>
+        <Link href={`/clients/${project.client.id}`} className="text-ink-400 hover:text-ink-700 no-underline">{project.client.company}</Link>
+        <span className="mx-1.5 text-ink-300">›</span>
+        <span className="text-ink-700 font-semibold">{project.projectNumber}</span>
       </div>
 
-      {/* Project Title & Meta */}
-      <div className="bg-white border rounded-xl p-6 space-y-4">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-mono text-gray-400">{project.projectNumber}</span>
-              <StatusBadge status={project.status} />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900 mt-1">{project.title}</h1>
-            <div className="flex items-center gap-4 mt-1 text-sm text-gray-500 flex-wrap">
-              <span>{project.client.company}</span>
-              {project.primaryContact && <span>· {project.primaryContact.name}</span>}
-              {project.assignedTo && <span>· Assigned: {project.assignedTo.name}</span>}
-            </div>
+      <div className="flex items-start justify-between gap-6 flex-wrap mb-5">
+        <div>
+          <div className="flex items-center gap-2.5 mb-1">
+            <span className="font-mono text-[11px] font-semibold text-ink-300 tracking-[0.04em]">
+              {project.projectNumber}
+            </span>
+            <StatusPill status={project.status} />
           </div>
-          <div className="flex items-center gap-4">
-            {approvedEstimates.length > 0 && (
-              <div className="text-right">
-                <p className="text-xs text-gray-500">Project Total</p>
-                <p className="text-xl font-bold tracking-tight text-green-700">
-                  ${fmtCurrency(approvedTotal)}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {approvedEstimates.filter((e) => !e.parentEstimateId).length} approved
-                </p>
-              </div>
-            )}
-            {isAdmin && (
-              <DeleteProjectButton projectId={project.id} projectNumber={project.projectNumber} />
-            )}
-          </div>
+          <h1 className="text-2xl font-bold tracking-[-0.025em] mb-1.5">{project.title}</h1>
+          <p className="text-[13px] text-ink-500">
+            {project.client.company}
+            {project.startDate ? ` · started ${new Date(project.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}
+            {project.assignedTo ? ` · ${project.assignedTo.name} lead` : ""}
+            {approvedTotal > 0 ? ` · $${approvedTotal.toLocaleString()} approved` : ""}
+          </p>
         </div>
-
-        {/* Status Stepper */}
-        <div className="pt-2">
-          <ProjectStatusStepper
-            projectId={project.id}
-            currentStatus={project.status}
-            context={{
-              hasInquiry: !!project.inquiry,
-              estimateCount: project.estimates.length,
-              approvedEstimateCount: approvedEstimates.length,
-              invoiceCount: project.invoices.length,
-              hasUninvoicedApproved,
-              updatedAt: project.updatedAt.toISOString(),
-              startDate: project.startDate?.toISOString() ?? null,
-              contactEmail: project.primaryContact?.email ?? null,
-              contactName: project.primaryContact?.name ?? null,
-            }}
-          />
-        </div>
+        {isAdmin && (
+          <DeleteProjectButton projectId={project.id} projectNumber={project.projectNumber} />
+        )}
       </div>
+
+      {/* Status Stepper (4-stage card row) */}
+      <ProjectStatusStepper
+        projectId={project.id}
+        currentStatus={project.status}
+        context={{
+          hasInquiry: !!project.inquiry,
+          estimateCount: project.estimates.length,
+          approvedEstimateCount: approvedEstimates.length,
+          invoiceCount: project.invoices.length,
+          hasUninvoicedApproved,
+          updatedAt: project.updatedAt.toISOString(),
+          startDate: project.startDate?.toISOString() ?? null,
+          contactEmail: project.primaryContact?.email ?? null,
+          contactName: project.primaryContact?.name ?? null,
+        }}
+      />
 
       {/* Tabs */}
       <ProjectHubTabs
-        defaultTab="overview"
+        defaultTab={defaultTab}
         tabs={[
           { value: "overview", label: "Overview", content: overviewTab },
           { value: "estimates", label: `Estimates (${project.estimates.length})`, content: estimatesTab },
           { value: "invoice", label: `Invoices (${project.invoices.length})`, content: invoiceTab },
-          { value: "completion", label: "Completion", content: completionTab },
+          { value: "execution", label: "Execution", content: executionTab },
+          { value: "completion", label: "Delivery & Sign-off", content: completionTab },
         ]}
       />
     </div>

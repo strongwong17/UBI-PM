@@ -181,6 +181,14 @@ export async function PUT(
       projectId: id,
     });
 
+    // Forward-only auto-transition: NEW → BRIEFED when objectives + at least one service module exist
+    if ((inquiry?.objectives?.trim()?.length ?? 0) > 0 && (inquiry?.serviceModules?.length ?? 0) > 0) {
+      const currentProject = await prisma.project.findUnique({ where: { id }, select: { status: true } });
+      if (currentProject && (currentProject.status === "NEW" || currentProject.status === "INQUIRY_RECEIVED")) {
+        await prisma.project.update({ where: { id }, data: { status: "BRIEFED" } });
+      }
+    }
+
     return NextResponse.json(inquiry);
   } catch (error) {
     console.error("Failed to upsert inquiry:", error);

@@ -107,25 +107,6 @@ export async function PATCH(
         },
       });
 
-      // SENT → set project status to INVOICED
-      if (status === "SENT" && existing.status !== "SENT") {
-        const project = await tx.project.findUnique({ where: { id: existing.projectId }, select: { status: true } });
-        if (project && !["INVOICED", "PAID", "CLOSED"].includes(project.status)) {
-          await tx.project.update({
-            where: { id: existing.projectId },
-            data: { status: "INVOICED" },
-          });
-        }
-      }
-
-      // PAID → archive the project (set to CLOSED)
-      if (status === "PAID" && existing.status !== "PAID") {
-        await tx.project.update({
-          where: { id: existing.projectId },
-          data: { status: "CLOSED" },
-        });
-      }
-
       return inv;
     });
 

@@ -197,11 +197,15 @@ export async function POST(
       },
     });
 
-    // Auto-advance project status to ESTIMATE_SENT if still at INQUIRY_RECEIVED
-    if (project.status === "INQUIRY_RECEIVED") {
+    // Auto-advance project status to ESTIMATING if still at NEW | BRIEFED | INQUIRY_RECEIVED
+    if (
+      project.status === "NEW" ||
+      project.status === "BRIEFED" ||
+      project.status === "INQUIRY_RECEIVED"
+    ) {
       await prisma.project.update({
         where: { id },
-        data: { status: "ESTIMATE_SENT" },
+        data: { status: "ESTIMATING" },
       });
     }
 

@@ -8,7 +8,7 @@ import { ArrowLeft, Save, Eye, EyeOff, Info } from "lucide-react";
 import Link from "next/link";
 import ExhibitEditor from "@/components/contracts/exhibit-editor";
 
-export default function NewTemplatePage() {
+export default function NewContractTemplatePage() {
   const router = useRouter();
   const addTemplate = useContractStore((s) => s.addTemplate);
 
@@ -23,7 +23,6 @@ export default function NewTemplatePage() {
 
   const handleSave = () => {
     if (!name.trim() || !content.trim()) return;
-
     const id = addTemplate({
       name: name.trim(),
       description: description.trim(),
@@ -32,163 +31,220 @@ export default function NewTemplatePage() {
       exhibits,
       placeholders: detectedPlaceholders,
     });
-
     router.push(`/contract-templates/${id}`);
   };
 
   return (
-    <>
-      <div className="mb-6">
+    <div className="space-y-6">
+      <div>
         <Link
           href="/contract-templates"
-          className="mb-4 inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+          className="inline-flex items-center gap-1 text-[12px] text-ink-500 hover:text-ink-900 mb-3"
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to Templates
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to templates
         </Link>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">
-          Create Template
-        </h1>
+        <div
+          className="flex items-start justify-between gap-4 flex-wrap pb-[18px]"
+          style={{ borderBottom: "1px solid var(--color-hairline)" }}
+        >
+          <div>
+            <h1 className="text-[24px] font-bold tracking-[-0.025em] m-0 mb-1 text-ink-900">
+              New contract template
+            </h1>
+            <p className="text-[13px] text-ink-500 m-0 max-w-[520px]">
+              Use{" "}
+              <code className="font-mono text-[12px] px-1 py-0.5 rounded bg-canvas-cool">
+                {"{{field_name}}"}
+              </code>{" "}
+              for dynamic fields — they&apos;ll be auto-detected and turned into form inputs when
+              generating a contract.
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-            <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Template Name
+        <div className="space-y-6 lg:col-span-2">
+          {/* Template info */}
+          <div>
+            <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+              {"// TEMPLATE INFO"}
+            </p>
+            <div
+              className="bg-card-rd rounded-[14px] p-5 space-y-4"
+              style={{
+                border: "1px solid var(--color-hairline)",
+                boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+              }}
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                    {"// NAME *"}
+                  </label>
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="e.g. Service Agreement"
+                    className="w-full px-3 py-2 rounded-md text-[13px] text-ink-900 placeholder:text-ink-300 outline-none focus:ring-2 focus:ring-ink-900/10"
+                    style={{
+                      background: "var(--color-card-rd)",
+                      border: "1px solid var(--color-hairline)",
+                    }}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                    {"// CATEGORY"}
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as Template["category"])}
+                    className="w-full px-3 py-2 rounded-md text-[13px] text-ink-900 outline-none focus:ring-2 focus:ring-ink-900/10"
+                    style={{
+                      background: "var(--color-card-rd)",
+                      border: "1px solid var(--color-hairline)",
+                    }}
+                  >
+                    <option value="service-agreement">Service Agreement</option>
+                    <option value="sow">Statement of Work</option>
+                    <option value="vendor">Vendor Contract</option>
+                    <option value="nda">Non-Disclosure Agreement</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                  {"// DESCRIPTION"}
                 </label>
                 <input
                   type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Service Agreement"
-                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Brief description of this template"
+                  className="w-full px-3 py-2 rounded-md text-[13px] text-ink-900 placeholder:text-ink-300 outline-none focus:ring-2 focus:ring-ink-900/10"
+                  style={{
+                    background: "var(--color-card-rd)",
+                    border: "1px solid var(--color-hairline)",
+                  }}
                 />
               </div>
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Category
-                </label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as Template["category"])}
-                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                >
-                  <option value="service-agreement">Service Agreement</option>
-                  <option value="sow">Statement of Work</option>
-                  <option value="vendor">Vendor Contract</option>
-                  <option value="nda">Non-Disclosure Agreement</option>
-                  <option value="custom">Custom</option>
-                </select>
-              </div>
-            </div>
 
-            <div className="mb-4">
-              <label className="mb-1.5 block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Description
-              </label>
-              <input
-                type="text"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Brief description of this template"
-                className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-
-            <div>
-              <div className="mb-1.5 flex items-center justify-between">
-                <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Template Content
-                </label>
-                <button
-                  onClick={() => setShowPreview(!showPreview)}
-                  className="flex items-center gap-1.5 text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400"
-                >
-                  {showPreview ? (
-                    <>
-                      <EyeOff className="h-3.5 w-3.5" /> Editor
-                    </>
-                  ) : (
-                    <>
-                      <Eye className="h-3.5 w-3.5" /> Preview
-                    </>
-                  )}
-                </button>
-              </div>
-
-              {showPreview ? (
-                <div className="min-h-[400px] whitespace-pre-wrap rounded-lg border border-zinc-200 bg-zinc-50 p-4 font-mono text-sm text-zinc-800 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200">
-                  {content || (
-                    <span className="text-zinc-400">Nothing to preview</span>
-                  )}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                    {"// CONTENT"}
+                  </label>
+                  <button
+                    onClick={() => setShowPreview(!showPreview)}
+                    className="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] text-ink-500 hover:text-ink-900 hover:bg-[#FCFAF6]"
+                  >
+                    {showPreview ? (
+                      <>
+                        <EyeOff className="h-3 w-3" /> Editor
+                      </>
+                    ) : (
+                      <>
+                        <Eye className="h-3 w-3" /> Preview
+                      </>
+                    )}
+                  </button>
                 </div>
-              ) : (
-                <textarea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder={`Enter your contract template here.\n\nUse {{placeholder_name}} for dynamic fields.\nExample: {{client_name}}, {{effective_date}}, {{total_amount}}`}
-                  rows={20}
-                  className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 font-mono text-sm text-zinc-900 placeholder:text-zinc-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
-                />
-              )}
+                {showPreview ? (
+                  <div
+                    className="min-h-[400px] whitespace-pre-wrap rounded-md p-4 font-mono text-[12px] text-ink-700"
+                    style={{
+                      background: "#FAFAF6",
+                      border: "1px solid var(--color-hairline)",
+                    }}
+                  >
+                    {content || <span className="text-ink-300">Nothing to preview</span>}
+                  </div>
+                ) : (
+                  <textarea
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    placeholder={`Enter your contract template here.\n\nUse {{placeholder_name}} for dynamic fields.\nExample: {{client_name}}, {{effective_date}}, {{total_amount}}`}
+                    rows={20}
+                    className="w-full px-3 py-2 rounded-md font-mono text-[12px] text-ink-900 placeholder:text-ink-300 outline-none focus:ring-2 focus:ring-ink-900/10 resize-none"
+                    style={{
+                      background: "var(--color-card-rd)",
+                      border: "1px solid var(--color-hairline)",
+                    }}
+                  />
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Exhibits Section */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-950">
-            <ExhibitEditor exhibits={exhibits} onChange={setExhibits} />
-          </div>
-
-          <div className="flex justify-end gap-3">
-            <Link
-              href="/contract-templates"
-              className="rounded-lg border border-zinc-200 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          {/* Exhibits */}
+          <div>
+            <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+              {"// EXHIBITS"}
+            </p>
+            <div
+              className="bg-card-rd rounded-[14px] p-5"
+              style={{
+                border: "1px solid var(--color-hairline)",
+                boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+              }}
             >
-              Cancel
-            </Link>
-            <button
-              onClick={handleSave}
-              disabled={!name.trim() || !content.trim()}
-              className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Save className="h-4 w-4" />
-              Save Template
-            </button>
+              <ExhibitEditor exhibits={exhibits} onChange={setExhibits} />
+            </div>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950">
-            <div className="mb-2 flex items-center gap-2 text-sm font-medium text-blue-700 dark:text-blue-300">
-              <Info className="h-4 w-4" />
-              Placeholder Syntax
-            </div>
-            <p className="text-xs leading-relaxed text-blue-600 dark:text-blue-400">
-              Use <code className="rounded bg-blue-100 px-1 py-0.5 dark:bg-blue-900">{"{{field_name}}"}</code> to
-              create dynamic fields. They will be auto-detected and turned into
-              form inputs when generating a contract. Works in both the main
-              content and exhibits.
+        {/* Sidebar */}
+        <div className="space-y-6">
+          <div>
+            <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+              {"// PLACEHOLDER SYNTAX"}
             </p>
+            <div
+              className="rounded-[14px] p-4"
+              style={{
+                background: "var(--color-canvas-cool)",
+                border: "1px solid var(--color-hairline-strong)",
+              }}
+            >
+              <div className="mb-2 flex items-center gap-2 text-[12px] font-medium text-ink-900">
+                <Info className="h-3.5 w-3.5 text-accent-rd" />
+                How placeholders work
+              </div>
+              <p className="text-[12px] leading-relaxed text-ink-700">
+                Use{" "}
+                <code className="font-mono text-[11px] rounded bg-card-rd px-1 py-0.5 border border-hairline">
+                  {"{{field_name}}"}
+                </code>{" "}
+                in the body or exhibits — they&apos;ll be auto-detected and become form inputs when
+                generating a contract.
+              </p>
+            </div>
           </div>
 
           {detectedPlaceholders.length > 0 && (
-            <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-              <h3 className="mb-3 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Detected Fields ({detectedPlaceholders.length})
-              </h3>
-              <div className="space-y-2">
+            <div>
+              <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+                {"// DETECTED FIELDS"} · {detectedPlaceholders.length}
+              </p>
+              <div
+                className="bg-card-rd rounded-[14px] p-4 space-y-2"
+                style={{
+                  border: "1px solid var(--color-hairline)",
+                  boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                }}
+              >
                 {detectedPlaceholders.map((p) => (
                   <div
                     key={p.key}
-                    className="flex items-center justify-between rounded-lg bg-zinc-50 px-3 py-2 dark:bg-zinc-900"
+                    className="flex items-center justify-between rounded-md px-3 py-2"
+                    style={{ background: "#FAFAF6" }}
                   >
-                    <span className="text-sm text-zinc-700 dark:text-zinc-300">
-                      {p.label}
-                    </span>
-                    <span className="rounded bg-zinc-200 px-1.5 py-0.5 text-xs text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
+                    <span className="text-[12px] text-ink-700">{p.label}</span>
+                    <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase rounded px-1.5 py-0.5 bg-canvas-cool text-ink-500">
                       {p.type}
                     </span>
                   </div>
@@ -198,6 +254,48 @@ export default function NewTemplatePage() {
           )}
         </div>
       </div>
-    </>
+
+      {/* Sticky action footer */}
+      <div
+        className="flex items-center justify-between p-4 rounded-[14px] mt-5 sticky"
+        style={{
+          background: "var(--color-card-rd)",
+          border: "1px solid var(--color-hairline)",
+          boxShadow:
+            "0 6px 24px -6px rgba(15, 23, 41, 0.10), 0 2px 6px -2px rgba(15, 23, 41, 0.06)",
+          bottom: 16,
+          zIndex: 5,
+        }}
+      >
+        <div className="text-[12px] text-ink-500">
+          <strong className="text-ink-900 font-bold rd-tabular">
+            {detectedPlaceholders.length}
+          </strong>{" "}
+          {detectedPlaceholders.length === 1 ? "field" : "fields"} ·{" "}
+          <strong className="text-ink-900 font-bold rd-tabular">{exhibits.length}</strong>{" "}
+          {exhibits.length === 1 ? "exhibit" : "exhibits"}
+        </div>
+        <div className="flex gap-2 items-center">
+          <Link
+            href="/contract-templates"
+            className="px-3 py-2 rounded-lg text-[13px] font-medium text-ink-700 hover:bg-[rgba(15,23,41,0.04)]"
+          >
+            Cancel
+          </Link>
+          <button
+            onClick={handleSave}
+            disabled={!name.trim() || !content.trim()}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium text-white tracking-[-0.005em] disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: "var(--color-accent-rd)",
+              boxShadow: "0 4px 12px -2px rgba(217, 82, 43, 0.32)",
+            }}
+          >
+            <Save className="h-4 w-4" />
+            Save template
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
