@@ -3,15 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 interface Client {
   id: string;
@@ -51,7 +48,6 @@ export function ProjectForm({ users }: ProjectFormProps) {
         }
         if (res.ok) {
           const data = await res.json();
-          // Also fetch contacts for each client
           const clientsWithContacts = await Promise.all(
             data.map(async (client: { id: string; company: string }) => {
               const cRes = await fetch(`/api/clients/${client.id}`);
@@ -71,7 +67,6 @@ export function ProjectForm({ users }: ProjectFormProps) {
     fetchClients();
   }, []);
 
-  // Reset contact when client changes
   useEffect(() => {
     setPrimaryContactId("");
   }, [clientId]);
@@ -119,17 +114,22 @@ export function ProjectForm({ users }: ProjectFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button type="button" variant="ghost" size="sm" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />Back
-        </Button>
-      </div>
-
-      <Card>
-        <CardHeader><CardTitle>New Project</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Client *</Label>
+      {/* Project details */}
+      <div>
+        <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+          {"// PROJECT DETAILS"}
+        </p>
+        <div
+          className="bg-card-rd rounded-[14px] p-5 space-y-4"
+          style={{
+            border: "1px solid var(--color-hairline)",
+            boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+          }}
+        >
+          <div className="space-y-1.5">
+            <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+              {"// CLIENT *"}
+            </label>
             <Select value={clientId} onValueChange={setClientId}>
               <SelectTrigger>
                 <SelectValue placeholder="Select client" />
@@ -143,8 +143,10 @@ export function ProjectForm({ users }: ProjectFormProps) {
           </div>
 
           {selectedClient && selectedClient.contacts.length > 0 && (
-            <div className="space-y-2">
-              <Label>Primary Contact</Label>
+            <div className="space-y-1.5">
+              <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+                {"// PRIMARY CONTACT"}
+              </label>
               <Select value={primaryContactId} onValueChange={setPrimaryContactId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select contact (optional)" />
@@ -160,8 +162,10 @@ export function ProjectForm({ users }: ProjectFormProps) {
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label>Project Title *</Label>
+          <div className="space-y-1.5">
+            <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+              {"// PROJECT TITLE *"}
+            </label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -170,8 +174,10 @@ export function ProjectForm({ users }: ProjectFormProps) {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Assign To</Label>
+          <div className="space-y-1.5">
+            <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+              {"// ASSIGN TO"}
+            </label>
             <Select value={assignedToId} onValueChange={setAssignedToId}>
               <SelectTrigger>
                 <SelectValue placeholder="Select team member (optional)" />
@@ -184,8 +190,10 @@ export function ProjectForm({ users }: ProjectFormProps) {
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label>Notes</Label>
+          <div className="space-y-1.5">
+            <label className="block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
+              {"// NOTES"}
+            </label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
@@ -193,17 +201,55 @@ export function ProjectForm({ users }: ProjectFormProps) {
               rows={3}
             />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
-      <div className="flex justify-end gap-3">
-        <Button type="button" variant="outline" onClick={() => router.back()} disabled={isSubmitting}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Create Project
-        </Button>
+      {/* Sticky action footer */}
+      <div
+        className="flex items-center justify-between p-4 rounded-[14px] mt-5 sticky"
+        style={{
+          background: "var(--color-card-rd)",
+          border: "1px solid var(--color-hairline)",
+          boxShadow:
+            "0 6px 24px -6px rgba(15, 23, 41, 0.10), 0 2px 6px -2px rgba(15, 23, 41, 0.06)",
+          bottom: 16,
+          zIndex: 5,
+        }}
+      >
+        <div className="text-[12px] text-ink-500">
+          {clientId ? (
+            <>
+              For{" "}
+              <strong className="text-ink-900 font-bold">
+                {clients.find((c) => c.id === clientId)?.company ?? ""}
+              </strong>
+            </>
+          ) : (
+            <span className="text-ink-400">Select a client to begin</span>
+          )}
+        </div>
+        <div className="flex gap-2 items-center">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            disabled={isSubmitting}
+            className="px-3 py-2 rounded-lg text-[13px] font-medium text-ink-700 hover:bg-[rgba(15,23,41,0.04)] disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium text-white tracking-[-0.005em] disabled:opacity-50"
+            style={{
+              background: "var(--color-accent-rd)",
+              boxShadow: "0 4px 12px -2px rgba(217, 82, 43, 0.32)",
+            }}
+          >
+            {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+            Create project
+          </button>
+        </div>
       </div>
     </form>
   );
