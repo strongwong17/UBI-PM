@@ -12,9 +12,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Trash2, Loader2, ChevronDown, ChevronUp, Layers, Plus } from "lucide-react";
+import { Trash2, Loader2, ChevronDown, ChevronUp, Layers, Plus, GripVertical } from "lucide-react";
 import { TemplatePicker } from "./template-picker";
 import { currencySymbol } from "@/lib/currency";
+import {
+  DndContext,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  closestCenter,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -183,6 +199,64 @@ function resolveItemTotal(li: LineItem, allPhases: Phase[]): number {
 
 function phaseTotal(phase: Phase, allPhases: Phase[]) {
   return phase.lineItems.reduce((sum, li) => sum + resolveItemTotal(li, allPhases), 0);
+}
+
+// ── Sortable wrappers ──────────────────────────────────────────────────────
+
+interface SortableHandleProps {
+  listeners: ReturnType<typeof useSortable>["listeners"];
+  attributes: ReturnType<typeof useSortable>["attributes"];
+}
+
+function SortablePhase({
+  phaseKey,
+  children,
+}: {
+  phaseKey: string;
+  children: (handle: SortableHandleProps) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: phaseKey,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : "auto",
+    position: "relative",
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children({ listeners, attributes })}
+    </div>
+  );
+}
+
+function SortableLineRow({
+  itemKey,
+  children,
+}: {
+  itemKey: string;
+  children: (handle: SortableHandleProps & { isDragging: boolean }) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: itemKey,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    background: isDragging ? "#FCFAF6" : undefined,
+    boxShadow: isDragging
+      ? "0 6px 16px -4px rgba(15, 23, 41, 0.12), 0 2px 4px -1px rgba(15, 23, 41, 0.06)"
+      : undefined,
+    zIndex: isDragging ? 5 : "auto",
+    position: "relative",
+  };
+  return (
+    <div ref={setNodeRef} style={style} className="group">
+      {children({ listeners, attributes, isDragging })}
+    </div>
+  );
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -406,6 +480,37 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
     );
   }
 
+  // ── Drag & drop ────────────────────────────────────────────────────────────
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } })
+  );
+
+  function onPhaseDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    setPhases((prev) => {
+      const oldIdx = prev.findIndex((p) => p._key === active.id);
+      const newIdx = prev.findIndex((p) => p._key === over.id);
+      if (oldIdx === -1 || newIdx === -1) return prev;
+      return arrayMove(prev, oldIdx, newIdx);
+    });
+  }
+
+  function onLineDragEnd(phaseKey: string, e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    setPhases((prev) =>
+      prev.map((p) => {
+        if (p._key !== phaseKey) return p;
+        const oldIdx = p.lineItems.findIndex((li) => li._key === active.id);
+        const newIdx = p.lineItems.findIndex((li) => li._key === over.id);
+        if (oldIdx === -1 || newIdx === -1) return p;
+        return { ...p, lineItems: arrayMove(p.lineItems, oldIdx, newIdx) };
+      })
+    );
+  }
+
   // ── Totals ─────────────────────────────────────────────────────────────────
 
   const subtotal = phases.reduce((sum, p) => sum + phaseTotal(p, phases), 0);
@@ -514,7 +619,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
   const monoLabel =
     "block font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500 mb-1.5";
 
-  const gridCols = "1fr 110px 90px 110px 110px 32px";
+  const gridCols = "24px 1fr 110px 90px 110px 110px 32px";
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -682,9 +787,20 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
           </div>
         </div>
 
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          modifiers={[restrictToVerticalAxis]}
+          onDragEnd={onPhaseDragEnd}
+        >
+          <SortableContext
+            items={phases.map((p) => p._key)}
+            strategy={verticalListSortingStrategy}
+          >
         {phases.map((phase, phaseIdx) => (
+          <SortablePhase key={phase._key} phaseKey={phase._key}>
+            {(phaseHandle) => (
           <div
-            key={phase._key}
             className="bg-card-rd rounded-[14px] overflow-hidden"
             style={{
               border: "1px solid var(--color-hairline)",
@@ -700,6 +816,15 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                 background: "linear-gradient(180deg, #FCFAF6 0%, #FFFFFF 100%)",
               }}
             >
+              <button
+                type="button"
+                {...phaseHandle.listeners}
+                {...phaseHandle.attributes}
+                className="text-ink-200 hover:text-ink-500 cursor-grab active:cursor-grabbing -ml-1 px-1 py-1 rounded hover:bg-[#FCFAF6] flex-shrink-0 touch-none"
+                aria-label="Drag to reorder phase"
+              >
+                <GripVertical className="h-4 w-4" />
+              </button>
               <span
                 className="w-2.5 h-2.5 rounded-full flex-shrink-0"
                 style={{ background: "var(--color-ink-300)" }}
@@ -775,6 +900,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                     color: "var(--color-ink-400)",
                   }}
                 >
+                  <span></span>
                   <span>Description</span>
                   <span>Unit</span>
                   <span className="text-right">Qty</span>
@@ -784,12 +910,24 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                 </div>
 
                 {/* Line item rows */}
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  modifiers={[restrictToVerticalAxis]}
+                  onDragEnd={(e) => onLineDragEnd(phase._key, e)}
+                >
+                  <SortableContext
+                    items={phase.lineItems.map((li) => li._key)}
+                    strategy={verticalListSortingStrategy}
+                  >
                 {phase.lineItems.map((item) => {
                   const isPercent = item.percentageBasis !== "";
                   const computedTotal = resolveItemTotal(item, phases);
 
                   return (
-                    <div key={item._key}>
+                    <SortableLineRow key={item._key} itemKey={item._key}>
+                      {(lineHandle) => (
+                    <div>
                       <div
                         className="grid gap-3 items-center px-5 py-3.5 transition-colors hover:bg-[#FCFAF6]"
                         style={{
@@ -797,6 +935,17 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                           borderBottom: "1px solid var(--color-hairline)",
                         }}
                       >
+                        {/* Drag handle */}
+                        <button
+                          type="button"
+                          {...lineHandle.listeners}
+                          {...lineHandle.attributes}
+                          className="text-ink-200 group-hover:text-ink-300 hover:!text-ink-500 cursor-grab active:cursor-grabbing flex items-center justify-center rounded touch-none"
+                          aria-label="Drag to reorder line item"
+                        >
+                          <GripVertical className="h-3.5 w-3.5" />
+                        </button>
+
                         {/* Description */}
                         <Input
                           value={item.description}
@@ -993,8 +1142,12 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                         </div>
                       )}
                     </div>
+                      )}
+                    </SortableLineRow>
                   );
                 })}
+                  </SortableContext>
+                </DndContext>
 
                 {/* Add line item */}
                 <button
@@ -1007,7 +1160,11 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
               </>
             )}
           </div>
+            )}
+          </SortablePhase>
         ))}
+          </SortableContext>
+        </DndContext>
       </div>
 
       {/* ─── NOTES ─────────────────────────────────────────────────────── */}
