@@ -225,49 +225,61 @@ npx shadcn@latest add <component-name> --yes
 
 ## Production Deployment
 
-**URL:** https://pmt.ubinsights.com
-**VM:** GCP `internal-tools` in `us-central1-c` (Debian 12, 2GB RAM, no external IP)
-**SSH:** `gcloud compute ssh internal-tools --zone=us-central1-c`
-**App dir:** `/opt/ubinsights-pmt` (standalone build)
-**Build dir:** `/tmp/ubi-pm-build` (git clone, used for builds)
-**Process:** PM2 process `ubinsights-pmt` on port 3002
-**Tunnel:** Cloudflare Tunnel → `localhost:3002`
-**DB:** PostgreSQL 15, user `ubinsights`, db `ubinsights_pmt`
-**Backups:** `/home/yushi_ubinsights_com/backups/`
+Production runs on **Google Cloud Run + Cloud SQL**. The GCP VM `internal-tools` is decommissioned; the `deploy.sh` script in the repo targets that old VM and is obsolete — do not use it for prod.
+
+**URL:** https://pmt.ubinsights.com (custom domain) / https://pmt-651705303791.us-central1.run.app (direct)
+**Cloud Run service:** `pmt` in `us-central1`, project `internal-tools-489020`
+**Image registry:** `us-central1-docker.pkg.dev/internal-tools-489020/ubinsights-repo/pmt`
+**Build:** repo-root `Dockerfile` (multi-stage Next.js standalone, port 8080)
+**DB:** Cloud SQL Postgres 15 instance `ubinsights`, private IP `10.38.0.3:5432`, database name `ubinsights`
+**DB access from outside VPC:** none (private IP only) — must run migrations via a host inside the VPC (e.g. the legacy VM, which still has VPC access) or via Cloud SQL Auth Proxy from a VPC-connected Cloud Run job
+**Env vars on Cloud Run:** `DATABASE_URL`, `AUTH_SECRET`, `AUTH_TRUST_HOST=true`, `NODE_ENV=production` — set directly on the service, not from Secret Manager
 
 ### Deploy flow
 
 ```bash
-# 1. Pull latest code on server
-cd /tmp/ubi-pm-build && git pull origin main
+# 0. Push code to GitHub (Cloud Build pulls from local source via --source)
+git push origin main
 
-# 2. Build
-npm run build
+# 1. Backup Cloud SQL (FAST, restorable, do this every time)
+gcloud sql backups create --instance=ubinsights \
+  --description="Pre-deploy $(date -u +%Y%m%dT%H%M%SZ)"
 
-# 3. Copy standalone build (NEVER overwrite ecosystem.config.cjs)
-sudo rsync -a --delete .next/standalone/ /opt/ubinsights-pmt/ \
-  --exclude ecosystem.config.cjs --exclude logs --exclude uploads
-sudo rsync -a --delete .next/static/ /opt/ubinsights-pmt/.next/static/
-sudo rsync -a public/ /opt/ubinsights-pmt/public/
-sudo rsync -a prisma/ /opt/ubinsights-pmt/prisma/
-sudo cp prisma.config.ts /opt/ubinsights-pmt/prisma.config.ts
-sudo cp package.json /opt/ubinsights-pmt/package.json
+# 2. Apply migrations against Cloud SQL.
+#    Cloud SQL is private-IP only, so run from inside the VPC.
+#    Easiest path: the legacy VM still has VPC reach + a /tmp/ubi-pm-build clone.
+#    Pull the production DSN from Cloud Run's env (don't echo it to logs):
+gcloud run services describe pmt --region us-central1 --format=json \
+  | python3 -c "import json,sys; print(next(e['value'] for e in json.load(sys.stdin)['spec']['template']['spec']['containers'][0]['env'] if e['name']=='DATABASE_URL'))" \
+  > /tmp/.cs_dburl && chmod 600 /tmp/.cs_dburl
 
-# 4. Apply migrations (NEVER drop the database)
-DATABASE_URL='...' npx prisma migrate deploy
+DSN_B64=$(base64 < /tmp/.cs_dburl | tr -d '\n')
+gcloud compute ssh internal-tools --zone=us-central1-c --tunnel-through-iap --command="
+  set -e
+  DSN=\$(echo $DSN_B64 | base64 -d)
+  cd /tmp/ubi-pm-build && git pull origin main
+  DATABASE_URL=\"\$DSN\" npx prisma migrate deploy
+"
+rm -f /tmp/.cs_dburl
+unset DSN_B64
 
-# 5. Restart
-cd /opt/ubinsights-pmt && pm2 restart ecosystem.config.cjs && pm2 save
+# 3. Build container + deploy new revision (uses Cloud Build under the hood)
+gcloud run deploy pmt --source . --region us-central1 \
+  --project internal-tools-489020
+
+# 4. Smoke test
+curl -sS -o /dev/null -w "%{http_code}\n" https://pmt.ubinsights.com/login
 ```
 
-### Production database rules
+### Production rules
 
-- **NEVER drop or recreate the production database.** Only run `prisma migrate deploy`.
+- **Always back up Cloud SQL before migrations** (`gcloud sql backups create --instance=ubinsights`). Restore via `gcloud sql backups restore <ID> --restore-instance=ubinsights`.
 - **NEVER run `prisma migrate reset`** or `DROP DATABASE` on production.
-- **NEVER seed production** unless explicitly asked — seed is for local dev / initial setup only.
-- **NEVER overwrite `ecosystem.config.cjs`** on the server — it contains production env vars (DATABASE_URL, AUTH_SECRET, AUTH_URL, AUTH_TRUST_HOST) that are NOT in the repo.
-- **Always ask for permission** before any destructive database operation on production.
-- **Table ownership** must be `ubinsights` (not `postgres`) for migrations to succeed.
+- **NEVER seed production** unless explicitly asked.
+- **Don't print env values containing secrets** (`DATABASE_URL`, `AUTH_SECRET`) into terminal output that's preserved. Mask them or write to mode-600 files.
+- **Always ask before any destructive DB operation.** Migrations that only `CREATE TABLE` / `ALTER TABLE ADD COLUMN` / data UPDATEs are not destructive; migrations that DROP/DELETE are.
+- **The legacy VM (`internal-tools`) is not used for prod traffic.** It's still useful as a VPC bastion for migrations only — don't deploy code to it.
+- **`./deploy.sh` is obsolete** (it targets the VM). Don't run it for prod.
 
 ---
 
