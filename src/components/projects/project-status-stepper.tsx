@@ -18,14 +18,11 @@ interface Props {
   };
 }
 
-// APPROVED is no longer a project status — approving an estimate auto-advances
-// the project to IN_PROGRESS. Kept as a fallback in stage 1 in case any legacy
-// projects predate the data migration.
 const STAGES = [
-  { key: "stage1", label: "1 · Inquiry", desc: "Build estimate, get approval", statuses: ["NEW", "BRIEFED", "ESTIMATING", "APPROVED"], color: "var(--color-s-estimating)", fg: "var(--color-s-estimating-fg)" },
+  { key: "stage1", label: "1 · Inquiry", desc: "Build estimate, get approval", statuses: ["ESTIMATING"], color: "var(--color-s-estimating)", fg: "var(--color-s-estimating-fg)" },
   { key: "stage2", label: "2 · In Progress", desc: "Coordinate team & deliverables", statuses: ["IN_PROGRESS"], color: "var(--color-s-in-progress)", fg: "var(--color-s-in-progress-fg)" },
   { key: "stage3", label: "3 · Completion", desc: "Sign-off & feedback", statuses: ["DELIVERED"], color: "var(--color-s-delivered)", fg: "var(--color-s-delivered-fg)" },
-  { key: "stage4", label: "4 · Archive", desc: "Auto-archived once paid + feedback collected", statuses: ["CLOSED"], color: "var(--color-s-closed)", fg: "var(--color-s-closed-fg)" },
+  { key: "stage4", label: "4 · Archive", desc: "Auto-archived once paid + feedback collected", statuses: ["CLOSED", "EXPIRED"], color: "var(--color-s-closed)", fg: "var(--color-s-closed-fg)" },
 ];
 
 function stageIndex(status: string): number {

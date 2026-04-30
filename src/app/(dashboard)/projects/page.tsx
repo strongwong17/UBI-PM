@@ -16,10 +16,7 @@ import { currencySymbol } from "@/lib/currency";
 import { statusTokens } from "@/lib/redesign-tokens";
 
 const STATUS_CHIPS: { value: string; label: string }[] = [
-  { value: "NEW",         label: "New" },
-  { value: "BRIEFED",     label: "Briefed" },
   { value: "ESTIMATING",  label: "Estimating" },
-  { value: "APPROVED",    label: "Approved" },
   { value: "IN_PROGRESS", label: "In progress" },
   { value: "DELIVERED",   label: "Delivered" },
 ];

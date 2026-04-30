@@ -2,8 +2,6 @@
 // Helpers for mapping a project / invoice / phase status to its color tokens.
 
 export type ProjectStatus =
-  | "NEW"
-  | "BRIEFED"
   | "ESTIMATING"
   | "APPROVED"
   | "IN_PROGRESS"
@@ -11,8 +9,6 @@ export type ProjectStatus =
   | "CLOSED";
 
 const STATUS_TOKENS: Record<string, { bg: string; fg: string; dot: string }> = {
-  NEW:         { bg: "var(--color-s-new-bg)",         fg: "var(--color-s-new-fg)",         dot: "var(--color-s-new)" },
-  BRIEFED:     { bg: "var(--color-s-briefed-bg)",     fg: "var(--color-s-briefed-fg)",     dot: "var(--color-s-briefed)" },
   ESTIMATING:  { bg: "var(--color-s-estimating-bg)",  fg: "var(--color-s-estimating-fg)",  dot: "var(--color-s-estimating)" },
   APPROVED:    { bg: "var(--color-s-approved-bg)",    fg: "var(--color-s-approved-fg)",    dot: "var(--color-s-approved)" },
   IN_PROGRESS: { bg: "var(--color-s-in-progress-bg)", fg: "var(--color-s-in-progress-fg)", dot: "var(--color-s-in-progress)" },

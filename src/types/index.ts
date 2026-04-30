@@ -12,8 +12,6 @@ declare module "next-auth" {
 export type Role = "ADMIN" | "MANAGER" | "VIEWER";
 
 export type ProjectStatus =
-  | "NEW"
-  | "BRIEFED"
   | "ESTIMATING"
   | "APPROVED"
   | "IN_PROGRESS"

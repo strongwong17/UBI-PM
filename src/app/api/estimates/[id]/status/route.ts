@@ -44,25 +44,6 @@ export async function PATCH(
         },
       });
 
-      // SENT → auto-advance project status to ESTIMATING if still at NEW | BRIEFED | INQUIRY_RECEIVED
-      if (status === "SENT") {
-        const currentProject = await tx.project.findUnique({
-          where: { id: existing.projectId },
-          select: { status: true },
-        });
-        if (
-          currentProject &&
-          (currentProject.status === "NEW" ||
-            currentProject.status === "BRIEFED" ||
-            currentProject.status === "INQUIRY_RECEIVED")
-        ) {
-          await tx.project.update({
-            where: { id: existing.projectId },
-            data: { status: "ESTIMATING" },
-          });
-        }
-      }
-
       return est;
     });
 

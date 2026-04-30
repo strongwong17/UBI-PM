@@ -425,7 +425,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
   );
 
   // Default tab by lifecycle stage
-  const stage1 = ["NEW", "BRIEFED", "ESTIMATING"].includes(project.status);
+  const stage1 = project.status === "ESTIMATING";
   const stage3 = project.status === "DELIVERED";
   const defaultTab =
     stage3 ? "completion"

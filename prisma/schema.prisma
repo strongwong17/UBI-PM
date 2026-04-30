@@ -72,9 +72,9 @@ model Project {
   id             String    @id @default(cuid())
   projectNumber  String    @unique // PRJ-2026-001
   title          String
-  status         String    @default("NEW")
-  // NEW, BRIEFED, ESTIMATING, IN_PROGRESS, DELIVERED, CLOSED
-  // (Approving an estimate auto-advances to IN_PROGRESS; CLOSED is auto-set when paid + dual feedback collected.)
+  status         String    @default("ESTIMATING")
+  // ESTIMATING, IN_PROGRESS, DELIVERED, CLOSED, EXPIRED
+  // (Approving an estimate auto-advances to IN_PROGRESS; CLOSED is auto-set when paid + dual feedback collected; EXPIRED is auto-set when sent estimates are >30d old.)
   executionPhase String?   // RECRUITMENT, FIELDWORK, ANALYSIS, REPORTING
   startDate      DateTime?
   endDate        DateTime?

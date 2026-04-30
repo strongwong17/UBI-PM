@@ -56,9 +56,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     }),
   }));
 
-  const inquiryProjects = allProjectsWithTotals.filter((p) =>
-    ["NEW", "BRIEFED", "ESTIMATING"].includes(p.status),
-  );
+  const inquiryProjects = allProjectsWithTotals.filter((p) => p.status === "ESTIMATING");
   const inProgressProjects = allProjectsWithTotals.filter((p) => p.status === "IN_PROGRESS");
   const completionProjects = allProjectsWithTotals.filter((p) => p.status === "DELIVERED");
   const archiveProjects = allProjectsWithTotals.filter((p) =>

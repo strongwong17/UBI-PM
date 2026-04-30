@@ -15,10 +15,6 @@ function pad(n: number) {
 }
 
 export function HubInquiry({ projects }: Props) {
-  const drafts = projects.filter((p) => p.status === "NEW");
-  const briefed = projects.filter((p) => p.status === "BRIEFED");
-  const estimating = projects.filter((p) => p.status === "ESTIMATING");
-
   const pipelineValue = projects
     .flatMap((p) => p.estimates.filter((e) => e.isApproved))
     .reduce((sum, e) => sum + e.total, 0);
@@ -37,33 +33,19 @@ export function HubInquiry({ projects }: Props) {
           </>
         }
       >
-        <div className="grid grid-cols-4 gap-0 items-end">
+        <div className="grid grid-cols-2 gap-0 items-end">
           <Readout
             label="ACTIVE"
             value={pad(projects.length)}
-            unit="in this hub"
+            unit="estimating · awaiting client"
             dotColor="var(--color-s-estimating)"
           />
           <Readout
-            label="NEW"
-            value={pad(drafts.length)}
-            unit="awaiting brief"
-            dotColor="var(--color-ink-300)"
-            muted={drafts.length === 0}
-          />
-          <Readout
-            label="BRIEFED"
-            value={pad(briefed.length)}
-            unit="to estimate"
-            dotColor="var(--color-s-briefed)"
-            muted={briefed.length === 0}
-          />
-          <Readout
-            label="ESTIMATING"
-            value={pad(estimating.length)}
-            unit="awaiting client"
+            label="PIPELINE"
+            value={fmtUSD(pipelineValue)}
+            unit="approved value"
             dotColor="var(--color-s-estimating)"
-            muted={estimating.length === 0}
+            muted={pipelineValue === 0}
           />
         </div>
 

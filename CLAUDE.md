@@ -77,15 +77,15 @@ Project (created first)
 
 ## Enums & Status Values
 
-### Project statuses (7 stages)
+### Project statuses (4 active stages)
 
-`NEW → BRIEFED → ESTIMATING → IN_PROGRESS → DELIVERED → CLOSED`
+`ESTIMATING → IN_PROGRESS → DELIVERED → CLOSED`
 
 Side-track: `ESTIMATING → EXPIRED` (auto, see auto-archive rule below)
 
+New projects default to `ESTIMATING` (Prisma `@default("ESTIMATING")`). The legacy `NEW` and `BRIEFED` statuses were removed — projects now enter the lifecycle in the estimating phase regardless of whether the brief or estimate has been filled in.
+
 Transitions:
-- `NEW → BRIEFED` (auto): brief saved with objectives + ≥1 service module
-- `BRIEFED → ESTIMATING` (auto): first estimate generated or sent
 - `ESTIMATING → IN_PROGRESS` (auto): any estimate approved (sets `startDate`)
 - `IN_PROGRESS → DELIVERED` (auto): both internal + client sign-off recorded
 - `DELIVERED → CLOSED` (auto): all invoices PAID + both feedback sides submitted (`checkAndAutoArchive`)

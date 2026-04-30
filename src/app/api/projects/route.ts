@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
       data: {
         projectNumber,
         title: title.trim(),
-        status: "NEW",
+        status: "ESTIMATING",
         clientId,
         primaryContactId: primaryContactId || null,
         assignedToId: assignedToId || null,
