@@ -113,9 +113,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
       <HubTabBar hubs={hubs} active={active} />
 
-      {active === "inquiry" && (
-        <HubInquiry projects={inquiryProjects} staleProjects={[]} />
-      )}
+      {active === "inquiry" && <HubInquiry projects={inquiryProjects} />}
       {active === "in-progress" && <HubInProgress projects={inProgressProjects} />}
       {active === "completion" && <HubCompletion projects={completionProjects} />}
       {active === "archive" && <HubArchive projects={archiveProjects} />}
