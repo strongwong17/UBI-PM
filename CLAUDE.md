@@ -45,18 +45,21 @@ npx prisma studio                                # Open database browser
 
 ```
 Project (created first)
-  ├── Brief/Inquiry (one child — research brief + service module checklist)
-  ├── Estimate[] (multiple versioned; one marked isApproved)
-  ├── Invoice (one, generated from approved estimate)
-  └── ProjectCompletion (formal sign-off)
+  ├── Brief/Inquiry          (one child — research brief + service module checklist)
+  ├── Estimate[]             (multiple versioned; one marked isApproved per project)
+  ├── ProjectCompletion      (internal + client sign-off → flips status to DELIVERED)
+  ├── ProjectFeedback        (open-ended internal + client retrospective)
+  └── Invoice[]              (one per approved estimate; generated from confirmed actuals)
 ```
 
 1. **Project** — created first from a client. Auto-generates `PRJ-YYYY-NNN` project number.
-2. **Brief** — fill the inquiry/brief tab: research objectives, methodology, service module checklist (RECRUITMENT, MODERATION, etc.).
-3. **Estimate** — generate from service modules or build manually. Multiple versions allowed; one is `isApproved`.
-4. **Approve Estimate** — marks `isApproved:true`, sets project status to `APPROVED`.
-5. **Invoice** — generated from the approved estimate via project hub. One invoice per project.
-6. **Completion** — `ProjectCompletion` records internal + client sign-off.
+2. **Brief** — fill the brief tab: research objectives, methodology, service module checklist (RECRUITMENT, MODERATION, etc.).
+3. **Estimate** — generate from service modules or build manually. Multiple versions allowed; multiple can be `isApproved` (e.g. one per country / currency).
+4. **Approve estimate** — marks `isApproved:true` AND auto-flips project status straight to `IN_PROGRESS` (sets `startDate` if not already set). There is no longer a transient `APPROVED` status.
+5. **Execution** — track research progress via `executionPhase` (Recruitment → Fieldwork → Analysis → Reporting). Manual selector.
+6. **Delivery & Sign-off** — confirm actual delivered quantities per estimate, record internal + client sign-off (auto-flips status to `DELIVERED`), and submit open-ended Feedback (internal + client).
+7. **Invoice** — generated from confirmed actuals on the Delivery & Sign-off tab. Multiple estimates → multiple invoices, one per estimate.
+8. **Auto-archive** — when all of (status=DELIVERED) + (every non-deleted invoice = PAID) + (both feedback sides submitted) are true, project flips to `CLOSED` automatically. Helper: `src/lib/auto-archive.ts`.
 
 ---
 
@@ -74,9 +77,17 @@ Project (created first)
 
 ## Enums & Status Values
 
-### Project statuses (8 stages)
+### Project statuses (6 stages)
 
-`INQUIRY_RECEIVED → ESTIMATE_SENT → APPROVED → IN_PROGRESS → COMPLETED → INVOICED → PAID → CLOSED`
+`NEW → BRIEFED → ESTIMATING → IN_PROGRESS → DELIVERED → CLOSED`
+
+Transitions:
+- `NEW → BRIEFED` (auto): brief saved with objectives + ≥1 service module
+- `BRIEFED → ESTIMATING` (auto): first estimate generated or sent
+- `ESTIMATING → IN_PROGRESS` (auto): any estimate approved (sets `startDate`)
+- `IN_PROGRESS → DELIVERED` (auto): both internal + client sign-off recorded
+- `DELIVERED → CLOSED` (auto): all invoices PAID + both feedback sides submitted (`checkAndAutoArchive`)
+- Manual PATCH to `/api/projects/[id]` is still accepted for edge cases.
 
 ### Other enums (in `src/types/index.ts`)
 
@@ -97,9 +108,11 @@ Project (created first)
 
 - **Client** — primary field is `company String` (not `name`). Has `billingName`, `billingAddress`, `billingEmail`, `billingPhone`, `taxId`, `industry`.
 - **Project** — `projectNumber String @unique` (format `PRJ-YYYY-NNN`). Client access via `project.client`.
-- **Estimate** — `projectId` (not inquiryId). `isApproved Boolean` marks the single approved version. `version` auto-increments per project.
-- **Invoice** — `projectId @unique` (one per project). `estimateId @unique`. Client accessed via `project.client` (no direct `clientId`). Has `paidDate DateTime?`.
+- **Estimate** — `projectId` (not inquiryId). `isApproved Boolean` can be true on multiple estimates per project (e.g. USD + CNY for different markets). `version` auto-increments per project.
+- **Invoice** — `projectId` (NOT @unique — multiple invoices per project allowed, one per estimate). `estimateId` links to source estimate. Client accessed via `project.client`. Has `paidDate DateTime?`. Soft-deleted via `deletedAt`.
 - **Inquiry** — `projectId @unique` (one per project, child of Project). Has `serviceModules InquiryServiceModule[]`.
+- **ProjectCompletion** — `projectId @unique`. Tracks `internalCompleted` + `clientAcknowledged` booleans with timestamps. Both true → project status auto-flips to DELIVERED.
+- **ProjectFeedback** — `projectId @unique`. Open-ended `internalContent` + `clientContent` text fields plus submission timestamps. Both submitted (combined with all-paid invoices) trigger auto-archive.
 
 ---
 
@@ -109,13 +122,14 @@ Project (created first)
 Dashboard → Projects → Estimates → Invoices → Clients | Admin: Templates, Settings
 
 ### Project Hub (`/projects/[id]`)
-6 tabs: **Overview** | **Brief** | **Estimates** | **Invoice** | **Execution** | **Completion**
-- Tab state synced to `?tab=` URL param
-- Brief tab: InquiryBriefForm (all brief fields + service module checklist)
-- Estimates tab: version list + approve/duplicate/status actions + generate-from-modules button
-- Invoice tab: generate button (from approved estimate) or invoice card with status
-- Execution tab: 4-phase selector (only active when IN_PROGRESS)
-- Completion tab: internal + client sign-off form
+5 tabs in lifecycle order: **Overview** | **Estimates** | **Execution** | **Delivery & Sign-off** | **Invoices**
+- Tab state synced to `?tab=` URL param. Brief lives inside Overview (ClientSignalsPanel).
+- Tab values: `overview`, `estimates`, `execution`, `completion` (Delivery & Sign-off), `invoice`.
+- Estimates tab: version list with approve/duplicate/⋯ actions. Approving auto-starts the project.
+- Execution tab: manual `executionPhase` selector (Recruitment → Fieldwork → Analysis → Reporting).
+- Delivery & Sign-off tab: confirm actuals per estimate (chip-row picker shows invoice status per estimate when multiple), internal + client sign-off, open-ended feedback section. "Confirm & generate draft invoice" creates the Invoice from confirmed actuals.
+- Invoices tab: BillingSummary (Estimated/Delivered/Invoiced/Paid) + per-estimate "awaiting invoice" rows that link to Delivery & Sign-off pre-selected to that estimate + existing invoice rows.
+- Linking from the Invoices tab to a specific estimate uses `?tab=completion&estimate=<id>`.
 
 ---
 
@@ -123,19 +137,21 @@ Dashboard → Projects → Estimates → Invoices → Clients | Admin: Templates
 
 ### Projects
 - `POST /api/projects` — requires `{ clientId, title, primaryContactId? }`; auto-generates `PRJ-YYYY-NNN`
-- `GET /api/projects/[id]` — full graph (inquiry+modules, estimates, invoice, completion, client+contacts)
-- `PATCH /api/projects/[id]` — accepts `{ status, executionPhase, title, notes, assignedToId, primaryContactId }`
+- `GET /api/projects/[id]` — full graph (inquiry+modules, estimates, invoices, completion, feedback, client+contacts)
+- `PATCH /api/projects/[id]` — accepts `{ status, executionPhase, title, notes, assignedToId, primaryContactId, startDate, endDate }`. Auto-sets `startDate` on first transition to IN_PROGRESS.
 - `POST /api/projects/[id]/generate-estimate` — maps service modules → phases+line items, creates new versioned Estimate
-- `POST /api/projects/[id]/generate-invoice` — reads approved estimate, creates Invoice (409 if exists)
+- `POST /api/projects/[id]/invoices` — creates Invoice from a specific estimate, supports `mode: SLICE | PERCENT | FLAT`
 - `GET/PATCH /api/projects/[id]/inquiry` — upsert inquiry + service modules
-- `GET/PATCH /api/projects/[id]/completion` — upsert ProjectCompletion
+- `GET/PATCH /api/projects/[id]/completion` — upsert ProjectCompletion. Both signoffs → status=DELIVERED + auto-archive check.
+- `GET/PUT /api/projects/[id]/feedback` — upsert ProjectFeedback (`internalContent`, `clientContent` + submit toggles). Submitting either side triggers auto-archive check.
+- `PATCH /api/projects/[id]/delivery` — record delivered quantities per estimate line item.
 
 ### Estimates
-- `PATCH /api/estimates/[id]/approve` — transaction: clears isApproved on all project estimates, sets this one, sets project status to APPROVED
-- `PATCH /api/estimates/[id]/status` — valid: DRAFT, SENT, APPROVED, REJECTED; SENT also sets project status to ESTIMATE_SENT
+- `PATCH /api/estimates/[id]/approve` — toggle approval. On approve, project status auto-jumps to IN_PROGRESS (and sets startDate). On unapprove, rolls back to ESTIMATING only if no other approvals exist AND project is not already past start.
+- `PATCH /api/estimates/[id]/status` — valid: DRAFT, SENT, APPROVED, REJECTED; SENT advances project from NEW/BRIEFED → ESTIMATING.
 
 ### Invoices
-- `PATCH /api/invoices/[id]` — PAID sets `paidDate` + project status to PAID
+- `PATCH /api/invoices/[id]` — PAID sets `paidDate`. Triggers `checkAndAutoArchive` (closes project if DELIVERED + all invoices PAID + dual feedback submitted).
 
 ### PDF routes (all return `application/pdf`)
 - `GET /api/estimates/[id]/pdf`

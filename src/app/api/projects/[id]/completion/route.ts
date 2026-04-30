@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
+import { checkAndAutoArchive } from "@/lib/auto-archive";
 import type { Prisma } from "@/generated/prisma/client";
 
 export async function GET(
@@ -102,6 +103,8 @@ export async function PATCH(
           data: { status: "DELIVERED" },
         });
       }
+      // Dual sign-off may have been the last gate — check auto-archive.
+      await checkAndAutoArchive(id, userId);
     }
 
     await logActivity({

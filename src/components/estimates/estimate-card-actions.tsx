@@ -144,9 +144,17 @@ export function EstimateCardActions({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-gray-400 hover:text-gray-700 transition-colors duration-150">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
+          <button
+            type="button"
+            aria-label="More actions"
+            className="inline-flex items-center justify-center h-7 w-7 rounded-lg text-ink-500 hover:text-ink-900 hover:bg-card-rd transition-colors"
+            style={{
+              background: "var(--color-canvas-cool)",
+              border: "1px solid var(--color-hairline-strong)",
+            }}
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-52 p-1 rounded-lg shadow-lg border border-gray-200/80">
           {/* View & Edit group */}

@@ -38,20 +38,25 @@ export async function PATCH(
       });
 
       if (nowApproved) {
-        // Set project status to APPROVED (only if not already past that stage)
+        // Approval = green light to start work. Auto-advance project to IN_PROGRESS
+        // (and let project PATCH handler's logic fire startDate via direct write below).
         const project = await tx.project.findUnique({
           where: { id: estimate.projectId },
-          select: { status: true },
+          select: { status: true, startDate: true },
         });
-        const noForwardJump = ["IN_PROGRESS", "DELIVERED", "CLOSED", "COMPLETED", "INVOICED", "PAID"];
-        if (project && !noForwardJump.includes(project.status)) {
+        const alreadyStarted = ["IN_PROGRESS", "DELIVERED", "CLOSED"];
+        if (project && !alreadyStarted.includes(project.status)) {
           await tx.project.update({
             where: { id: estimate.projectId },
-            data: { status: "APPROVED" },
+            data: {
+              status: "IN_PROGRESS",
+              ...(project.startDate ? {} : { startDate: new Date() }),
+            },
           });
         }
       } else {
-        // Check if any other approved estimates remain
+        // Unapproving — only roll back to ESTIMATING if nothing else is approved
+        // AND the project hasn't already moved past start (don't undo real progress).
         const otherApproved = await tx.estimate.findFirst({
           where: {
             projectId: estimate.projectId,
@@ -61,10 +66,16 @@ export async function PATCH(
           },
         });
         if (!otherApproved) {
-          await tx.project.update({
+          const project = await tx.project.findUnique({
             where: { id: estimate.projectId },
-            data: { status: "ESTIMATING" },
+            select: { status: true },
           });
+          if (project && !["DELIVERED", "CLOSED"].includes(project.status)) {
+            await tx.project.update({
+              where: { id: estimate.projectId },
+              data: { status: "ESTIMATING" },
+            });
+          }
         }
       }
 

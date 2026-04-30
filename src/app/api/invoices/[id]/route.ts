@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
+import { checkAndAutoArchive } from "@/lib/auto-archive";
 
 export async function GET(
   request: NextRequest,
@@ -121,6 +122,9 @@ export async function PATCH(
         userId,
         projectId: existing.projectId,
       });
+      if (status === "PAID") {
+        await checkAndAutoArchive(existing.projectId, userId);
+      }
     } else {
       await logActivity({
         action: "UPDATE",

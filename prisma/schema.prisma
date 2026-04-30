@@ -21,6 +21,7 @@ model User {
   estimates              Estimate[]
   assignedProjects       Project[]          @relation("ProjectAssignee")
   internalCompletions    ProjectCompletion[] @relation("CompletionCompletedBy")
+  internalFeedbacks      ProjectFeedback[]  @relation("FeedbackInternalBy")
   activityLogs           ActivityLog[]
   scopeVersions          ScopeVersion[]
   clientSignals          ClientSignal[]     @relation("SignalCreatedBy")
@@ -72,7 +73,8 @@ model Project {
   projectNumber  String    @unique // PRJ-2026-001
   title          String
   status         String    @default("NEW")
-  // NEW, BRIEFED, ESTIMATING, APPROVED, IN_PROGRESS, DELIVERED, CLOSED
+  // NEW, BRIEFED, ESTIMATING, IN_PROGRESS, DELIVERED, CLOSED
+  // (Approving an estimate auto-advances to IN_PROGRESS; CLOSED is auto-set when paid + dual feedback collected.)
   executionPhase String?   // RECRUITMENT, FIELDWORK, ANALYSIS, REPORTING
   startDate      DateTime?
   endDate        DateTime?
@@ -91,6 +93,7 @@ model Project {
   estimates     Estimate[]
   invoices      Invoice[]
   completion    ProjectCompletion?
+  feedback      ProjectFeedback?
   attachments   Attachment[]
   activityLogs  ActivityLog[]
   clientSignals ClientSignal[]
@@ -342,6 +345,30 @@ model ProjectCompletion {
   project               Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   internalCompletedById String?
   internalCompletedBy   User?   @relation("CompletionCompletedBy", fields: [internalCompletedById], references: [id])
+}
+
+// ─── PROJECT FEEDBACK ───────────────────────────────────
+// Open-ended retrospective notes captured after delivery; combined with
+// "all invoices paid" they trigger auto-archive (status = CLOSED).
+
+model ProjectFeedback {
+  id        String   @id @default(cuid())
+  projectId String   @unique
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  // Internal team retrospective (free text)
+  internalContent       String?
+  internalSubmittedAt   DateTime?
+  internalSubmittedById String?
+  internalSubmittedBy   User?     @relation("FeedbackInternalBy", fields: [internalSubmittedById], references: [id])
+
+  // Client feedback (free text; client has no login so name captured as string)
+  clientContent         String?
+  clientSubmittedAt     DateTime?
+  clientSubmittedByName String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // ─── ATTACHMENTS ────────────────────────────────────────

@@ -2,10 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { StatusBadge } from "@/components/shared/status-badge";
 import { StatusPill } from "@/components/redesign/status-pill";
 import { ProjectStatusStepper } from "@/components/projects/project-status-stepper";
 import { ProjectHubTabs } from "@/components/projects/project-hub-tabs";
@@ -65,6 +62,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
         orderBy: { createdAt: "desc" },
       },
       completion: { include: { internalCompletedBy: { select: { name: true } } } },
+      feedback: { include: { internalSubmittedBy: { select: { name: true } } } },
       attachments: { orderBy: { createdAt: "desc" } },
     },
   });
@@ -78,16 +76,6 @@ export default async function ProjectHubPage({ params }: PageProps) {
   const invoicedEstimateIds = new Set(
     project.invoices.map((inv) => inv.estimateId).filter(Boolean)
   );
-  const approvedForInvoice = approvedEstimates.map((e) => ({
-    id: e.id,
-    estimateNumber: e.estimateNumber,
-    version: e.version,
-    label: e.label ?? null,
-    hasInvoice: invoicedEstimateIds.has(e.id),
-  }));
-
-  const hasUninvoicedApproved = approvedForInvoice.some((e) => !e.hasInvoice);
-
   function estimateTotal(estimate: NonNullable<typeof project>["estimates"][0]) {
     const subtotal = estimate.phases.reduce(
       (sum, phase) =>
@@ -100,6 +88,19 @@ export default async function ProjectHubPage({ params }: PageProps) {
     const tax = taxable * (taxRate / 100);
     return taxable + tax;
   }
+
+  const approvedForInvoice = approvedEstimates.map((e) => ({
+    id: e.id,
+    estimateNumber: e.estimateNumber,
+    version: e.version,
+    label: e.label ?? null,
+    currency: e.currency,
+    total: estimateTotal(e),
+    hasInvoice: invoicedEstimateIds.has(e.id),
+    isRmbDuplicate: !!e.parentEstimateId,
+  }));
+
+  const hasUninvoicedApproved = approvedForInvoice.some((e) => !e.hasInvoice);
 
   // Total of approved estimates only (excluding RMB duplicates to avoid double-counting)
   const approvedTotal = approvedEstimates
@@ -215,97 +216,168 @@ export default async function ProjectHubPage({ params }: PageProps) {
 
   const estimatesTab = (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h3 className="font-semibold">Estimates ({project.estimates.length})</h3>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/estimates/new?projectId=${project.id}`}>
-            <Plus className="h-4 w-4 mr-2" />
-            New Estimate
-          </Link>
-        </Button>
+      {/* Section header — same pattern as delivery-signoff */}
+      <div
+        className="flex items-start justify-between gap-4 flex-wrap pb-[18px]"
+        style={{ borderBottom: "1px solid var(--color-hairline)" }}
+      >
+        <div>
+          <p className="font-mono text-[11px] font-bold tracking-[0.06em] uppercase m-0 mb-1 text-ink-500">
+            {"// ESTIMATES"}
+          </p>
+          <h2 className="text-[20px] font-bold tracking-[-0.02em] m-0 text-ink-900">
+            {project.estimates.length === 0
+              ? "No estimates yet"
+              : `${project.estimates.length} ${project.estimates.length === 1 ? "estimate" : "estimates"}`}
+          </h2>
+          <p className="text-[13px] text-ink-500 m-0 mt-1 max-w-[520px]">
+            Versioned estimates for this project. Approve one to start work — auto-advances the
+            project to In Progress.
+          </p>
+        </div>
+        <Link
+          href={`/estimates/new?projectId=${project.id}`}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-ink-700 hover:bg-card-rd"
+          style={{
+            background: "var(--color-canvas-cool)",
+            border: "1px solid var(--color-hairline-strong)",
+          }}
+        >
+          <Plus className="h-3.5 w-3.5" /> New estimate
+        </Link>
       </div>
+
       {project.estimates.length === 0 ? (
-        <Card>
-          <CardContent className="py-8 text-center text-gray-500">
+        <div
+          className="rounded-[14px] p-8 text-center"
+          style={{
+            background: "var(--color-card-rd)",
+            border: "1px solid var(--color-hairline)",
+            boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+          }}
+        >
+          <p className="text-[13px] text-ink-500 m-0">
             No estimates yet. Generate one from the brief or create manually.
-          </CardContent>
-        </Card>
+          </p>
+        </div>
       ) : (
         <div className="space-y-3">
           {project.estimates.map((estimate) => {
             const total = estimateTotal(estimate);
+            const isRmb = !!estimate.parentEstimateId;
+            const accent = estimate.isApproved
+              ? "var(--color-s-delivered)"
+              : isRmb
+              ? "rgba(217, 119, 6, 0.55)"
+              : "var(--color-hairline)";
             return (
-              <Card key={estimate.id} className={estimate.isApproved ? "border-green-400" : estimate.parentEstimateId ? "border-amber-300 bg-amber-50/30" : ""}>
-                <CardContent className="pt-4">
-                  <div className="flex items-center justify-between flex-wrap gap-3">
-                    <div className="flex items-center gap-3 flex-wrap">
-                      <Link
-                        href={`/estimates/${estimate.id}`}
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        {estimate.title}
-                      </Link>
-                      <Badge variant="outline" className="font-mono text-xs">{estimate.estimateNumber}</Badge>
-                      {estimate.label && (
-                        <Badge variant="secondary" className="text-xs">{estimate.label}</Badge>
-                      )}
-                      <StatusBadge status={estimate.status} />
-                      {estimate.isApproved && (
-                        <Badge className="bg-green-100 text-green-800 border-green-300">
-                          Approved
-                        </Badge>
-                      )}
-                      {estimate.parentEstimateId && (
-                        <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-800">
-                          RMB Version
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold">
-                        {estimate.currency === "CNY" ? "¥" : "$"}{total.toLocaleString()}
-                      </span>
-                      {!estimate.isApproved && (
-                        <EstimateApproveButton
-                          estimateId={estimate.id}
-                          isApproved={false}
-                          version={estimate.version}
-                        />
-                      )}
-                      <EstimateCardActions
-                        estimateId={estimate.id}
-                        estimateNumber={estimate.estimateNumber}
-                        estimateTitle={estimate.title}
-                        isApproved={estimate.isApproved}
-                        isRmbDuplicate={!!estimate.parentEstimateId}
-                        hasRmbDuplicate={!!estimate.rmbDuplicate}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <div
+                key={estimate.id}
+                className="rounded-[12px] px-4 py-2.5 flex items-center gap-3 flex-wrap"
+                style={{
+                  background: "var(--color-card-rd)",
+                  border: `1px solid ${accent}`,
+                  boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                }}
+              >
+                <span
+                  className="w-2 h-2 rounded-full flex-shrink-0"
+                  style={{ background: estimate.isApproved ? "var(--color-s-delivered)" : "var(--color-ink-300)" }}
+                />
+                <span className="font-mono text-[11px] font-bold tracking-[0.06em] uppercase text-ink-500 flex-shrink-0">
+                  {estimate.estimateNumber}·v{estimate.version}
+                </span>
+                <Link
+                  href={`/estimates/${estimate.id}`}
+                  className="text-[13px] font-semibold text-ink-900 hover:underline tracking-[-0.005em] min-w-0 truncate"
+                >
+                  {estimate.title}
+                </Link>
+                <StatusPill status={estimate.status} size="xs" />
+                {estimate.isApproved && <StatusPill status="APPROVED" label="Approved" size="xs" />}
+                {estimate.label && (
+                  <span
+                    className="font-mono text-[10px] tracking-[0.04em] px-1.5 py-0.5 rounded-full"
+                    style={{
+                      background: "var(--color-canvas-cool)",
+                      color: "var(--color-ink-500)",
+                      border: "1px solid var(--color-hairline)",
+                    }}
+                  >
+                    {estimate.label}
+                  </span>
+                )}
+                {isRmb && (
+                  <span
+                    className="font-mono text-[10px] font-bold tracking-[0.04em] uppercase px-1.5 py-0.5 rounded-full"
+                    style={{ background: "rgba(217, 119, 6, 0.10)", color: "#A85614" }}
+                  >
+                    RMB
+                  </span>
+                )}
+                <span
+                  className="ml-auto font-mono text-[12px] font-bold rd-tabular flex-shrink-0"
+                  style={{ color: "var(--color-ink-900)" }}
+                >
+                  {estimate.currency === "CNY" ? "¥" : "$"}
+                  {total.toLocaleString()}
+                </span>
+                {!estimate.isApproved && (
+                  <EstimateApproveButton
+                    estimateId={estimate.id}
+                    isApproved={false}
+                    version={estimate.version}
+                  />
+                )}
+                <EstimateCardActions
+                  estimateId={estimate.id}
+                  estimateNumber={estimate.estimateNumber}
+                  estimateTitle={estimate.title}
+                  isApproved={estimate.isApproved}
+                  isRmbDuplicate={isRmb}
+                  hasRmbDuplicate={!!estimate.rmbDuplicate}
+                />
+              </div>
             );
           })}
         </div>
       )}
 
-      {/* CTA: when approved estimates have uninvoiced lines, point to the Delivery & Sign-off tab */}
+      {/* CTA — when approved estimates have uninvoiced lines, point to Delivery & Sign-off */}
       {hasUninvoicedApproved && (
-        <Card className="border-green-300 bg-green-50/50">
-          <CardContent className="py-5 flex items-center justify-between gap-4">
-            <div>
-              <p className="font-medium text-green-900">Estimate approved — ready for delivery</p>
-              <p className="text-sm text-green-700 mt-0.5">
-                Record actuals and confirm sign-off. Invoices are created on the Invoices tab.
-              </p>
-            </div>
-            <Button asChild className="bg-green-600 hover:bg-green-700 shrink-0">
-              <Link href={`/projects/${project.id}?tab=completion`}>
-                Open Delivery & Sign-off
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div
+          className="rounded-[14px] p-5 flex items-center justify-between gap-4 flex-wrap"
+          style={{
+            background: "var(--color-s-delivered-bg)",
+            border: "1px solid var(--color-s-delivered)",
+            boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+          }}
+        >
+          <div>
+            <p
+              className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase m-0 mb-1"
+              style={{ color: "var(--color-s-delivered-fg)" }}
+            >
+              {"// READY FOR DELIVERY"}
+            </p>
+            <p className="text-[14px] font-semibold m-0 mb-0.5" style={{ color: "var(--color-s-delivered-fg)" }}>
+              Estimate approved
+            </p>
+            <p className="text-[12px] m-0" style={{ color: "var(--color-s-delivered-fg)" }}>
+              Record actuals and confirm sign-off. Invoices are created on the Invoices tab.
+            </p>
+          </div>
+          <Link
+            href={`/projects/${project.id}?tab=completion`}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-[13px] font-medium text-white tracking-[-0.005em]"
+            style={{
+              background: "var(--color-s-delivered)",
+              boxShadow: "0 4px 12px -2px rgba(5, 150, 105, 0.32)",
+            }}
+          >
+            Open Delivery & Sign-off
+          </Link>
+        </div>
       )}
     </div>
   );
@@ -316,6 +388,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
       billing={billing}
       invoices={invoiceRows}
       hasApprovedEstimate={hasApprovedEstimate}
+      pendingEstimates={approvedForInvoice.filter((e) => !e.hasInvoice && !e.isRmbDuplicate)}
     />
   );
 
@@ -352,7 +425,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
   );
 
   // Default tab by lifecycle stage
-  const stage1 = ["NEW", "BRIEFED", "ESTIMATING", "APPROVED"].includes(project.status);
+  const stage1 = ["NEW", "BRIEFED", "ESTIMATING"].includes(project.status);
   const stage3 = project.status === "DELIVERED";
   const defaultTab =
     stage3 ? "completion"
@@ -365,24 +438,35 @@ export default async function ProjectHubPage({ params }: PageProps) {
       projectStatus={project.status}
       estimates={approvedEstimates
         .filter((e) => !e.parentEstimateId)
-        .map((est) => ({
-          id: est.id,
-          estimateNumber: est.estimateNumber,
-          title: est.title,
-          label: est.label ?? null,
-          currency: est.currency,
-          lines: est.phases.flatMap((p) =>
-            p.lineItems.map((l) => ({
-              id: l.id,
-              description: l.description,
-              serviceModuleType: l.serviceModuleType ?? null,
-              unit: l.unit,
-              quantity: l.quantity,
-              unitPrice: l.unitPrice,
-              deliveredQuantity: l.deliveredQuantity ?? null,
-            }))
-          ),
-        }))}
+        .map((est) => {
+          const linkedInvoice = project.invoices.find((inv) => inv.estimateId === est.id);
+          return {
+            id: est.id,
+            estimateNumber: est.estimateNumber,
+            title: est.title,
+            label: est.label ?? null,
+            currency: est.currency,
+            total: estimateTotal(est),
+            invoice: linkedInvoice
+              ? {
+                  id: linkedInvoice.id,
+                  invoiceNumber: linkedInvoice.invoiceNumber,
+                  status: linkedInvoice.status,
+                }
+              : null,
+            lines: est.phases.flatMap((p) =>
+              p.lineItems.map((l) => ({
+                id: l.id,
+                description: l.description,
+                serviceModuleType: l.serviceModuleType ?? null,
+                unit: l.unit,
+                quantity: l.quantity,
+                unitPrice: l.unitPrice,
+                deliveredQuantity: l.deliveredQuantity ?? null,
+              }))
+            ),
+          };
+        })}
       initialCompletion={
         project.completion
           ? {
@@ -406,6 +490,20 @@ export default async function ProjectHubPage({ params }: PageProps) {
         primaryCurrency: billing.primaryCurrency,
       }}
       hasInvoices={project.invoices.length > 0}
+      initialFeedback={
+        project.feedback
+          ? {
+              internalContent: project.feedback.internalContent,
+              internalSubmittedAt: project.feedback.internalSubmittedAt?.toISOString() ?? null,
+              internalSubmittedBy: project.feedback.internalSubmittedBy
+                ? { name: project.feedback.internalSubmittedBy.name }
+                : null,
+              clientContent: project.feedback.clientContent,
+              clientSubmittedAt: project.feedback.clientSubmittedAt?.toISOString() ?? null,
+              clientSubmittedByName: project.feedback.clientSubmittedByName,
+            }
+          : null
+      }
     />
   );
 
@@ -464,9 +562,9 @@ export default async function ProjectHubPage({ params }: PageProps) {
         tabs={[
           { value: "overview", label: "Overview", content: overviewTab },
           { value: "estimates", label: `Estimates (${project.estimates.length})`, content: estimatesTab },
-          { value: "invoice", label: `Invoices (${project.invoices.length})`, content: invoiceTab },
           { value: "execution", label: "Execution", content: executionTab },
           { value: "completion", label: "Delivery & Sign-off", content: completionTab },
+          { value: "invoice", label: `Invoices (${project.invoices.length})`, content: invoiceTab },
         ]}
       />
     </div>

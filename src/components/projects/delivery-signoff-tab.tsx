@@ -2,12 +2,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { phaseTokens } from "@/lib/redesign-tokens";
 import { showUnderDevToast } from "@/components/redesign/under-dev-toast";
 import { currencySymbol } from "@/lib/currency";
 import { Loader2 } from "lucide-react";
+import {
+  ProjectFeedbackSection,
+  type FeedbackSnapshot,
+} from "@/components/projects/project-feedback-section";
 
 export interface DeliveryLine {
   id: string;
@@ -25,6 +29,9 @@ export interface DeliveryEstimate {
   title: string;
   label: string | null;
   currency: string;
+  total: number;
+  /** Invoice generated from this estimate, if any. */
+  invoice: { id: string; invoiceNumber: string; status: string } | null;
   lines: DeliveryLine[];
 }
 
@@ -49,6 +56,7 @@ interface Props {
     primaryCurrency: string;
   };
   hasInvoices: boolean;
+  initialFeedback?: FeedbackSnapshot | null;
 }
 
 /* ───────────────────────────── helpers ───────────────────────────── */
@@ -167,14 +175,20 @@ export function DeliverySignoffTab({
   projectStatus,
   estimates,
   initialCompletion,
+  initialFeedback,
 }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const readOnly = projectStatus === "CLOSED";
 
-  // Multi-estimate selection
-  const [activeEstimateId, setActiveEstimateId] = useState<string>(
-    estimates[0]?.id ?? ""
-  );
+  // Multi-estimate selection — honor ?estimate=<id> when arriving from the
+  // Invoices tab's "Generate invoice" link, so the right estimate is preselected.
+  const requestedEstimateId = searchParams.get("estimate");
+  const initialEstimateId =
+    requestedEstimateId && estimates.some((e) => e.id === requestedEstimateId)
+      ? requestedEstimateId
+      : estimates[0]?.id ?? "";
+  const [activeEstimateId, setActiveEstimateId] = useState<string>(initialEstimateId);
   const activeEstimate = estimates.find((e) => e.id === activeEstimateId) ?? estimates[0];
 
   // Edits keyed per-estimate so switching doesn't lose state.
@@ -371,25 +385,72 @@ export function DeliverySignoffTab({
 
   return (
     <div className="space-y-6">
-      {/* Multi-estimate selector — only when more than one */}
+      {/* Multi-estimate picker — chip row, surfaces invoice status per estimate.
+          Shown whenever there are multiple approved estimates so the user can
+          see at a glance which have been invoiced and which still need actuals. */}
       {estimates.length > 1 && (
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500">
-            {"// ESTIMATE"}
-          </span>
-          <select
-            value={activeEstimate.id}
-            onChange={(e) => setActiveEstimateId(e.target.value)}
-            className="px-3 py-1.5 rounded-lg border bg-card-rd text-sm font-medium text-ink-900"
-            style={{ borderColor: "var(--color-hairline-strong)" }}
-          >
-            {estimates.map((est) => (
-              <option key={est.id} value={est.id}>
-                {est.estimateNumber}
-                {est.label ? ` — ${est.label}` : ""} · {est.currency}
-              </option>
-            ))}
-          </select>
+        <div className="space-y-2">
+          <p className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500 m-0">
+            {`// ESTIMATES · ${estimates.length}`}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {estimates.map((est) => {
+              const isActive = est.id === activeEstimate.id;
+              const inv = est.invoice;
+              const invoiced = !!inv;
+              return (
+                <button
+                  key={est.id}
+                  type="button"
+                  onClick={() => setActiveEstimateId(est.id)}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg text-left transition-colors hover:bg-[#FCFAF6]"
+                  style={{
+                    background: isActive ? "var(--color-card-rd)" : "var(--color-canvas-cool)",
+                    border: isActive
+                      ? "1.5px solid var(--color-ink-900)"
+                      : "1px solid var(--color-hairline-strong)",
+                    boxShadow: isActive ? "0 1px 2px rgba(15, 23, 41, 0.06)" : "none",
+                  }}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{
+                      background: invoiced
+                        ? inv!.status === "PAID"
+                          ? "var(--color-s-delivered)"
+                          : "var(--color-s-in-progress)"
+                        : "var(--color-s-delivered)",
+                    }}
+                  />
+                  <div className="flex flex-col items-start gap-0.5">
+                    <span className="flex items-center gap-1.5">
+                      <span className="font-mono text-[11px] font-bold tracking-[0.06em] uppercase text-ink-700">
+                        {est.estimateNumber}
+                      </span>
+                      <span
+                        className="font-mono text-[10px] tracking-[0.04em] px-1.5 py-0.5 rounded-full"
+                        style={{
+                          background: "var(--color-card-rd)",
+                          color: "var(--color-ink-500)",
+                          border: "1px solid var(--color-hairline)",
+                        }}
+                      >
+                        {est.currency}
+                      </span>
+                      {est.label && (
+                        <span className="text-[11px] text-ink-500">{est.label}</span>
+                      )}
+                    </span>
+                    <span className="font-mono text-[10px] tracking-[0.02em] text-ink-400">
+                      {invoiced
+                        ? `${inv!.status === "PAID" ? "// PAID · " : "// INVOICED · "}${inv!.invoiceNumber}`
+                        : "// AWAITING ACTUALS"}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -877,6 +938,13 @@ export function DeliverySignoffTab({
           />
         </div>
       </div>
+
+      {/* Feedback (open-ended retrospective; combined with paid invoices, this auto-archives the project) */}
+      <ProjectFeedbackSection
+        projectId={projectId}
+        projectStatus={projectStatus}
+        initialFeedback={initialFeedback ?? null}
+      />
 
       {/* Action footer */}
       <div

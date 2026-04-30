@@ -17,6 +17,10 @@
 /.next/
 /out/
 
+# Claude Code runtime artifacts (lock files, not the tracked agent definitions)
+.claude/scheduled_tasks.lock
+.claude/worktrees/
+
 # production
 /build
 

@@ -78,12 +78,19 @@ export function EstimateApproveButton({
     );
   }
 
-  // Approve — shown inline, icon + text clickable action
+  // Approve — inline chip styled to match the redesign action vocabulary
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <button className="flex items-center gap-1.5 text-sm font-medium text-green-600 hover:text-green-800 transition-colors">
-          <CheckCircle className="h-4 w-4" />
+        <button
+          type="button"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-white tracking-[-0.005em] transition-colors disabled:opacity-50"
+          style={{
+            background: "var(--color-s-delivered)",
+            boxShadow: "0 4px 12px -2px rgba(5, 150, 105, 0.28)",
+          }}
+        >
+          <CheckCircle className="h-3.5 w-3.5" />
           Approve
         </button>
       </AlertDialogTrigger>

@@ -59,6 +59,7 @@ gcloud compute ssh $VM --zone=$ZONE -- "
   sudo cp -r $BUILD_DIR/.next/standalone/* $APP_DIR/ && \
   sudo mkdir -p $APP_DIR/.next && \
   sudo cp -r $BUILD_DIR/.next/standalone/.next/* $APP_DIR/.next/ && \
+  sudo rm -rf $APP_DIR/.next/static && \
   sudo cp -r $BUILD_DIR/.next/static $APP_DIR/.next/static && \
   sudo cp -r $BUILD_DIR/node_modules/bcryptjs $APP_DIR/node_modules/ && \
   sudo cp -r $BUILD_DIR/node_modules/@prisma/adapter-pg $APP_DIR/node_modules/@prisma/ && \
