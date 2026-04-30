@@ -77,9 +77,11 @@ Project (created first)
 
 ## Enums & Status Values
 
-### Project statuses (6 stages)
+### Project statuses (7 stages)
 
 `NEW → BRIEFED → ESTIMATING → IN_PROGRESS → DELIVERED → CLOSED`
+
+Side-track: `ESTIMATING → EXPIRED` (auto, see auto-archive rule below)
 
 Transitions:
 - `NEW → BRIEFED` (auto): brief saved with objectives + ≥1 service module
@@ -87,6 +89,7 @@ Transitions:
 - `ESTIMATING → IN_PROGRESS` (auto): any estimate approved (sets `startDate`)
 - `IN_PROGRESS → DELIVERED` (auto): both internal + client sign-off recorded
 - `DELIVERED → CLOSED` (auto): all invoices PAID + both feedback sides submitted (`checkAndAutoArchive`)
+- `ESTIMATING → EXPIRED` (auto): on dashboard load, if every non-deleted SENT estimate on the project has `updatedAt > 30 days ago` and no estimate is approved. Helper: `src/lib/expire-stale-estimates.ts`. EXPIRED projects appear in the Archive hub.
 - Manual PATCH to `/api/projects/[id]` is still accepted for edge cases.
 
 ### Other enums (in `src/types/index.ts`)
