@@ -172,11 +172,6 @@ export async function POST(request: NextRequest) {
       projectId,
     });
 
-    const proj = await prisma.project.findUnique({ where: { id: estimate.projectId }, select: { status: true } });
-    if (proj && (proj.status === "NEW" || proj.status === "BRIEFED" || proj.status === "INQUIRY_RECEIVED")) {
-      await prisma.project.update({ where: { id: estimate.projectId }, data: { status: "ESTIMATING" } });
-    }
-
     return NextResponse.json(estimate, { status: 201 });
   } catch (error) {
     console.error("Error creating estimate:", error);
