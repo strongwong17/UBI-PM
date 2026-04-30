@@ -18,7 +18,8 @@ export type ProjectStatus =
   | "APPROVED"
   | "IN_PROGRESS"
   | "DELIVERED"
-  | "CLOSED";
+  | "CLOSED"
+  | "EXPIRED";
 
 export type ExecutionPhase = "RECRUITMENT" | "FIELDWORK" | "ANALYSIS" | "REPORTING";
 

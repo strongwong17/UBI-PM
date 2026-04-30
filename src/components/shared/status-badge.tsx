@@ -10,6 +10,7 @@ const statusColorMap: Record<string, string> = {
   IN_PROGRESS: "bg-indigo-100 text-indigo-800 border-indigo-200",
   DELIVERED: "bg-emerald-100 text-emerald-800 border-emerald-200",
   CLOSED: "bg-zinc-200 text-zinc-700 border-zinc-300",
+  EXPIRED: "bg-zinc-100 text-zinc-500 border-zinc-200",
   // Estimate statuses
   DRAFT: "bg-gray-100 text-gray-600 border-gray-200",
   SENT: "bg-violet-100 text-violet-800 border-violet-200",

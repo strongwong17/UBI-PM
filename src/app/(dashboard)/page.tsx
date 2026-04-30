@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { expireStaleEstimates } from "@/lib/expire-stale-estimates";
 import { HubTabBar, type HubKey } from "@/components/redesign/hub-tab-bar";
 import { HubInquiry } from "@/components/redesign/hubs/hub-1-inquiry";
 import { HubInProgress } from "@/components/redesign/hubs/hub-2-in-progress";
@@ -10,8 +11,6 @@ import { HubArchive } from "@/components/redesign/hubs/hub-4-archive";
 
 export const dynamic = "force-dynamic";
 
-const STALE_DAYS = 30;
-
 interface PageProps {
   searchParams: Promise<{ hub?: string }>;
 }
@@ -19,6 +18,12 @@ interface PageProps {
 export default async function DashboardPage({ searchParams }: PageProps) {
   const session = await auth();
   if (!session?.user) redirect("/login");
+
+  try {
+    await expireStaleEstimates();
+  } catch (err) {
+    console.error("expireStaleEstimates failed:", err);
+  }
 
   const { hub: hubParam } = await searchParams;
   const active: HubKey = (["inquiry", "in-progress", "completion", "archive"] as const).find(
@@ -52,16 +57,12 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   }));
 
   const inquiryProjects = allProjectsWithTotals.filter((p) =>
-    ["NEW", "BRIEFED", "ESTIMATING", "APPROVED"].includes(p.status),
+    ["NEW", "BRIEFED", "ESTIMATING"].includes(p.status),
   );
   const inProgressProjects = allProjectsWithTotals.filter((p) => p.status === "IN_PROGRESS");
   const completionProjects = allProjectsWithTotals.filter((p) => p.status === "DELIVERED");
-  const archiveProjects = allProjectsWithTotals.filter((p) => p.status === "CLOSED");
-
-  // eslint-disable-next-line react-hooks/purity
-  const staleCutoff = new Date(Date.now() - STALE_DAYS * 86_400_000);
-  const inquiryStale = inquiryProjects.filter(
-    (p) => p.status === "ESTIMATING" && p.updatedAt < staleCutoff,
+  const archiveProjects = allProjectsWithTotals.filter((p) =>
+    ["CLOSED", "EXPIRED"].includes(p.status),
   );
 
   const userName = session.user.name?.split(" ")[0] ?? "there";
@@ -112,12 +113,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
       <HubTabBar hubs={hubs} active={active} />
 
-      {active === "inquiry" && (
-        <HubInquiry
-          projects={inquiryProjects}
-          staleProjects={inquiryStale}
-        />
-      )}
+      {active === "inquiry" && <HubInquiry projects={inquiryProjects} />}
       {active === "in-progress" && <HubInProgress projects={inProgressProjects} />}
       {active === "completion" && <HubCompletion projects={completionProjects} />}
       {active === "archive" && <HubArchive projects={archiveProjects} />}

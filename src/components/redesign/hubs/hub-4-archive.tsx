@@ -131,17 +131,34 @@ export function HubArchive({ projects }: Props) {
                         className="grid items-center gap-3.5 px-4 py-3.5 border-b border-hairline last:border-b-0 hover:bg-[#FCFAF6] transition-colors text-xs"
                         style={{ gridTemplateColumns: "4px 1fr auto auto 24px" }}
                       >
-                        <span className="w-1 h-9 rounded-full" style={{ background: "var(--color-s-closed)" }} />
+                        <span
+                          className="w-1 h-9 rounded-full"
+                          style={{ background: p.status === "EXPIRED" ? "#A1A1AA" : "var(--color-s-closed)" }}
+                        />
                         <span>
                           <span className="font-mono text-[10px] text-ink-300 tracking-[0.04em]">{p.projectNumber}</span>
                           <div className="text-[13px] font-medium text-ink-900 mt-0.5 tracking-[-0.005em]">{p.title}</div>
                           <div className="text-[11px] text-ink-500 mt-0.5">
-                            {p.client.company} · archived {new Date(p.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                            {p.client.company} · {p.status === "EXPIRED" ? "expired" : "archived"} {new Date(p.updatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                           </div>
                         </span>
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full font-mono text-[10px] font-bold tracking-[0.02em]" style={{ border: "1px dashed var(--color-ink-300)", color: "var(--color-ink-400)" }}>
-                          {"// no feedback yet"}
-                        </span>
+                        {p.status === "EXPIRED" ? (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full font-mono text-[10px] font-bold tracking-[0.02em]"
+                            style={{ background: "#F4F4F5", color: "#71717A" }}
+                          >
+                            <span className="w-1 h-1 rounded-full" style={{ background: "#A1A1AA" }} />
+                            EXPIRED
+                          </span>
+                        ) : (
+                          <span
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded-full font-mono text-[10px] font-bold tracking-[0.02em]"
+                            style={{ background: "var(--color-s-closed-bg)", color: "var(--color-s-closed-fg)" }}
+                          >
+                            <span className="w-1 h-1 rounded-full" style={{ background: "var(--color-s-closed)" }} />
+                            CLOSED
+                          </span>
+                        )}
                         <span className="text-right">
                           <div className="text-[13px] font-semibold text-ink-900 rd-tabular tracking-[-0.01em]">{e ? fmtUSD(e.total) : "—"}</div>
                         </span>
