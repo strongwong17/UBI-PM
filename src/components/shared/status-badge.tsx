@@ -29,6 +29,11 @@ interface StatusBadgeProps {
   className?: string;
 }
 
+export function formatStatus(status: string): string {
+  const lower = status.replace(/_/g, " ").toLowerCase();
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   const colorClasses =
     statusColorMap[status] || "bg-gray-100 text-gray-800 border-gray-200";
@@ -38,7 +43,7 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
       variant="outline"
       className={cn(colorClasses, "font-medium", className)}
     >
-      {status.replace(/_/g, " ")}
+      {formatStatus(status)}
     </Badge>
   );
 }

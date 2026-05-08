@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { formatStatus } from "@/components/shared/status-badge";
 
 const STATUSES = ["DRAFT", "SENT", "PAID", "OVERDUE"];
 
@@ -57,7 +58,7 @@ export function InvoiceStatusChanger({ invoiceId, currentStatus }: InvoiceStatus
       <DropdownMenuContent>
         {STATUSES.filter((s) => s !== currentStatus).map((status) => (
           <DropdownMenuItem key={status} onClick={() => changeStatus(status)}>
-            {status}
+            {formatStatus(status)}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

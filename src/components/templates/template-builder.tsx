@@ -586,12 +586,8 @@ export function TemplateBuilder({ initialData, mode }: TemplateBuilderProps) {
                                         <SelectContent>
                                           <SelectItem value="hours">hours</SelectItem>
                                           <SelectItem value="days">days</SelectItem>
-                                          <SelectItem value="sessions">sessions</SelectItem>
-                                          <SelectItem value="pieces">pieces</SelectItem>
-                                          <SelectItem value="participants">
-                                            participants
-                                          </SelectItem>
                                           <SelectItem value="units">units</SelectItem>
+                                          <SelectItem value="lump sum">lump sum</SelectItem>
                                         </SelectContent>
                                       </Select>
                                       <Input

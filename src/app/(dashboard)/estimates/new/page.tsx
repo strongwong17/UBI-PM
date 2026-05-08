@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { EstimateBuilder } from "@/components/estimates/estimate-builder";
+import { NewEstimateGate } from "@/components/estimates/new-estimate-gate";
 import { ArrowLeft } from "lucide-react";
 
 interface PageProps {
@@ -41,7 +42,11 @@ export default async function NewEstimatePage({ searchParams }: PageProps) {
         </div>
       </div>
       <div className="mt-6">
-        <EstimateBuilder mode="create" defaultProjectId={projectId} />
+        {projectId ? (
+          <EstimateBuilder mode="create" defaultProjectId={projectId} />
+        ) : (
+          <NewEstimateGate />
+        )}
       </div>
     </div>
   );

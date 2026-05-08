@@ -268,10 +268,10 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
 
   const projectId = initialData?.projectId || defaultProjectId || "";
 
-  const [title, setTitle] = useState(initialData?.title || "");
-  const [label, setLabel] = useState(initialData?.label || "");
-  const [projectName, setProjectName] = useState(initialData?.projectName || "");
-  const [address, setAddress] = useState(initialData?.address || "");
+  // Single name field — falls back to legacy `title` for old estimates
+  const [projectName, setProjectName] = useState(
+    initialData?.projectName || initialData?.title || ""
+  );
   const [pricingModel, setPricingModel] = useState(initialData?.pricingModel || "MIXED");
   const [currency, setCurrency] = useState(initialData?.currency || "USD");
   const [taxRate, setTaxRate] = useState(initialData?.taxRate ?? 0);
@@ -528,7 +528,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    if (!title.trim()) { toast.error("Title is required"); return; }
+    if (!projectName.trim()) { toast.error("Project name is required"); return; }
     if (!projectId) { toast.error("Project ID is missing"); return; }
     for (const phase of phases) {
       if (!phase.name.trim()) { toast.error("All phases must have a name"); return; }
@@ -544,10 +544,11 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
     setIsSubmitting(true);
 
     const payload = {
-      title: title.trim(),
-      label: label.trim() || null,
-      projectName: projectName.trim() || null,
-      address: address.trim() || null,
+      // `title` is the legacy required column — mirror projectName into it
+      title: projectName.trim(),
+      label: null,
+      projectName: projectName.trim(),
+      address: null,
       projectId,
       pricingModel,
       currency,
@@ -637,44 +638,13 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
           }}
         >
           <div>
-            <label htmlFor="title" className={monoLabel}>{"// TITLE *"}</label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Estimate title"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="label" className={monoLabel}>{"// LABEL / SUB-NAME"}</label>
-            <Input
-              id="label"
-              value={label}
-              onChange={(e) => setLabel(e.target.value)}
-              placeholder='e.g. "China Pricing", "US Market"'
-            />
-          </div>
-
-          <div>
-            <label htmlFor="projectName" className={monoLabel}>{"// PROJECT NAME"}</label>
+            <label htmlFor="projectName" className={monoLabel}>{"// PROJECT NAME *"}</label>
             <Input
               id="projectName"
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
-              placeholder="Project name shown on the estimate"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="address" className={monoLabel}>{"// CLIENT ADDRESS"}</label>
-            <Textarea
-              id="address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              placeholder="Client billing address"
-              rows={2}
+              placeholder="e.g. Skincare Usage Study Q2 2026"
+              required
             />
           </div>
 
@@ -974,12 +944,9 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                           <SelectContent>
                             <SelectItem value="hours">hours</SelectItem>
                             <SelectItem value="days">days</SelectItem>
-                            <SelectItem value="sessions">sessions</SelectItem>
-                            <SelectItem value="pieces">pieces</SelectItem>
-                            <SelectItem value="participants">participants</SelectItem>
                             <SelectItem value="units">units</SelectItem>
                             <SelectItem value="lump sum">lump sum</SelectItem>
-                            <SelectItem value="% of...">% of...</SelectItem>
+                            <SelectItem value="% of...">% of a line item</SelectItem>
                           </SelectContent>
                         </Select>
 
