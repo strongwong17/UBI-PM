@@ -42,10 +42,6 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authResult = await requireAuth(["ADMIN", "MANAGER"]);
-    if (isAuthError(authResult)) return authResult;
-    const { userId } = authResult;
-
     const { id } = await params;
     const body = await request.json();
     const { status, issuedDate, dueDate, notes, contactEmail, discount, lineItems } = body;
@@ -54,6 +50,19 @@ export async function PATCH(
     if (!existing) {
       return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
     }
+
+    // Status-aware role gate. Status-only PATCH stays open to MANAGER even on
+    // non-DRAFT invoices (so MANAGER can still mark invoices SENT/PAID/OVERDUE).
+    // Any "correction" field on a non-DRAFT invoice requires ADMIN.
+    const correctionFields = { lineItems, discount, issuedDate, dueDate, notes, contactEmail };
+    const isCorrection = Object.values(correctionFields).some((v) => v !== undefined);
+    const isDraft = existing.status === "DRAFT";
+    const requiredRoles: Array<"ADMIN" | "MANAGER"> =
+      isDraft || !isCorrection ? ["ADMIN", "MANAGER"] : ["ADMIN"];
+
+    const authResult = await requireAuth(requiredRoles);
+    if (isAuthError(authResult)) return authResult;
+    const { userId } = authResult;
 
     const invoice = await prisma.$transaction(async (tx) => {
       const updateData: Record<string, unknown> = {};
