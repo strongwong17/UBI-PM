@@ -3,209 +3,263 @@ import { registerFonts } from "./register-fonts";
 
 registerFonts();
 
+const COLORS = {
+  ink900: "#0F1729",
+  ink700: "#525873",
+  ink600: "#5C6378",          // replaces #82869C and #A4A6B5; ~5.6:1 on white (AA at all sizes)
+  accent: "#D9522B",
+  discount: "#A85614",
+  hairline: "#E8E5DD",
+  hairlineStrong: "#1F2A44",  // new — rule above totals final + below table header + above wire panel
+};
+
 const styles = StyleSheet.create({
   page: {
     fontFamily: "NotoSansSC",
     fontSize: 10,
-    padding: 40,
-    color: "#0F1729",
+    paddingTop: 48,
+    paddingHorizontal: 44,
+    paddingBottom: 44,
+    color: COLORS.ink900,
     backgroundColor: "#ffffff",
   },
+
+  // -------- HEADER --------
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 32,
+    marginBottom: 22,
   },
   companyName: {
-    fontSize: 20,
-    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#0F1729",
+    fontSize: 18,
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.ink900,
   },
   companyDetail: {
-    fontSize: 9,
-    color: "#82869C",
-    marginTop: 1,
+    fontSize: 10,
+    color: COLORS.ink700,
+    marginTop: 2,
   },
-  invoiceTitle: {
-    fontSize: 18,
-    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#D9522B",
-    textAlign: "right",
-    letterSpacing: 0.6,
+  headerMeta: { alignItems: "flex-end" },
+  invoiceEyebrow: {
+    fontSize: 9.5,
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.ink600,
+    textTransform: "uppercase",
+    letterSpacing: 1.1,
   },
   invoiceNumber: {
-    fontSize: 11,
-    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#0F1729",
-    textAlign: "right",
+    fontSize: 18,
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.ink900,
+    marginTop: 3,
+  },
+  metaLine: {
+    fontSize: 9,
+    color: COLORS.ink600,
     marginTop: 4,
   },
-  metaText: {
-    fontSize: 9,
-    color: "#82869C",
-    textAlign: "right",
-    marginTop: 2,
+  metaValue: {
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.ink900,
   },
-  // Billing section
-  billingSection: {
+
+  // -------- DIVIDERS --------
+  hairlineRow: {
+    height: 1,
+    backgroundColor: COLORS.hairline,
+    marginVertical: 14,
+  },
+
+  // -------- BILL TO / PROJECT --------
+  billGrid: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 28,
-    backgroundColor: "#F0EDE5",
-    padding: 14,
-    borderRadius: 8,
+    gap: 28,
   },
-  billingLabel: {
-    fontSize: 8,
-    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#82869C",
+  billCol: { flex: 1 },
+  fieldLabel: {
+    fontSize: 8.5,
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.ink600,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
+    letterSpacing: 0.7,
     marginBottom: 4,
   },
-  billingName: {
-    fontSize: 12,
-    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#0F1729",
+  fieldHeadline: {
+    fontSize: 18,
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.ink900,
+    lineHeight: 1.15,
   },
-  billingText: {
-    fontSize: 9,
-    color: "#525873",
-    marginTop: 2,
+  fieldLine: {
+    fontSize: 10,
+    color: COLORS.ink700,
+    marginTop: 1,
+    lineHeight: 1.35,
   },
-  // Table
-  tableHeader: {
+
+  // -------- TABLE --------
+  tableHead: {
     flexDirection: "row",
-    backgroundColor: "#FAFAF6",
-    padding: "8 10",
-    borderTopWidth: 1,
-    borderTopColor: "#E8E5DD",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E5DD",
+    paddingTop: 6,
+    paddingBottom: 6,
+    borderBottomWidth: 1.4,
+    borderBottomColor: COLORS.hairlineStrong,
+    marginTop: 22,
   },
   tableRow: {
     flexDirection: "row",
-    padding: "7 10",
+    paddingTop: 6,
+    paddingBottom: 6,
     borderBottomWidth: 1,
-    borderBottomColor: "#E8E5DD",
+    borderBottomColor: COLORS.hairline,
   },
-  colDesc: { flex: 5, paddingRight: 8 },
-  colQty: { flex: 1, textAlign: "right", paddingRight: 4 },
+  colDesc:  { flex: 5, paddingRight: 8 },
+  colQty:   { flex: 1, textAlign: "right", paddingRight: 4 },
   colPrice: { flex: 2, textAlign: "right", paddingRight: 4 },
   colTotal: { flex: 2, textAlign: "right" },
   headerCell: {
-    fontSize: 8,
-    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#A4A6B5",
+    fontSize: 8.5,
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.ink600,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
+    letterSpacing: 0.7,
   },
-  cellText: { fontSize: 9, color: "#525873" },
-  cellBold: { fontSize: 9, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#0F1729" },
-  // Totals
-  totalsSection: {
-    marginTop: 24,
+  cellText:     { fontSize: 10, color: COLORS.ink700 },
+  cellStrong:   { fontSize: 10, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: COLORS.ink900 },
+
+  // -------- TOTALS (open list) --------
+  totalsWrap: {
+    marginTop: 18,
     flexDirection: "row",
     justifyContent: "flex-end",
   },
-  totalsBox: {
-    width: 220,
-    borderWidth: 1,
-    borderColor: "#E8E5DD",
-    borderRadius: 8,
-    overflow: "hidden",
-  },
+  totalsList: { width: 280 },
   totalsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: "6 12",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E5DD",
+    paddingTop: 3,
+    paddingBottom: 3,
   },
-  totalsLabel: { fontSize: 9, color: "#82869C" },
-  totalsValue: { fontSize: 9, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#525873" },
-  totalsFinalRow: {
+  totalsLabel: { fontSize: 10, color: COLORS.ink600 },
+  totalsValue: { fontSize: 10, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: COLORS.ink900 },
+  totalsDiscount: { fontSize: 10, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: COLORS.discount },
+  totalsFinal: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: "10 12",
-    backgroundColor: "#FFFFFF",
-    borderTopWidth: 1,
-    borderTopColor: "#D8D4C8",
+    alignItems: "baseline",
+    paddingTop: 10,
+    marginTop: 6,
+    borderTopWidth: 1.4,
+    borderTopColor: COLORS.hairlineStrong,
   },
-  totalsFinalLabel: { fontSize: 11, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#0F1729" },
-  totalsFinalValue: { fontSize: 12, fontFamily: "NotoSansSC", fontWeight: "bold" as const, color: "#D9522B" },
-  // Notes
-  notesSection: {
-    marginTop: 20,
-    borderTopWidth: 1,
-    borderTopColor: "#E8E5DD",
-    paddingTop: 14,
+  totalsFinalLabel: {
+    fontSize: 12,
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.ink900,
+    textTransform: "uppercase",
+    letterSpacing: 0.7,
   },
+  totalsFinalValue: {
+    fontSize: 30,
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.accent,
+    lineHeight: 1.0,
+  },
+
+  // -------- NOTES --------
+  notesSection: { marginTop: 18 },
   notesTitle: {
-    fontSize: 9,
-    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#0F1729",
+    fontSize: 8.5,
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.ink600,
     textTransform: "uppercase",
-    letterSpacing: 0.6,
-    marginBottom: 5,
+    letterSpacing: 0.7,
+    marginBottom: 4,
   },
-  notesText: { fontSize: 9, color: "#525873", lineHeight: 1.5 },
-  // Wiring
-  wiringSection: {
-    marginTop: 20,
+  notesText: {
+    fontSize: 10,
+    color: COLORS.ink700,
+    lineHeight: 1.4,
+  },
+
+  // -------- SPACER (pushes wire panel to bottom) --------
+  spacer: { flexGrow: 1, minHeight: 24 },
+
+  // -------- WIRE TRANSFER (bottom-anchored, no chip) --------
+  wireBlock: {
+    paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: "#E8E5DD",
-    paddingTop: 14,
+    borderTopColor: COLORS.hairlineStrong,
+    marginBottom: 16,
   },
-  wiringBox: {
-    borderWidth: 1,
-    borderColor: "#E8E5DD",
-    borderRadius: 8,
-    overflow: "hidden",
+  wireTitle: {
+    fontSize: 9.5,
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.ink900,
+    textTransform: "none",
+    letterSpacing: 0,
+    marginBottom: 8,
+    lineHeight: 1.1,
   },
-  wiringBoxHeader: {
-    backgroundColor: "#FAFAF6",
-    padding: "6 10",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E5DD",
-  },
-  wiringBoxTitle: {
-    fontSize: 9,
-    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    color: "#0F1729",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
-  },
-  wiringRow: {
+  wireGrid: {
     flexDirection: "row",
-    padding: "4 10",
-    borderBottomWidth: 1,
-    borderBottomColor: "#E8E5DD",
+    gap: 28,
   },
-  wiringLabel: {
-    fontSize: 8,
-    color: "#82869C",
-    fontFamily: "NotoSansSC", fontWeight: "bold" as const,
-    width: 100,
+  wireCol: { flex: 1, flexDirection: "column" },
+  wireRow: {
+    flexDirection: "row",
+    marginTop: 3,
   },
-  wiringValue: {
-    fontSize: 8,
-    color: "#525873",
+  wireRowFirst: {
+    flexDirection: "row",
+    marginTop: 0,
+  },
+  wireRowAddressGap: {
+    flexDirection: "row",
+    marginTop: 8,
+  },
+  wireKey: {
+    width: 88,
+    fontSize: 8.5,
+    fontFamily: "NotoSansSC",
+    fontWeight: "bold" as const,
+    color: COLORS.ink600,
+    textTransform: "none",
+    letterSpacing: 0,
+    lineHeight: 1.35,
+  },
+  wireVal: {
     flex: 1,
+    fontSize: 8.5,
+    color: COLORS.ink900,
+    lineHeight: 1.35,
   },
-  // Footer
+
+  // -------- FOOTER --------
   footer: {
     position: "absolute",
-    bottom: 30,
-    left: 40,
-    right: 40,
+    bottom: 18,
+    left: 44,
+    right: 44,
     flexDirection: "row",
     justifyContent: "space-between",
     borderTopWidth: 1,
-    borderTopColor: "#E8E5DD",
-    paddingTop: 8,
+    borderTopColor: COLORS.hairline,
+    paddingTop: 6,
   },
-  footerText: { fontSize: 8, color: "#A4A6B5" },
+  footerText: { fontSize: 8.5, color: COLORS.ink600 },
 });
 
 export interface BusinessProfileData {
@@ -275,62 +329,65 @@ export function InvoicePDF({
         <View style={styles.header}>
           <View>
             <Text style={styles.companyName}>{business.name}</Text>
-            {business.address && (
-              <Text style={styles.companyDetail}>{business.address}</Text>
-            )}
-            {business.email && (
-              <Text style={styles.companyDetail}>{business.email}</Text>
-            )}
-            {business.phone && (
-              <Text style={styles.companyDetail}>{business.phone}</Text>
-            )}
+            {business.address && <Text style={styles.companyDetail}>{business.address}</Text>}
+            {business.email && <Text style={styles.companyDetail}>{business.email}</Text>}
+            {business.phone && <Text style={styles.companyDetail}>{business.phone}</Text>}
           </View>
-          <View>
-            <Text style={styles.invoiceTitle}>INVOICE</Text>
+          <View style={styles.headerMeta}>
+            <Text style={styles.invoiceEyebrow}>Invoice</Text>
+            <Text style={styles.invoiceNumber}>{invoice.invoiceNumber}</Text>
             {invoice.issuedDate && (
-              <Text style={styles.metaText}>
-                Issued: {new Date(invoice.issuedDate).toLocaleDateString()}
+              <Text style={styles.metaLine}>
+                Issued{" "}
+                <Text style={styles.metaValue}>
+                  {new Date(invoice.issuedDate).toLocaleDateString()}
+                </Text>
               </Text>
             )}
             {invoice.dueDate && (
-              <Text style={styles.metaText}>
-                Due: {new Date(invoice.dueDate).toLocaleDateString()}
+              <Text style={styles.metaLine}>
+                Due{" "}
+                <Text style={styles.metaValue}>
+                  {new Date(invoice.dueDate).toLocaleDateString()}
+                </Text>
               </Text>
             )}
-            <Text style={styles.invoiceNumber}>{invoice.invoiceNumber}</Text>
           </View>
         </View>
 
-        {/* Billing */}
-        <View style={styles.billingSection}>
-          <View>
-            <Text style={styles.billingLabel}>Bill To</Text>
-            <Text style={styles.billingName}>
+        {/* Faint divider before bill-to */}
+        <View style={styles.hairlineRow} />
+
+        {/* Bill To / Project */}
+        <View style={styles.billGrid}>
+          <View style={styles.billCol}>
+            <Text style={styles.fieldLabel}>Billed to</Text>
+            <Text style={styles.fieldHeadline}>
               {invoice.project.client.billingName || invoice.project.client.company}
             </Text>
             {invoice.project.client.billingName && (
-              <Text style={styles.billingText}>{invoice.project.client.company}</Text>
+              <Text style={styles.fieldLine}>{invoice.project.client.company}</Text>
             )}
             {invoice.project.client.billingAddress && (
-              <Text style={styles.billingText}>{invoice.project.client.billingAddress}</Text>
+              <Text style={styles.fieldLine}>{invoice.project.client.billingAddress}</Text>
             )}
             {(invoice.project.client.billingEmail || invoice.project.client.email) && (
-              <Text style={styles.billingText}>
+              <Text style={styles.fieldLine}>
                 {invoice.project.client.billingEmail || invoice.project.client.email}
               </Text>
             )}
           </View>
-          <View>
-            <Text style={styles.billingLabel}>Project</Text>
-            <Text style={styles.billingName}>{invoice.project.title}</Text>
+          <View style={styles.billCol}>
+            <Text style={styles.fieldLabel}>Project</Text>
+            <Text style={styles.fieldHeadline}>{invoice.project.title}</Text>
             {invoice.contactEmail && (
-              <Text style={styles.billingText}>Contact: {invoice.contactEmail}</Text>
+              <Text style={styles.fieldLine}>Contact: {invoice.contactEmail}</Text>
             )}
           </View>
         </View>
 
         {/* Table */}
-        <View style={styles.tableHeader}>
+        <View style={styles.tableHead}>
           <Text style={[styles.headerCell, styles.colDesc]}>Description</Text>
           <Text style={[styles.headerCell, styles.colQty]}>Qty</Text>
           <Text style={[styles.headerCell, styles.colPrice]}>Unit Price</Text>
@@ -338,16 +395,16 @@ export function InvoicePDF({
         </View>
         {invoice.lineItems.map((item, i) => (
           <View key={i} style={styles.tableRow}>
-            <Text style={[styles.cellText, styles.colDesc]}>{item.description}</Text>
+            <Text style={[styles.cellStrong, styles.colDesc]}>{item.description}</Text>
             <Text style={[styles.cellText, styles.colQty]}>{item.quantity}</Text>
             <Text style={[styles.cellText, styles.colPrice]}>{fmt(item.unitPrice, currency)}</Text>
-            <Text style={[styles.cellBold, styles.colTotal]}>{fmt(item.total, currency)}</Text>
+            <Text style={[styles.cellStrong, styles.colTotal]}>{fmt(item.total, currency)}</Text>
           </View>
         ))}
 
         {/* Totals */}
-        <View style={styles.totalsSection}>
-          <View style={styles.totalsBox}>
+        <View style={styles.totalsWrap}>
+          <View style={styles.totalsList}>
             <View style={styles.totalsRow}>
               <Text style={styles.totalsLabel}>Subtotal</Text>
               <Text style={styles.totalsValue}>{fmt(invoice.subtotal, currency)}</Text>
@@ -355,7 +412,7 @@ export function InvoicePDF({
             {invoice.discount > 0 && (
               <View style={styles.totalsRow}>
                 <Text style={styles.totalsLabel}>Discount</Text>
-                <Text style={[styles.totalsValue, { color: "#A85614" }]}>-{fmt(invoice.discount, currency)}</Text>
+                <Text style={styles.totalsDiscount}>-{fmt(invoice.discount, currency)}</Text>
               </View>
             )}
             {invoice.taxRate > 0 && (
@@ -366,11 +423,11 @@ export function InvoicePDF({
             )}
             {invoice.exchangeRate && (
               <View style={styles.totalsRow}>
-                <Text style={styles.totalsLabel}>Exchange Rate</Text>
+                <Text style={styles.totalsLabel}>Exchange rate</Text>
                 <Text style={styles.totalsValue}>1 USD = {invoice.exchangeRate} CNY</Text>
               </View>
             )}
-            <View style={styles.totalsFinalRow}>
+            <View style={styles.totalsFinal}>
               <Text style={styles.totalsFinalLabel}>Total Due</Text>
               <Text style={styles.totalsFinalValue}>{fmt(invoice.total, currency)}</Text>
             </View>
@@ -385,26 +442,52 @@ export function InvoicePDF({
           </View>
         )}
 
-        {/* Wiring Instructions */}
-        <View style={styles.wiringSection}>
-          <View style={styles.wiringBox}>
-            <View style={styles.wiringBoxHeader}>
-              <Text style={styles.wiringBoxTitle}>Wiring Instructions</Text>
-            </View>
-            {[
-              ["Beneficiary", "UBINSIGHTS LLC"],
-              ["Bank", "Bank of America"],
-              ["Account No.", "325201682368"],
-              ["Routing No.", "026009593"],
-              ["SWIFT Code", "BOFAUS3N"],
-              ["Bank Address", "Bank of America, N.A., 222 Broadway, New York, NY 10038"],
-              ["Beneficiary Address", "28016 Ridgebluff Ct., Rancho Palos Verdes, CA 90275"],
-            ].map(([label, value]) => (
-              <View key={label} style={styles.wiringRow}>
-                <Text style={styles.wiringLabel}>{label}</Text>
-                <Text style={styles.wiringValue}>{value}</Text>
+        {/* Spacer pushes wire panel to the bottom of the page */}
+        <View style={styles.spacer} />
+
+        {/* Wire transfer (bottom-anchored) */}
+        <View style={styles.wireBlock}>
+          <Text style={styles.wireTitle}>Wire transfer details</Text>
+          <View style={styles.wireGrid}>
+            {/* Left column: short fields */}
+            <View style={styles.wireCol}>
+              <View style={styles.wireRowFirst}>
+                <Text style={styles.wireKey}>Beneficiary</Text>
+                <Text style={styles.wireVal}>UBINSIGHTS LLC</Text>
               </View>
-            ))}
+              <View style={styles.wireRow}>
+                <Text style={styles.wireKey}>Bank</Text>
+                <Text style={styles.wireVal}>Bank of America</Text>
+              </View>
+              <View style={styles.wireRow}>
+                <Text style={styles.wireKey}>Account No.</Text>
+                <Text style={styles.wireVal}>325201682368</Text>
+              </View>
+              <View style={styles.wireRow}>
+                <Text style={styles.wireKey}>Routing No.</Text>
+                <Text style={styles.wireVal}>026009593</Text>
+              </View>
+              <View style={styles.wireRow}>
+                <Text style={styles.wireKey}>SWIFT Code</Text>
+                <Text style={styles.wireVal}>BOFAUS3N</Text>
+              </View>
+            </View>
+
+            {/* Right column: addresses */}
+            <View style={styles.wireCol}>
+              <View style={styles.wireRowFirst}>
+                <Text style={styles.wireKey}>Bank Address</Text>
+                <Text style={styles.wireVal}>
+                  Bank of America, N.A., 222 Broadway, New York, NY 10038
+                </Text>
+              </View>
+              <View style={styles.wireRowAddressGap}>
+                <Text style={styles.wireKey}>Beneficiary Address</Text>
+                <Text style={styles.wireVal}>
+                  28016 Ridgebluff Ct., Rancho Palos Verdes, CA 90275
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
