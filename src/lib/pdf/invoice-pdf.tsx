@@ -243,6 +243,7 @@ const styles = StyleSheet.create({
   wireVal: {
     flex: 1,
     fontSize: 8.5,
+    fontWeight: "normal" as const,
     color: COLORS.ink900,
     lineHeight: 1.35,
   },

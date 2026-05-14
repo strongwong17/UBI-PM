@@ -97,11 +97,11 @@ Five tiers, all using `NotoSansSC` with the existing regular / variable-bold set
 - **Drop** the boxed/bordered look (the `totalsBox` with internal dividers and a separate "final row" container).
 - Right-aligned open list, ~280pt wide.
 - Each breakdown row (Subtotal, Discount, Tax, Exchange Rate): label in body 10pt `#5C6378`, value in body-strong 10pt `#0F1729` (Discount value keeps `#A85614`). 5pt vertical padding per row.
-- **Final row** ("Total Due"): a strong rule above (`#1F2A44`, 1.4pt), 14pt padding-top, 8pt margin-top. Label is subhead (12pt bold `#0F1729` uppercase + 0.06em tracking, reading "TOTAL DUE"). Value is **display 30pt bold `#D9522B`** — the focal point.
+- **Final row** ("Total Due"): a strong rule above (`#1F2A44`, 1.4pt), 10pt padding-top, 6pt margin-top. Label is subhead (12pt bold `#0F1729` uppercase + 0.06em tracking, reading "TOTAL DUE"). Value is **display 30pt bold `#D9522B`** — the focal point.
 
 #### Notes
-- Caption "Notes" label, then body 10pt `#525873`, line-height 1.55.
-- 30px top margin from the totals block.
+- Caption "Notes" label, then body 10pt `#525873`, line-height 1.4.
+- 18pt top margin from the totals block.
 
 #### Wire transfer details (currently "Wiring Instructions")
 
