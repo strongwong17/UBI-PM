@@ -91,11 +91,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   fieldHeadline: {
-    fontSize: 18,
+    fontSize: 14,
     fontFamily: "NotoSansSC",
     fontWeight: "bold" as const,
     color: COLORS.ink900,
-    lineHeight: 1.15,
+    lineHeight: 1.2,
   },
   fieldLine: {
     fontSize: 10,
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.7,
   },
   totalsFinalValue: {
-    fontSize: 30,
+    fontSize: 22,
     fontFamily: "NotoSansSC",
     fontWeight: "bold" as const,
     color: COLORS.accent,

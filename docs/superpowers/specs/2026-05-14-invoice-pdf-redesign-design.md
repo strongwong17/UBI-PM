@@ -57,19 +57,28 @@ Both cream surfaces are deleted. The redesign relies entirely on rules and white
 
 ### 2. Type ladder
 
-Five tiers, all using `NotoSansSC` with the existing regular / variable-bold setup. Sizes are in pt (PDF unit).
+Six tiers, all using `NotoSansSC`. Sizes are in pt (PDF unit).
 
 | Tier | Size | Weight | Color | Used for |
 |------|------|--------|-------|---------|
-| **Display** | 30pt | bold | `#D9522B` | The Total Due value, only. The largest element on the page. |
-| **Headline** | 18pt | bold | `#0F1729` | Invoice number (top-right), Bill-To name, Project title, company name (top-left). |
+| **Display** | 22pt | bold | `#D9522B` | The Total Due value, only. The largest element on the page. |
+| **Headline** | 18pt | bold | `#0F1729` | Invoice number (top-right) and company name (top-left) — both short by convention. |
+| **Subheadline** | 14pt | bold | `#0F1729` | Bill-To name and Project title — content-bearing field headlines that need to accommodate longer real-world strings. |
 | **Subhead** | 12pt | bold | `#0F1729` | Section names ("Wire transfer details", "Total Due" label). Uppercase + 0.06em tracking on the "Total Due" label, no transform on body subheads. |
 | **Body strong** | 10pt | bold | `#0F1729` | Line item descriptions, line item totals, totals breakdown values, wire transfer values. |
 | **Body** | 10pt | regular | `#525873` | Billing detail lines, notes body, qty / unit price columns, totals breakdown labels. |
 | **Caption** | 8.5pt | bold | `#5C6378` | Section labels ("Billed to", "Project", "Notes"), table header cells, wire transfer row labels, footer. Uppercase + 0.08em tracking. |
 | **Eyebrow** | 9.5pt | bold | `#5C6378` | Single use: the small "INVOICE" eyebrow above the invoice number. Uppercase + 0.12em tracking. |
 
+**Font weight requires two physical files.** `@react-pdf/renderer` does not synthesize bold from a regular file or use variable-font weight axes. The bold weight must point at an actual bold font file. `src/lib/pdf/register-fonts.ts` registers two files:
+- `public/fonts/NotoSansSC-Regular.ttf` for `fontWeight: "normal"` (existing 17MB CJK file)
+- `public/fonts/NotoSansSC-Bold.otf` for `fontWeight: "bold"` (8.1MB CJK bold file from notofonts; added as part of this redesign)
+
+Without the bold file, every `fontWeight: "bold"` in the StyleSheet renders identically to regular and the entire type ladder collapses to size-only contrast.
+
 @react-pdf/renderer supports `textTransform`, `letterSpacing`, and `fontWeight` (already used in the current code). It does **not** support `fontFeatureSettings`, so tabular numerals are not enforced; rely on NotoSansSC's default digit metrics, which are close enough at the sizes used.
+
+**Latin-glyph ligature caveat.** NotoSansSC's Latin glyphs use `fi` / `ff` / `ffi` ligatures whose `ToUnicode` CMAP mapping is incorrect, so PDFs render correctly visually but text-extraction (copy-paste, screen readers) drops characters — "Beneficiary" becomes "Benefciary", "Ridgebluff" becomes "Ridgebluf". This is pre-existing behavior and not addressed in this redesign; flag as a future fix (would likely require a separate Latin font family for the wire panel and header chrome, or a font whose Latin ligature CMAP is correct).
 
 ### 3. Structural changes (top to bottom)
 
@@ -84,7 +93,7 @@ Five tiers, all using `NotoSansSC` with the existing regular / variable-bold set
 #### Bill To / Project
 - **Drop** the `billingSection` cream-panel + 14px padding + 8px radius treatment entirely.
 - Add a single faint hairline rule (`#E8E5DD`, 1pt) above the section to separate it from the header.
-- Render as a clean two-column block on white. Left column: caption "Billed to" → headline 18pt name → body lines for address / email. Right column: caption "Project" → headline 18pt project title → body lines for contact / project number.
+- Render as a clean two-column block on white. Left column: caption "Billed to" → subheadline 14pt name → body lines for address / email. Right column: caption "Project" → subheadline 14pt project title → body lines for contact / project number. The 14pt name size accommodates longer real-world client names and project titles (e.g. "College Students Recruitment - US" or 北京谦诚致远市场咨询有限公司) on a single line within the column width.
 - 28px gap between columns. Section uses 18px top margin from the divider rule.
 
 #### Line-items table
@@ -97,7 +106,7 @@ Five tiers, all using `NotoSansSC` with the existing regular / variable-bold set
 - **Drop** the boxed/bordered look (the `totalsBox` with internal dividers and a separate "final row" container).
 - Right-aligned open list, ~280pt wide.
 - Each breakdown row (Subtotal, Discount, Tax, Exchange Rate): label in body 10pt `#5C6378`, value in body-strong 10pt `#0F1729` (Discount value keeps `#A85614`). 5pt vertical padding per row.
-- **Final row** ("Total Due"): a strong rule above (`#1F2A44`, 1.4pt), 10pt padding-top, 6pt margin-top. Label is subhead (12pt bold `#0F1729` uppercase + 0.06em tracking, reading "TOTAL DUE"). Value is **display 30pt bold `#D9522B`** — the focal point.
+- **Final row** ("Total Due"): a strong rule above (`#1F2A44`, 1.4pt), 10pt padding-top, 6pt margin-top. Label is subhead (12pt bold `#0F1729` uppercase + 0.06em tracking, reading "TOTAL DUE"). Value is **display 22pt bold `#D9522B`** — the focal point (still the largest text on the page, but not visually overwhelming).
 
 #### Notes
 - Caption "Notes" label, then body 10pt `#525873`, line-height 1.4.

@@ -13,8 +13,7 @@ export function registerFonts() {
     family: "NotoSansSC",
     fonts: [
       { src: path.join(fontsDir, "NotoSansSC-Regular.ttf"), fontWeight: "normal" },
-      // Variable font — same file for bold (renders correctly)
-      { src: path.join(fontsDir, "NotoSansSC-Regular.ttf"), fontWeight: "bold" },
+      { src: path.join(fontsDir, "NotoSansSC-Bold.otf"), fontWeight: "bold" },
     ],
   });
 }
