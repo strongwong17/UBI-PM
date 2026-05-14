@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Loader2, Save } from "lucide-react";
+import { Loader2, Plus, Save, Trash2 } from "lucide-react";
 
 interface LineItem {
   id: string;
@@ -54,12 +54,54 @@ export function InvoiceLineEditor({
     return { subtotal, tax, total: taxable + tax };
   }, [items, discount, taxRate]);
 
+  function updateDescription(idx: number, description: string) {
+    setItems((prev) => {
+      const updated = [...prev];
+      updated[idx] = { ...updated[idx], description };
+      return updated;
+    });
+  }
+
   function updateQuantity(idx: number, qty: number) {
     setItems((prev) => {
       const updated = [...prev];
-      updated[idx] = { ...updated[idx], quantity: qty, total: qty * updated[idx].unitPrice };
+      updated[idx] = {
+        ...updated[idx],
+        quantity: qty,
+        total: qty * updated[idx].unitPrice,
+      };
       return updated;
     });
+  }
+
+  function updateUnitPrice(idx: number, unitPrice: number) {
+    setItems((prev) => {
+      const updated = [...prev];
+      updated[idx] = {
+        ...updated[idx],
+        unitPrice,
+        total: updated[idx].quantity * unitPrice,
+      };
+      return updated;
+    });
+  }
+
+  function addRow() {
+    setItems((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        description: "",
+        quantity: 1,
+        unitPrice: 0,
+        total: 0,
+        sortOrder: prev.length,
+      },
+    ]);
+  }
+
+  function removeRow(idx: number) {
+    setItems((prev) => prev.filter((_, i) => i !== idx));
   }
 
   const fmt = (n: number) =>
@@ -102,15 +144,23 @@ export function InvoiceLineEditor({
         <TableHeader>
           <TableRow>
             <TableHead>Description</TableHead>
-            <TableHead className="text-right w-[120px]">Qty</TableHead>
-            <TableHead className="text-right">Unit Price</TableHead>
+            <TableHead className="text-right w-[100px]">Qty</TableHead>
+            <TableHead className="text-right w-[140px]">Unit Price</TableHead>
             <TableHead className="text-right">Total</TableHead>
+            <TableHead className="w-[40px]" />
           </TableRow>
         </TableHeader>
         <TableBody>
           {items.map((item, idx) => (
             <TableRow key={item.id}>
-              <TableCell className="font-medium text-sm">{item.description}</TableCell>
+              <TableCell>
+                <Input
+                  type="text"
+                  value={item.description}
+                  onChange={(e) => updateDescription(idx, e.target.value)}
+                  className="h-8"
+                />
+              </TableCell>
               <TableCell className="text-right">
                 <Input
                   type="number"
@@ -118,19 +168,43 @@ export function InvoiceLineEditor({
                   step="any"
                   value={item.quantity}
                   onChange={(e) => updateQuantity(idx, parseFloat(e.target.value) || 0)}
-                  className="w-24 ml-auto text-right h-8"
+                  className="w-20 ml-auto text-right h-8"
                 />
               </TableCell>
-              <TableCell className="text-right text-sm">
-                {sym}{fmt(item.unitPrice)}
+              <TableCell className="text-right">
+                <Input
+                  type="number"
+                  min={0}
+                  step="any"
+                  value={item.unitPrice}
+                  onChange={(e) => updateUnitPrice(idx, parseFloat(e.target.value) || 0)}
+                  className="w-28 ml-auto text-right h-8"
+                />
               </TableCell>
               <TableCell className="text-right text-sm font-medium">
                 {sym}{fmt(item.quantity * item.unitPrice)}
+              </TableCell>
+              <TableCell className="text-right">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-gray-400 hover:text-red-600"
+                  onClick={() => removeRow(idx)}
+                  aria-label="Remove line item"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      <div className="flex">
+        <Button variant="outline" size="sm" onClick={addRow}>
+          <Plus className="h-4 w-4 mr-1" /> Add line
+        </Button>
+      </div>
 
       <div className="mt-6 pt-4 border-t">
         <div className="max-w-xs ml-auto space-y-2">
