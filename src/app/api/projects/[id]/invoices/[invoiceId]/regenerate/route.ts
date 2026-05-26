@@ -16,7 +16,7 @@ export async function POST(
     const { id, invoiceId } = await params;
 
     const existing = await prisma.invoice.findUnique({ where: { id: invoiceId } });
-    if (!existing || existing.projectId !== id) {
+    if (!existing || existing.projectId !== id || existing.deletedAt) {
       return NextResponse.json({ error: "Invoice not found for this project" }, { status: 404 });
     }
     if (existing.status === "PAID") {
@@ -43,6 +43,12 @@ export async function POST(
     });
     if (!estimate) {
       return NextResponse.json({ error: "Source estimate not found" }, { status: 404 });
+    }
+    if (estimate.parentEstimateId) {
+      return NextResponse.json(
+        { error: "Cannot regenerate from RMB-duplicate estimate" },
+        { status: 400 }
+      );
     }
 
     const built = buildInvoiceFromEstimate(estimate);
