@@ -396,7 +396,7 @@ export function DeliverySignoffTab({
       {/* Multi-estimate picker — chip row, surfaces invoice status per estimate.
           Shown whenever there are multiple approved estimates so the user can
           see at a glance which have been invoiced and which still need actuals. */}
-      {estimates.length > 1 && (
+      {!correctInvoiceId && estimates.length > 1 && (
         <div className="space-y-2">
           <p className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-500 m-0">
             {`// ESTIMATES · ${estimates.length}`}
