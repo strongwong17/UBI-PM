@@ -4,6 +4,7 @@ import { requireAuth, isAuthError } from "@/lib/require-auth";
 import { prisma } from "@/lib/prisma";
 import { logActivity } from "@/lib/activity-log";
 import { generateInvoiceNumber } from "@/lib/generate-number";
+import { buildInvoiceFromEstimate } from "@/lib/invoice-from-estimate";
 
 type SliceLine = { estimateLineItemId: string; quantity: number; description?: string };
 
@@ -74,29 +75,16 @@ export async function POST(
     const invoiceLines: { description: string; quantity: number; unitPrice: number; total: number; sortOrder: number; estimateLineItemId: string | null }[] = [];
 
     if (mode === "SLICE") {
-      if (!lines || lines.length === 0) {
-        return NextResponse.json({ error: "lines required for SLICE mode" }, { status: 400 });
+      // Bill from the estimate's confirmed delivered quantities. Percentage
+      // lines (e.g. 10% of incentives, 15% of subtotal) are re-derived here.
+      const built = buildInvoiceFromEstimate(estimate);
+      if (built.lineItems.length === 0) {
+        return NextResponse.json(
+          { error: "No billable lines (nothing delivered)" },
+          { status: 400 }
+        );
       }
-      const allEstimateLines = estimate.phases.flatMap((p) => p.lineItems);
-      let sortOrder = 0;
-      for (const ln of lines) {
-        const src = allEstimateLines.find((l) => l.id === ln.estimateLineItemId);
-        if (!src) {
-          return NextResponse.json({ error: `Estimate line ${ln.estimateLineItemId} not found` }, { status: 400 });
-        }
-        if (ln.quantity <= 0) continue;
-        invoiceLines.push({
-          description: ln.description ?? src.description,
-          quantity: ln.quantity,
-          unitPrice: src.unitPrice,
-          total: ln.quantity * src.unitPrice,
-          sortOrder: sortOrder++,
-          estimateLineItemId: src.id,
-        });
-      }
-      if (invoiceLines.length === 0) {
-        return NextResponse.json({ error: "No billable lines (all quantities are zero)" }, { status: 400 });
-      }
+      invoiceLines.push(...built.lineItems);
     } else if (mode === "PERCENT") {
       if (typeof percent !== "number" || percent <= 0 || percent > 100) {
         return NextResponse.json({ error: "percent must be 0..100" }, { status: 400 });
