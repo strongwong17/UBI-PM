@@ -135,8 +135,9 @@ export async function PATCH(
         await checkAndAutoArchive(existing.projectId, userId);
       }
     } else {
-      const changes: Record<string, { from: unknown; to: unknown }> = {};
-      if (discount !== undefined && discount !== existing.discount) {
+      const changes: Record<string, unknown> = {};
+      const discountChanged = discount !== undefined && discount !== existing.discount;
+      if (discountChanged) {
         changes.discount = { from: existing.discount, to: discount };
       }
       if (issuedDate !== undefined) {
@@ -156,11 +157,11 @@ export async function PATCH(
         changes.contactEmail = { from: existing.contactEmail, to: contactEmail };
       }
       if (lineItems && Array.isArray(lineItems)) {
-        changes.lineItemsChanged = { from: false, to: true };
-        // The transaction above already recomputed subtotal/tax/total when
-        // lineItems were sent; surface the new total alongside the old.
-        changes.total = { from: existing.total, to: invoice.total };
-      } else if (discount !== undefined && discount !== existing.discount) {
+        changes.lineItemsChanged = true;
+      }
+      // The transaction recomputes totals when lineItems or discount change;
+      // record the total only when it actually moved.
+      if (invoice.total !== existing.total) {
         changes.total = { from: existing.total, to: invoice.total };
       }
 
