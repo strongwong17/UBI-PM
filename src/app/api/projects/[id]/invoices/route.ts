@@ -6,8 +6,6 @@ import { logActivity } from "@/lib/activity-log";
 import { generateInvoiceNumber } from "@/lib/generate-number";
 import { buildInvoiceFromEstimate } from "@/lib/invoice-from-estimate";
 
-type SliceLine = { estimateLineItemId: string; quantity: number; description?: string };
-
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -22,7 +20,6 @@ export async function POST(
     const {
       estimateId,
       mode,
-      lines,
       percent,
       flatAmount,
       flatDescription,
@@ -32,7 +29,6 @@ export async function POST(
     } = body as {
       estimateId?: string;
       mode?: "SLICE" | "PERCENT" | "FLAT";
-      lines?: SliceLine[];
       percent?: number;
       flatAmount?: number;
       flatDescription?: string;

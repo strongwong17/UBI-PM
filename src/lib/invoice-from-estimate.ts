@@ -70,12 +70,11 @@ export function buildInvoiceFromEstimate(
           estimateLineItemId: src.id,
         });
       } else {
-        const q = src.deliveredQuantity ?? 0;
         lineItems.push({
           description: src.description,
-          quantity: q,
+          quantity: src.deliveredQuantity ?? 0,
           unitPrice: src.unitPrice,
-          total: q * src.unitPrice,
+          total,
           sortOrder: sortOrder++,
           estimateLineItemId: src.id,
         });
