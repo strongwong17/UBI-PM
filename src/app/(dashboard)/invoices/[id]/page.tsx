@@ -8,7 +8,7 @@ import { InvoiceStatusChanger } from "@/components/invoices/invoice-status-chang
 import { CreateRmbInvoiceButton } from "@/components/invoices/create-rmb-invoice-button";
 import { InvoiceLineEditor } from "@/components/invoices/invoice-line-editor";
 import { auth } from "@/lib/auth";
-import { InvoiceCorrectionShell } from "@/components/invoices/invoice-correction-shell";
+import { ReopenCorrectionButton } from "@/components/invoices/reopen-correction-button";
 
 export default async function InvoiceDetailPage({
   params,
@@ -108,6 +108,16 @@ export default async function InvoiceDetailPage({
           </div>
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
+            {isAdmin &&
+              invoice.status !== "DRAFT" &&
+              invoice.status !== "PAID" &&
+              invoice.estimateId && (
+                <ReopenCorrectionButton
+                  invoiceId={invoice.id}
+                  projectId={invoice.project.id}
+                  estimateId={invoice.estimateId}
+                />
+              )}
             <InvoiceStatusChanger invoiceId={invoice.id} currentStatus={invoice.status} />
             {!invoice.parentInvoiceId && (
               <CreateRmbInvoiceButton
@@ -166,140 +176,112 @@ export default async function InvoiceDetailPage({
               </div>
             </div>
           ) : (
-            (() => {
-              const readOnlyLineItemsBlock = (
-                <div>
-                  <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
-                    {"// LINE ITEMS"}
-                  </p>
+            <>
+              <div>
+                <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+                  {"// LINE ITEMS"}
+                </p>
+                <div
+                  className="bg-card-rd rounded-[14px] overflow-hidden"
+                  style={{
+                    border: "1px solid var(--color-hairline)",
+                    boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                  }}
+                >
+                  {/* Column header band */}
                   <div
-                    className="bg-card-rd rounded-[14px] overflow-hidden"
+                    className="grid gap-3 px-5 py-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.06em]"
                     style={{
-                      border: "1px solid var(--color-hairline)",
-                      boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                      gridTemplateColumns: "1fr 70px 110px 120px",
+                      background: "#FAFAF6",
+                      borderBottom: "1px solid var(--color-hairline)",
+                      color: "var(--color-ink-400)",
                     }}
                   >
-                    {/* Column header band */}
+                    <span>Description</span>
+                    <span className="text-right">Qty</span>
+                    <span className="text-right">Unit price</span>
+                    <span className="text-right">Total</span>
+                  </div>
+
+                  {/* Lines */}
+                  {invoice.lineItems.map((item, i) => (
                     <div
-                      className="grid gap-3 px-5 py-2.5 font-mono text-[9px] font-bold uppercase tracking-[0.06em]"
+                      key={item.id}
+                      className="grid gap-3 items-center px-5 py-3 hover:bg-[#FCFAF6] transition-colors"
                       style={{
                         gridTemplateColumns: "1fr 70px 110px 120px",
-                        background: "#FAFAF6",
-                        borderBottom: "1px solid var(--color-hairline)",
-                        color: "var(--color-ink-400)",
+                        borderBottom:
+                          i < invoice.lineItems.length - 1
+                            ? "1px solid var(--color-hairline)"
+                            : "none",
                       }}
                     >
-                      <span>Description</span>
-                      <span className="text-right">Qty</span>
-                      <span className="text-right">Unit price</span>
-                      <span className="text-right">Total</span>
-                    </div>
-
-                    {/* Lines */}
-                    {invoice.lineItems.map((item, i) => (
-                      <div
-                        key={item.id}
-                        className="grid gap-3 items-center px-5 py-3 hover:bg-[#FCFAF6] transition-colors"
-                        style={{
-                          gridTemplateColumns: "1fr 70px 110px 120px",
-                          borderBottom:
-                            i < invoice.lineItems.length - 1
-                              ? "1px solid var(--color-hairline)"
-                              : "none",
-                        }}
-                      >
-                        <div className="text-[13px] font-medium text-ink-900 leading-[1.3] tracking-[-0.005em]">
-                          {item.description}
-                        </div>
-                        <div className="text-right text-[13px] text-ink-700 rd-tabular">
-                          {item.quantity}
-                        </div>
-                        <div className="text-right text-[13px] text-ink-700 rd-tabular">
-                          {sym}{fmt(item.unitPrice)}
-                        </div>
-                        <div className="text-right text-[13px] font-medium text-ink-900 rd-tabular">
-                          {sym}{fmt(item.total)}
-                        </div>
+                      <div className="text-[13px] font-medium text-ink-900 leading-[1.3] tracking-[-0.005em]">
+                        {item.description}
                       </div>
-                    ))}
-                  </div>
+                      <div className="text-right text-[13px] text-ink-700 rd-tabular">
+                        {item.quantity}
+                      </div>
+                      <div className="text-right text-[13px] text-ink-700 rd-tabular">
+                        {sym}{fmt(item.unitPrice)}
+                      </div>
+                      <div className="text-right text-[13px] font-medium text-ink-900 rd-tabular">
+                        {sym}{fmt(item.total)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              );
+              </div>
 
-              const readOnlyTotalsBlock = (
-                <div>
-                  <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
-                    {"// TOTALS"}
-                  </p>
-                  <div
-                    className="bg-card-rd rounded-[14px] p-5"
-                    style={{
-                      border: "1px solid var(--color-hairline)",
-                      boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
-                    }}
-                  >
-                    <div className="max-w-xs ml-auto space-y-1.5">
+              {/* Totals */}
+              <div>
+                <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
+                  {"// TOTALS"}
+                </p>
+                <div
+                  className="bg-card-rd rounded-[14px] p-5"
+                  style={{
+                    border: "1px solid var(--color-hairline)",
+                    boxShadow: "0 1px 2px rgba(15, 23, 41, 0.04)",
+                  }}
+                >
+                  <div className="max-w-xs ml-auto space-y-1.5">
+                    <div className="flex justify-between text-[12px]">
+                      <span className="text-ink-500">Subtotal</span>
+                      <span className="font-mono rd-tabular text-ink-700">
+                        {sym}{fmt(invoice.subtotal)}
+                      </span>
+                    </div>
+                    {invoice.discount > 0 && (
                       <div className="flex justify-between text-[12px]">
-                        <span className="text-ink-500">Subtotal</span>
+                        <span className="text-ink-500">Discount</span>
+                        <span className="font-mono rd-tabular text-warn-fg">
+                          −{sym}{fmt(invoice.discount)}
+                        </span>
+                      </div>
+                    )}
+                    {invoice.taxRate > 0 && (
+                      <div className="flex justify-between text-[12px]">
+                        <span className="text-ink-500">Tax ({invoice.taxRate}%)</span>
                         <span className="font-mono rd-tabular text-ink-700">
-                          {sym}{fmt(invoice.subtotal)}
+                          {sym}{fmt(invoice.tax)}
                         </span>
                       </div>
-                      {invoice.discount > 0 && (
-                        <div className="flex justify-between text-[12px]">
-                          <span className="text-ink-500">Discount</span>
-                          <span className="font-mono rd-tabular text-warn-fg">
-                            −{sym}{fmt(invoice.discount)}
-                          </span>
-                        </div>
-                      )}
-                      {invoice.taxRate > 0 && (
-                        <div className="flex justify-between text-[12px]">
-                          <span className="text-ink-500">Tax ({invoice.taxRate}%)</span>
-                          <span className="font-mono rd-tabular text-ink-700">
-                            {sym}{fmt(invoice.tax)}
-                          </span>
-                        </div>
-                      )}
-                      <div
-                        className="flex justify-between pt-2 mt-2"
-                        style={{ borderTop: "1px solid var(--color-hairline)" }}
-                      >
-                        <span className="text-[13px] font-bold text-ink-900">Total</span>
-                        <span className="font-mono rd-tabular text-[16px] font-bold text-accent-rd">
-                          {sym}{fmt(invoice.total)}
-                        </span>
-                      </div>
+                    )}
+                    <div
+                      className="flex justify-between pt-2 mt-2"
+                      style={{ borderTop: "1px solid var(--color-hairline)" }}
+                    >
+                      <span className="text-[13px] font-bold text-ink-900">Total</span>
+                      <span className="font-mono rd-tabular text-[16px] font-bold text-accent-rd">
+                        {sym}{fmt(invoice.total)}
+                      </span>
                     </div>
                   </div>
                 </div>
-              );
-
-              return (
-                <InvoiceCorrectionShell
-                  invoiceId={invoice.id}
-                  isAdmin={isAdmin}
-                  lineItems={invoice.lineItems.map((li) => ({
-                    id: li.id,
-                    description: li.description,
-                    quantity: li.quantity,
-                    unitPrice: li.unitPrice,
-                    total: li.total,
-                    sortOrder: li.sortOrder,
-                  }))}
-                  discount={invoice.discount}
-                  taxRate={invoice.taxRate}
-                  currencySymbol={sym}
-                  issuedDate={invoice.issuedDate ? invoice.issuedDate.toISOString().slice(0, 10) : null}
-                  dueDate={invoice.dueDate ? invoice.dueDate.toISOString().slice(0, 10) : null}
-                  notes={invoice.notes}
-                  contactEmail={invoice.contactEmail}
-                  readOnlyLineItemsBlock={readOnlyLineItemsBlock}
-                  readOnlyTotalsBlock={readOnlyTotalsBlock}
-                  readOnlyMetadataBlock={null}
-                />
-              );
-            })()
+              </div>
+            </>
           )}
 
           {invoice.notes && (
