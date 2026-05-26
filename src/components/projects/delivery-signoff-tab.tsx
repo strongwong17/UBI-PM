@@ -184,6 +184,7 @@ export function DeliverySignoffTab({
   // Multi-estimate selection — honor ?estimate=<id> when arriving from the
   // Invoices tab's "Generate invoice" link, so the right estimate is preselected.
   const requestedEstimateId = searchParams.get("estimate");
+  const correctInvoiceId = searchParams.get("correctInvoice");
   const initialEstimateId =
     requestedEstimateId && estimates.some((e) => e.id === requestedEstimateId)
       ? requestedEstimateId
@@ -294,24 +295,31 @@ export function DeliverySignoffTab({
     try {
       await persistDelivery();
       if (signoffChanged) await persistSignoff();
-      const slice = activeEstimate.lines
-        .filter((l) => (edits[activeEstimate.id]?.[l.id] ?? 0) > 0)
-        .map((l) => ({
-          estimateLineItemId: l.id,
-          quantity: edits[activeEstimate.id]![l.id]!,
-        }));
-      const r3 = await fetch(`/api/projects/${projectId}/invoices`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ estimateId: activeEstimate.id, mode: "SLICE", lines: slice }),
-      });
-      if (!r3.ok) {
-        const j = await r3.json().catch(() => ({}));
-        throw new Error(j.error ?? "Failed to generate invoice");
+      if (correctInvoiceId) {
+        const r3 = await fetch(
+          `/api/projects/${projectId}/invoices/${correctInvoiceId}/regenerate`,
+          { method: "POST" }
+        );
+        if (!r3.ok) {
+          const j = await r3.json();
+          throw new Error(j.error ?? "Failed to regenerate invoice");
+        }
+        toast.success("Invoice regenerated from actuals");
+        router.push(`/invoices/${correctInvoiceId}`);
+      } else {
+        const r3 = await fetch(`/api/projects/${projectId}/invoices`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ estimateId: activeEstimate.id, mode: "SLICE" }),
+        });
+        if (!r3.ok) {
+          const j = await r3.json();
+          throw new Error(j.error ?? "Failed to generate invoice");
+        }
+        const inv = await r3.json();
+        toast.success("Draft invoice generated");
+        router.push(`/invoices/${inv.id}/send`);
       }
-      const inv = await r3.json();
-      toast.success("Draft invoice generated");
-      router.push(`/invoices/${inv.id}/send`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to confirm");
     } finally {
@@ -494,6 +502,20 @@ export function DeliverySignoffTab({
           </button>
         </div>
       </div>
+
+      {/* Correction-mode banner */}
+      {correctInvoiceId && (
+        <div
+          className="flex items-start gap-2 px-4 py-3 rounded-lg mb-4"
+          style={{ background: "#FFF7E6", border: "1px solid #F5C97A" }}
+        >
+          <div className="text-[12px] text-amber-900 leading-[1.4]">
+            Correcting an issued invoice. Adjust the confirmed quantities below, then
+            <strong> Save &amp; regenerate</strong> — the invoice will be updated in place and moved
+            back to draft for re-sending.
+          </div>
+        </div>
+      )}
 
       {/* Phase blocks */}
       {phaseGroups.map(({ phase, lines }, phaseIdx) => {
@@ -1038,6 +1060,8 @@ export function DeliverySignoffTab({
                 <Loader2 className="w-4 h-4 animate-spin" />
                 Generating…
               </>
+            ) : correctInvoiceId ? (
+              <>✓ Save &amp; regenerate invoice</>
             ) : (
               <>✓ Confirm &amp; generate draft invoice</>
             )}
