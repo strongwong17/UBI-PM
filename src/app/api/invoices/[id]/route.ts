@@ -135,12 +135,45 @@ export async function PATCH(
         await checkAndAutoArchive(existing.projectId, userId);
       }
     } else {
+      const changes: Record<string, { from: unknown; to: unknown }> = {};
+      if (discount !== undefined && discount !== existing.discount) {
+        changes.discount = { from: existing.discount, to: discount };
+      }
+      if (issuedDate !== undefined) {
+        const toIso = issuedDate ? new Date(issuedDate).toISOString() : null;
+        const fromIso = existing.issuedDate ? existing.issuedDate.toISOString() : null;
+        if (toIso !== fromIso) changes.issuedDate = { from: fromIso, to: toIso };
+      }
+      if (dueDate !== undefined) {
+        const toIso = dueDate ? new Date(dueDate).toISOString() : null;
+        const fromIso = existing.dueDate ? existing.dueDate.toISOString() : null;
+        if (toIso !== fromIso) changes.dueDate = { from: fromIso, to: toIso };
+      }
+      if (notes !== undefined && notes !== existing.notes) {
+        changes.notes = { from: existing.notes, to: notes };
+      }
+      if (contactEmail !== undefined && contactEmail !== existing.contactEmail) {
+        changes.contactEmail = { from: existing.contactEmail, to: contactEmail };
+      }
+      if (lineItems && Array.isArray(lineItems)) {
+        changes.lineItemsChanged = { from: false, to: true };
+        // The transaction above already recomputed subtotal/tax/total when
+        // lineItems were sent; surface the new total alongside the old.
+        changes.total = { from: existing.total, to: invoice.total };
+      } else if (discount !== undefined && discount !== existing.discount) {
+        changes.total = { from: existing.total, to: invoice.total };
+      }
+
+      const wasDraft = existing.status === "DRAFT";
       await logActivity({
         action: "UPDATE",
         entityType: "INVOICE",
         entityId: id,
         entityLabel: existing.invoiceNumber,
-        description: `Updated invoice ${existing.invoiceNumber}`,
+        description: wasDraft
+          ? `Updated invoice ${existing.invoiceNumber}`
+          : `Corrected invoice ${existing.invoiceNumber}`,
+        metadata: Object.keys(changes).length > 0 ? changes : undefined,
         userId,
         projectId: existing.projectId,
       });
