@@ -31,6 +31,10 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  resolveLineTotal as resolveSharedLineTotal,
+  type BillingPhase as SharedBillingPhase,
+} from "@/lib/estimate-totals";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -135,66 +139,36 @@ function newPhase(): Phase {
   return { _key: newKey(), name: "", description: "", lineItems: [newLineItem()], collapsed: false };
 }
 
-/** Resolve the total for a single line item, handling percentage mode.
- *  - SUBTOTAL: includes all items (fixed + resolved PHASE/LINE_ITEM percentages),
- *    but excludes other SUBTOTAL-based items to avoid circular refs.
- *  - PHASE: includes all fixed + resolved PHASE/LINE_ITEM items within the target phase,
- *    excludes SUBTOTAL-based items.
- *  - LINE_ITEM: percentage of a specific line item's resolved value.
- */
+/** Map the builder's client phases into the shared BillingPhase shape.
+ *  Identity = `_key`; LINE_ITEM reference = `basisLineItemKey`. */
+function toSharedPhases(allPhases: Phase[]): SharedBillingPhase[] {
+  return allPhases.map((p) => ({
+    name: p.name,
+    lines: p.lineItems.map((li) => ({
+      id: li._key,
+      quantity: li.quantity,
+      unitPrice: li.unitPrice,
+      percentageBasis: li.percentageBasis || null,
+      percentageRate: li.percentageRate,
+      basisPhaseName: li.basisPhaseName,
+      basisLineItemId: li.basisLineItemKey || null,
+    })),
+  }));
+}
+
+/** Resolve one line's total (planned quantities), via the shared resolver. */
 function resolveItemTotal(li: LineItem, allPhases: Phase[]): number {
-  if (!li.percentageBasis) return li.quantity * li.unitPrice;
-
-  const rate = (li.percentageRate || 0) / 100;
-
-  if (li.percentageBasis === "SUBTOTAL") {
-    // Include fixed items + resolved PHASE/LINE_ITEM items; exclude other SUBTOTAL items
-    let basis = 0;
-    for (const p of allPhases) {
-      for (const item of p.lineItems) {
-        if (item._key === li._key) continue;
-        if (!item.percentageBasis) {
-          basis += item.quantity * item.unitPrice;
-        } else if (item.percentageBasis !== "SUBTOTAL") {
-          // PHASE or LINE_ITEM — resolve their value and include
-          basis += resolveItemTotal(item, allPhases);
-        }
-      }
-    }
-    return basis * rate;
-  }
-
-  if (li.percentageBasis === "PHASE") {
-    const target = allPhases.find(
-      (p) => p.name.trim() !== "" && p.name.trim() === li.basisPhaseName.trim()
-    );
-    if (!target) return 0;
-    let basis = 0;
-    for (const item of target.lineItems) {
-      if (item._key === li._key) continue;
-      if (!item.percentageBasis) {
-        basis += item.quantity * item.unitPrice;
-      } else if (item.percentageBasis !== "SUBTOTAL") {
-        basis += resolveItemTotal(item, allPhases);
-      }
-    }
-    return basis * rate;
-  }
-
-  if (li.percentageBasis === "LINE_ITEM") {
-    for (const p of allPhases) {
-      const target = p.lineItems.find((item) => item._key === li.basisLineItemKey);
-      if (target) {
-        const basis = !target.percentageBasis
-          ? target.quantity * target.unitPrice
-          : resolveItemTotal(target, allPhases);
-        return basis * rate;
-      }
-    }
-    return 0;
-  }
-
-  return 0;
+  const shared = toSharedPhases(allPhases);
+  const self = {
+    id: li._key,
+    quantity: li.quantity,
+    unitPrice: li.unitPrice,
+    percentageBasis: li.percentageBasis || null,
+    percentageRate: li.percentageRate,
+    basisPhaseName: li.basisPhaseName,
+    basisLineItemId: li.basisLineItemKey || null,
+  };
+  return resolveSharedLineTotal(self, shared, (l) => l.quantity);
 }
 
 function phaseTotal(phase: Phase, allPhases: Phase[]) {
