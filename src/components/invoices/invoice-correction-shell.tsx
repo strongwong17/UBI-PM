@@ -86,6 +86,7 @@ export function InvoiceCorrectionShell({
         throw new Error(data.error || "Failed to save");
       }
       toast.success("Invoice details updated");
+      setEditing(false);
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to save");
@@ -95,6 +96,9 @@ export function InvoiceCorrectionShell({
   }
 
   // Non-admins or non-edit state: render the read-only blocks as-is.
+  // The early return keeps the editing/non-editing subtrees as distinct React
+  // identities, so InvoiceLineEditor remounts on every Edit/Cancel cycle and its
+  // local line-item/discount state resets to props — do not merge the branches.
   if (!isAdmin || !editing) {
     return (
       <>
@@ -121,7 +125,7 @@ export function InvoiceCorrectionShell({
       >
         <AlertTriangle className="h-4 w-4 text-amber-700 mt-0.5 flex-shrink-0" />
         <div className="text-[12px] text-amber-900 leading-[1.4]">
-          Editing a sent invoice. Saving will update the totals on the PDF and in the project&apos;s
+          Editing a non-draft invoice. Saving will update the totals on the PDF and in the project&apos;s
           billing summary. Activity will be recorded.
         </div>
         <div className="ml-auto">
