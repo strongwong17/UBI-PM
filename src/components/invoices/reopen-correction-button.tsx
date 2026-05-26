@@ -5,6 +5,17 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { RotateCcw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface ReopenCorrectionButtonProps {
   invoiceId: string;
@@ -20,14 +31,7 @@ export function ReopenCorrectionButton({
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  async function reopen() {
-    if (
-      !window.confirm(
-        "Reopen this invoice for correction? It moves back to DRAFT and returns to the Delivery & Sign-off stage so you can re-confirm the delivered quantities."
-      )
-    ) {
-      return;
-    }
+  async function handleReopen() {
     setLoading(true);
     try {
       const res = await fetch(`/api/invoices/${invoiceId}`, {
@@ -49,13 +53,33 @@ export function ReopenCorrectionButton({
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={reopen} disabled={loading}>
-      {loading ? (
-        <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-      ) : (
-        <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-      )}
-      Reopen for correction
-    </Button>
+    <AlertDialog>
+      <AlertDialogTrigger asChild>
+        <Button variant="outline" size="sm" disabled={loading}>
+          {loading ? (
+            <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+          ) : (
+            <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+          )}
+          Reopen for correction
+        </Button>
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Reopen invoice for correction?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This invoice will move back to DRAFT and return to the Delivery &amp; Sign-off stage so
+            you can re-confirm the delivered quantities and regenerate it.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleReopen} disabled={loading}>
+            {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Reopen for correction
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }

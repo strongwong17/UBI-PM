@@ -111,6 +111,7 @@ export default async function InvoiceDetailPage({
             {isAdmin &&
               invoice.status !== "DRAFT" &&
               invoice.status !== "PAID" &&
+              !invoice.parentInvoiceId &&
               invoice.estimateId && (
                 <ReopenCorrectionButton
                   invoiceId={invoice.id}

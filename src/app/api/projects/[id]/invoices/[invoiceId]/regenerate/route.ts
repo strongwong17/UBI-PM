@@ -25,6 +25,12 @@ export async function POST(
         { status: 400 }
       );
     }
+    if (existing.parentInvoiceId) {
+      return NextResponse.json(
+        { error: "Cannot regenerate an RMB-duplicate invoice; correct its original instead." },
+        { status: 400 }
+      );
+    }
     if (!existing.estimateId) {
       return NextResponse.json(
         { error: "Invoice has no source estimate to regenerate from" },
