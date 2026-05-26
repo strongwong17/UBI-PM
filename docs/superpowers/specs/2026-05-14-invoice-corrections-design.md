@@ -1,7 +1,7 @@
 # Invoice Corrections (Admin-Only Edit on Sent/Paid Invoices)
 
 **Date:** 2026-05-14
-**Status:** Approved (pending user review of this spec)
+**Status:** SUPERSEDED by `2026-05-26-invoice-correction-via-reconfirm-design.md`. The manual in-place line-item editing approach below (extended `InvoiceLineEditor` + `InvoiceCorrectionShell`) was replaced by a re-confirm + percentage-aware regeneration design. The admin-only PATCH gate (§2) and activity-log diff (§3) from this spec are retained; the manual-editing UI is reverted.
 
 ## Problem
 
