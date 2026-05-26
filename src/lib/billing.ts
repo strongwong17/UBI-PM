@@ -1,5 +1,7 @@
 // src/lib/billing.ts
 import type { Prisma } from "@/generated/prisma/client";
+import { estimateSubtotal } from "@/lib/estimate-billing";
+import { plannedQty, deliveredQty } from "@/lib/estimate-totals";
 
 export type ProjectForBilling = Prisma.ProjectGetPayload<{
   include: {
@@ -30,12 +32,8 @@ export function computeBillingState(project: ProjectForBilling): BillingState {
     if (!est.isApproved) continue;
     if (est.parentEstimateId) continue; // skip RMB duplicates
     if (est.currency !== primaryCurrency) continue;
-    for (const phase of est.phases) {
-      for (const li of phase.lineItems) {
-        estimated += li.quantity * li.unitPrice;
-        delivered += (li.deliveredQuantity ?? 0) * li.unitPrice;
-      }
-    }
+    estimated += estimateSubtotal(est, plannedQty);
+    delivered += estimateSubtotal(est, deliveredQty);
   }
 
   let invoiced = 0;

@@ -9,6 +9,8 @@ import { ProjectHubTabs } from "@/components/projects/project-hub-tabs";
 import { InquiryBriefForm } from "@/components/projects/inquiry-brief-form";
 import { DeliverySignoffTab } from "@/components/projects/delivery-signoff-tab";
 import { computeBillingState } from "@/lib/billing";
+import { estimateSubtotal } from "@/lib/estimate-billing";
+import { plannedQty } from "@/lib/estimate-totals";
 import { InvoicesTab } from "@/components/invoices/invoices-tab";
 import { EstimateApproveButton } from "@/components/estimates/estimate-approve-button";
 import { EstimateCardActions } from "@/components/estimates/estimate-card-actions";
@@ -77,11 +79,7 @@ export default async function ProjectHubPage({ params }: PageProps) {
     project.invoices.map((inv) => inv.estimateId).filter(Boolean)
   );
   function estimateTotal(estimate: NonNullable<typeof project>["estimates"][0]) {
-    const subtotal = estimate.phases.reduce(
-      (sum, phase) =>
-        sum + phase.lineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0),
-      0
-    );
+    const subtotal = estimateSubtotal(estimate, plannedQty);
     const discount = estimate.discount ?? 0;
     const taxRate = estimate.taxRate ?? 0;
     const taxable = subtotal - discount;
