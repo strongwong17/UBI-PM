@@ -294,14 +294,14 @@ export function DeliverySignoffTab({
     setConfirming(true);
     try {
       await persistDelivery();
-      if (signoffChanged) await persistSignoff();
+      if (signoffChanged && !correctInvoiceId) await persistSignoff();
       if (correctInvoiceId) {
         const r3 = await fetch(
           `/api/projects/${projectId}/invoices/${correctInvoiceId}/regenerate`,
           { method: "POST" }
         );
         if (!r3.ok) {
-          const j = await r3.json();
+          const j = await r3.json().catch(() => ({} as { error?: string }));
           throw new Error(j.error ?? "Failed to regenerate invoice");
         }
         toast.success("Invoice regenerated from actuals");
@@ -313,7 +313,7 @@ export function DeliverySignoffTab({
           body: JSON.stringify({ estimateId: activeEstimate.id, mode: "SLICE" }),
         });
         if (!r3.ok) {
-          const j = await r3.json();
+          const j = await r3.json().catch(() => ({} as { error?: string }));
           throw new Error(j.error ?? "Failed to generate invoice");
         }
         const inv = await r3.json();
@@ -1058,7 +1058,7 @@ export function DeliverySignoffTab({
             {confirming ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
-                Generating…
+                {correctInvoiceId ? "Regenerating…" : "Generating…"}
               </>
             ) : correctInvoiceId ? (
               <>✓ Save &amp; regenerate invoice</>
