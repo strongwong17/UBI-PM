@@ -9,6 +9,7 @@ import { CreateRmbInvoiceButton } from "@/components/invoices/create-rmb-invoice
 import { InvoiceLineEditor } from "@/components/invoices/invoice-line-editor";
 import { auth } from "@/lib/auth";
 import { ReopenCorrectionButton } from "@/components/invoices/reopen-correction-button";
+import { DeleteInvoiceButton } from "@/components/invoices/delete-invoice-button";
 
 export default async function InvoiceDetailPage({
   params,
@@ -19,7 +20,9 @@ export default async function InvoiceDetailPage({
 
   const session = await auth();
   if (!session?.user) redirect("/login");
-  const isAdmin = (session?.user as { role?: string })?.role === "ADMIN";
+  const role = (session?.user as { role?: string })?.role;
+  const isAdmin = role === "ADMIN";
+  const canDelete = role === "ADMIN" || role === "MANAGER";
 
   const invoice = await prisma.invoice.findUnique({
     where: { id },
@@ -141,6 +144,14 @@ export default async function InvoiceDetailPage({
             >
               <Download className="h-3.5 w-3.5" /> PDF
             </a>
+            {canDelete && (
+              <DeleteInvoiceButton
+                invoiceId={invoice.id}
+                invoiceNumber={invoice.invoiceNumber}
+                projectId={invoice.project.id}
+                status={invoice.status}
+              />
+            )}
           </div>
         </div>
       </div>
