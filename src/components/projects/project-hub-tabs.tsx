@@ -12,6 +12,7 @@ export function ProjectHubTabs({ tabs, defaultTab }: ProjectHubTabsProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const active = searchParams.get("tab") || defaultTab || tabs[0]?.value;
+  const activeTab = tabs.find((t) => t.value === active);
 
   function setActive(value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -35,7 +36,7 @@ export function ProjectHubTabs({ tabs, defaultTab }: ProjectHubTabsProps) {
           </button>
         ))}
       </div>
-      {tabs.find((t) => t.value === active)?.content}
+      {activeTab && <div key={activeTab.value}>{activeTab.content}</div>}
     </div>
   );
 }

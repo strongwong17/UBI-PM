@@ -461,6 +461,11 @@ export default async function ProjectHubPage({ params }: PageProps) {
                 quantity: l.quantity,
                 unitPrice: l.unitPrice,
                 deliveredQuantity: l.deliveredQuantity ?? null,
+                phaseName: p.name,
+                percentageBasis: l.percentageBasis ?? null,
+                percentageRate: l.percentageRate ?? null,
+                basisPhaseName: l.basisPhaseName ?? null,
+                basisLineItemDesc: l.basisLineItemDesc ?? null,
               }))
             ),
           };

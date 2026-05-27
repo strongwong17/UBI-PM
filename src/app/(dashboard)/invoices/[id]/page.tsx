@@ -38,6 +38,11 @@ export default async function InvoiceDetailPage({
     n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   const isDraft = invoice.status === "DRAFT";
+  // Inline manual editing only applies to invoices NOT generated from an estimate
+  // (FLAT/PERCENT one-offs). Estimate-derived invoices — which may carry
+  // percentage-derived lines the inline editor can't recompute — are corrected
+  // through the Reopen → re-confirm → regenerate path instead.
+  const showManualEditor = isDraft && !invoice.estimateId;
 
   return (
     <div className="space-y-6">
@@ -99,7 +104,7 @@ export default async function InvoiceDetailPage({
                   RMB
                 </span>
               )}
-              {isDraft && (
+              {showManualEditor && (
                 <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-accent-rd">
                   Editable
                 </span>
@@ -109,9 +114,7 @@ export default async function InvoiceDetailPage({
 
           <div className="flex items-center gap-2 flex-wrap justify-end">
             {isAdmin &&
-              invoice.status !== "DRAFT" &&
               invoice.status !== "PAID" &&
-              !invoice.parentInvoiceId &&
               invoice.estimateId && (
                 <ReopenCorrectionButton
                   invoiceId={invoice.id}
@@ -145,7 +148,7 @@ export default async function InvoiceDetailPage({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main column */}
         <div className="lg:col-span-2 space-y-6">
-          {isDraft ? (
+          {showManualEditor ? (
             <div>
               <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">
                 {"// LINE ITEMS · DRAFT"}

@@ -25,12 +25,6 @@ export async function POST(
         { status: 400 }
       );
     }
-    if (existing.parentInvoiceId) {
-      return NextResponse.json(
-        { error: "Cannot regenerate an RMB-duplicate invoice; correct its original instead." },
-        { status: 400 }
-      );
-    }
     if (!existing.estimateId) {
       return NextResponse.json(
         { error: "Invoice has no source estimate to regenerate from" },
@@ -65,27 +59,45 @@ export async function POST(
       );
     }
 
+    // `buildInvoiceFromEstimate` produces the estimate-currency (USD) figures.
+    // For an RMB duplicate (has a stored exchangeRate), convert the freshly-built
+    // lines/discount at that rate and keep the invoice's stored (combined) tax
+    // rate — mirroring how the RMB duplicate was originally created. Plain
+    // invoices use the built values unchanged.
+    const rate = existing.exchangeRate ?? 0;
+    const isConverted = rate > 0;
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+
+    const finalLineItems = built.lineItems.map((l) => ({
+      description: l.description,
+      quantity: l.quantity,
+      unitPrice: isConverted ? round2(l.unitPrice * rate) : l.unitPrice,
+      total: isConverted ? round2(l.total * rate) : l.total,
+      sortOrder: l.sortOrder,
+      estimateLineItemId: l.estimateLineItemId,
+    }));
+
+    const subtotal = isConverted
+      ? round2(finalLineItems.reduce((s, l) => s + l.total, 0))
+      : built.subtotal;
+    const taxRate = isConverted ? existing.taxRate : built.taxRate;
+    const discount = isConverted ? round2(built.discount * rate) : built.discount;
+    const taxable = subtotal - discount;
+    const tax = isConverted ? round2(taxable * (taxRate / 100)) : built.tax;
+    const total = isConverted ? round2(taxable + tax) : built.total;
+
     const invoice = await prisma.$transaction(async (tx) => {
       await tx.invoiceLineItem.deleteMany({ where: { invoiceId } });
       return tx.invoice.update({
         where: { id: invoiceId },
         data: {
           status: existing.status === "DRAFT" ? undefined : "DRAFT",
-          subtotal: built.subtotal,
-          taxRate: built.taxRate,
-          tax: built.tax,
-          discount: built.discount,
-          total: built.total,
-          lineItems: {
-            create: built.lineItems.map((l) => ({
-              description: l.description,
-              quantity: l.quantity,
-              unitPrice: l.unitPrice,
-              total: l.total,
-              sortOrder: l.sortOrder,
-              estimateLineItemId: l.estimateLineItemId,
-            })),
-          },
+          subtotal,
+          taxRate,
+          tax,
+          discount,
+          total,
+          lineItems: { create: finalLineItems },
         },
         include: {
           project: { select: { id: true, title: true } },
@@ -101,7 +113,7 @@ export async function POST(
       entityLabel: existing.invoiceNumber,
       description: `Corrected invoice ${existing.invoiceNumber} (regenerated from actuals)`,
       metadata: {
-        total: { from: existing.total, to: built.total },
+        total: { from: existing.total, to: total },
         lineItemsChanged: true,
       },
       userId,

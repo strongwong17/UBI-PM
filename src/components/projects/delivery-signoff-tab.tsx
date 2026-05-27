@@ -12,6 +12,13 @@ import {
   ProjectFeedbackSection,
   type FeedbackSnapshot,
 } from "@/components/projects/project-feedback-section";
+import {
+  resolveLineTotal,
+  plannedQty,
+  deliveredQty,
+  type BillingPhase,
+  type BillingLine,
+} from "@/lib/estimate-totals";
 
 export interface DeliveryLine {
   id: string;
@@ -21,6 +28,11 @@ export interface DeliveryLine {
   quantity: number;
   unitPrice: number;
   deliveredQuantity: number | null;
+  phaseName?: string | null;
+  percentageBasis?: string | null;
+  percentageRate?: number | null;
+  basisPhaseName?: string | null;
+  basisLineItemDesc?: string | null;
 }
 
 export interface DeliveryEstimate {
@@ -212,7 +224,7 @@ export function DeliverySignoffTab({
     setEdits((prev) => ({
       ...prev,
       [activeEstimate.id]: Object.fromEntries(
-        activeEstimate.lines.map((l) => [l.id, l.quantity])
+        activeEstimate.lines.filter((l) => !l.percentageBasis).map((l) => [l.id, l.quantity])
       ),
     }));
   };
@@ -247,10 +259,12 @@ export function DeliverySignoffTab({
 
   async function persistDelivery(): Promise<void> {
     if (!activeEstimate) return;
-    const lines = activeEstimate.lines.map((l) => ({
-      estimateLineItemId: l.id,
-      deliveredQuantity: edits[activeEstimate.id]?.[l.id] ?? null,
-    }));
+    const lines = activeEstimate.lines
+      .filter((l) => !l.percentageBasis)
+      .map((l) => ({
+        estimateLineItemId: l.id,
+        deliveredQuantity: edits[activeEstimate.id]?.[l.id] ?? null,
+      }));
     const r = await fetch(`/api/projects/${projectId}/delivery`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -351,6 +365,53 @@ export function DeliverySignoffTab({
     }));
   }, [activeEstimate]);
 
+  // Live billing phases for percentage resolution — derived (%) lines recompute
+  // from the CURRENT edited delivered quantities of the lines they depend on.
+  const billingPhases = useMemo<BillingPhase[]>(() => {
+    if (!activeEstimate) return [];
+    const idByDesc = new Map<string, string>();
+    for (const l of activeEstimate.lines) {
+      if (!idByDesc.has(l.description)) idByDesc.set(l.description, l.id);
+    }
+    const byPhase = new Map<string, BillingLine[]>();
+    for (const l of activeEstimate.lines) {
+      const phaseName = l.phaseName ?? "";
+      const bLine: BillingLine = {
+        id: l.id,
+        quantity: l.quantity,
+        unitPrice: l.unitPrice,
+        deliveredQuantity: lineEdits[l.id] ?? null,
+        percentageBasis: l.percentageBasis ?? null,
+        percentageRate: l.percentageRate ?? null,
+        basisPhaseName: l.basisPhaseName ?? null,
+        basisLineItemId:
+          l.percentageBasis === "LINE_ITEM" && l.basisLineItemDesc
+            ? idByDesc.get(l.basisLineItemDesc) ?? null
+            : null,
+      };
+      if (!byPhase.has(phaseName)) byPhase.set(phaseName, []);
+      byPhase.get(phaseName)!.push(bLine);
+    }
+    return Array.from(byPhase.entries()).map(([name, lines]) => ({ name, lines }));
+  }, [activeEstimate, lineEdits]);
+
+  const billingLineById = useMemo(() => {
+    const m = new Map<string, BillingLine>();
+    for (const ph of billingPhases) for (const l of ph.lines) m.set(l.id, l);
+    return m;
+  }, [billingPhases]);
+
+  // Helpers: a line is "derived" if it has a percentage basis.
+  const isDerived = (ln: DeliveryLine) => !!ln.percentageBasis;
+  const linePlanned = (ln: DeliveryLine) => {
+    const b = billingLineById.get(ln.id);
+    return b ? resolveLineTotal(b, billingPhases, plannedQty) : ln.quantity * ln.unitPrice;
+  };
+  const lineDelivered = (ln: DeliveryLine) => {
+    const b = billingLineById.get(ln.id);
+    return b ? resolveLineTotal(b, billingPhases, deliveredQty) : 0;
+  };
+
   // Totals across the active estimate
   const totals = useMemo(() => {
     let planned = 0;
@@ -362,21 +423,25 @@ export function DeliverySignoffTab({
       return { planned, delivered, confirmed, pending, pendingMoney, variance: 0, total: 0 };
     }
     for (const ln of activeEstimate.lines) {
-      const p = ln.quantity * ln.unitPrice;
+      const b = billingLineById.get(ln.id);
+      const p = b ? resolveLineTotal(b, billingPhases, plannedQty) : ln.quantity * ln.unitPrice;
+      const d = b ? resolveLineTotal(b, billingPhases, deliveredQty) : 0;
       planned += p;
-      const v = lineEdits[ln.id];
-      if (v == null) {
-        pending++;
-        pendingMoney += p;
-      } else {
-        confirmed++;
-        delivered += v * ln.unitPrice;
+      delivered += d;
+      if (!ln.percentageBasis) {
+        const v = lineEdits[ln.id];
+        if (v == null) {
+          pending++;
+          pendingMoney += p;
+        } else {
+          confirmed++;
+        }
       }
     }
     const variance = delivered - (planned - pendingMoney); // among confirmed lines only
-    const total = activeEstimate.lines.length;
+    const total = activeEstimate.lines.filter((l) => !l.percentageBasis).length;
     return { planned, delivered, confirmed, pending, pendingMoney, variance, total };
-  }, [activeEstimate, lineEdits]);
+  }, [activeEstimate, lineEdits, billingPhases, billingLineById]);
 
   if (estimates.length === 0 || !activeEstimate) {
     return (
@@ -597,10 +662,24 @@ export function DeliverySignoffTab({
 
             {/* Lines */}
             {lines.map((ln) => {
-              const planned = ln.quantity * ln.unitPrice;
+              const derived = isDerived(ln);
+              const planned = linePlanned(ln);
+              const liveDelivered = lineDelivered(ln);
               const v = lineEdits[ln.id];
-              const isConfirmed = v != null;
+              const isConfirmed = !derived && v != null;
               const deliveredMoney = (v ?? 0) * ln.unitPrice;
+
+              // Sub-caption for derived lines
+              const derivedCaption = derived
+                ? ln.percentageBasis === "LINE_ITEM"
+                  ? `// ${ln.percentageRate}% of ${ln.basisLineItemDesc}`
+                  : ln.percentageBasis === "SUBTOTAL"
+                  ? `// ${ln.percentageRate}% of subtotal`
+                  : ln.percentageBasis === "PHASE"
+                  ? `// ${ln.percentageRate}% of ${ln.basisPhaseName}`
+                  : null
+                : null;
+
               return (
                 <div
                   key={ln.id}
@@ -631,70 +710,92 @@ export function DeliverySignoffTab({
                       className="font-mono text-[10px] mt-0.5 tracking-[0.02em]"
                       style={{ color: "var(--color-ink-300)" }}
                     >
-                      {"// EST-line · "}{ln.quantity} {ln.unit} × {fmtMoneyExact(currency, ln.unitPrice)} = {fmtMoney(currency, planned)}
+                      {derived
+                        ? derivedCaption
+                        : `// EST-line · ${ln.quantity} ${ln.unit} × ${fmtMoneyExact(currency, ln.unitPrice)} = ${fmtMoney(currency, planned)}`}
                     </div>
                   </div>
 
                   {/* planned */}
                   <div className="text-right text-[13px] text-ink-700 rd-tabular">
-                    <div className="text-[11px] mb-0.5" style={{ color: "var(--color-ink-500)" }}>
-                      {ln.quantity} {ln.unit !== "ea" ? ln.unit : ""} ×{" "}
-                      {fmtMoneyExact(currency, ln.unitPrice)}
-                    </div>
+                    {!derived && (
+                      <div className="text-[11px] mb-0.5" style={{ color: "var(--color-ink-500)" }}>
+                        {ln.quantity} {ln.unit !== "ea" ? ln.unit : ""} ×{" "}
+                        {fmtMoneyExact(currency, ln.unitPrice)}
+                      </div>
+                    )}
                     <div>{fmtMoney(currency, planned)}</div>
                   </div>
 
-                  {/* delivered input */}
-                  <div>
-                    <div
-                      className="flex items-center rounded-lg overflow-hidden transition-colors"
-                      style={{
-                        background: isConfirmed ? "var(--color-s-delivered-bg)" : "var(--color-card-rd)",
-                        border: isConfirmed
-                          ? "1.5px solid var(--color-s-delivered)"
-                          : "1.5px solid var(--color-hairline)",
-                      }}
-                    >
-                      <input
-                        type="number"
-                        min={0}
-                        step="any"
-                        value={v ?? ""}
-                        disabled={readOnly}
-                        placeholder="0"
-                        onChange={(e) => {
-                          if (e.target.value === "") {
-                            update(activeEstimate.id, ln.id, null);
-                            return;
-                          }
-                          const n = parseFloat(e.target.value);
-                          update(activeEstimate.id, ln.id, Number.isFinite(n) ? n : null);
-                        }}
-                        className="flex-1 px-2.5 py-1.5 bg-transparent border-0 text-[13px] text-right text-ink-900 rd-tabular focus:outline-none"
-                        style={{ width: "100%" }}
-                      />
-                      <span
-                        className="px-2.5 font-mono text-[10px] tracking-[0.04em]"
+                  {/* delivered cell */}
+                  {derived ? (
+                    <div className="text-right">
+                      <div
+                        className="font-mono text-[10px] tracking-[0.04em] mb-0.5"
+                        style={{ color: "var(--color-ink-400)" }}
+                      >
+                        auto · locked
+                      </div>
+                      <div className="text-[13px] text-ink-900 rd-tabular">
+                        {fmtMoney(currency, liveDelivered)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div
+                        className="flex items-center rounded-lg overflow-hidden transition-colors"
                         style={{
-                          color: isConfirmed
-                            ? "var(--color-s-delivered-fg)"
-                            : "var(--color-ink-400)",
+                          background: isConfirmed ? "var(--color-s-delivered-bg)" : "var(--color-card-rd)",
+                          border: isConfirmed
+                            ? "1.5px solid var(--color-s-delivered)"
+                            : "1.5px solid var(--color-hairline)",
                         }}
                       >
-                        × {fmtMoneyExact(currency, ln.unitPrice)}
-                        {isConfirmed && ` = ${fmtMoney(currency, deliveredMoney)}`}
-                      </span>
+                        <input
+                          type="number"
+                          min={0}
+                          step="any"
+                          value={v ?? ""}
+                          disabled={readOnly}
+                          placeholder="0"
+                          onChange={(e) => {
+                            if (e.target.value === "") {
+                              update(activeEstimate.id, ln.id, null);
+                              return;
+                            }
+                            const n = parseFloat(e.target.value);
+                            update(activeEstimate.id, ln.id, Number.isFinite(n) ? n : null);
+                          }}
+                          className="flex-1 px-2.5 py-1.5 bg-transparent border-0 text-[13px] text-right text-ink-900 rd-tabular focus:outline-none"
+                          style={{ width: "100%" }}
+                        />
+                        <span
+                          className="px-2.5 font-mono text-[10px] tracking-[0.04em]"
+                          style={{
+                            color: isConfirmed
+                              ? "var(--color-s-delivered-fg)"
+                              : "var(--color-ink-400)",
+                          }}
+                        >
+                          × {fmtMoneyExact(currency, ln.unitPrice)}
+                          {isConfirmed && ` = ${fmtMoney(currency, deliveredMoney)}`}
+                        </span>
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* variance */}
                   <div className="flex items-center justify-end">
-                    <VarianceChip
-                      planned={ln.quantity}
-                      delivered={v ?? null}
-                      unitPrice={ln.unitPrice}
-                      currency={currency}
-                    />
+                    {derived ? (
+                      <div />
+                    ) : (
+                      <VarianceChip
+                        planned={ln.quantity}
+                        delivered={v ?? null}
+                        unitPrice={ln.unitPrice}
+                        currency={currency}
+                      />
+                    )}
                   </div>
 
                   <span
