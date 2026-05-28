@@ -12,6 +12,7 @@ Project management tool for UBInsights — manages the full client engagement li
 npm run dev       # Start dev server (localhost:3000)
 npm run build     # Production build (also runs TypeScript type-check)
 npm run lint      # ESLint
+npm run test      # Run vitest unit tests (npm run test:watch for watch mode)
 npm run seed      # Seed the database (npx tsx prisma/seed.ts)
 
 # Prisma
@@ -288,4 +289,4 @@ curl -sS -o /dev/null -w "%{http_code}\n" https://pmt.ubinsights.com/login
 
 ## Tests
 
-No test framework is configured.
+**vitest** is configured (`vitest.config.ts`, `@`→`src` alias, node env). Run with `npm run test` (or `npm run test:watch`). Coverage is currently scoped to pure financial math — `src/lib/margin.test.ts` (margin / cost / passthrough calculations). Test files live next to their source as `*.test.ts`.
