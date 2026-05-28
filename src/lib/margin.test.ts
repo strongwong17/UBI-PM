@@ -8,7 +8,21 @@ import {
   type MarginEstimate,
 } from "@/lib/margin";
 
-function line(over: Partial<any> = {}) {
+type TestLine = {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  deliveredQuantity: number | null;
+  percentageBasis: string | null;
+  percentageRate: number | null;
+  basisPhaseName: string | null;
+  basisLineItemDesc: string | null;
+  serviceModuleType: string | null;
+  isPassthrough: boolean;
+};
+
+function line(over: Partial<TestLine> = {}): TestLine {
   return {
     id: over.id ?? "l" + Math.random(),
     description: "x",

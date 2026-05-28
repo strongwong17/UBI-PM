@@ -23,14 +23,41 @@ const estimateInclude = {
   },
 } as const;
 
-function toMarginEstimate(est: any): MarginEstimate {
+// Loose structural shapes of the Prisma rows we read. Declared here (rather
+// than importing generated Prisma types) so this adapter stays decoupled from
+// the exact generated names while remaining fully typed.
+interface RawLine {
+  id: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  deliveredQuantity: number | null;
+  percentageBasis: string | null;
+  percentageRate: number | null;
+  basisPhaseName: string | null;
+  basisLineItemDesc: string | null;
+  serviceModuleType: string | null;
+  isPassthrough: boolean;
+}
+interface RawPhase {
+  name: string;
+  lineItems: RawLine[];
+}
+interface RawEstimate {
+  isApproved: boolean;
+  parentEstimateId: string | null;
+  currency: string;
+  phases: RawPhase[];
+}
+
+function toMarginEstimate(est: RawEstimate): MarginEstimate {
   return {
     isApproved: est.isApproved,
     parentEstimateId: est.parentEstimateId,
     currency: est.currency,
-    phases: est.phases.map((p: any) => ({
+    phases: est.phases.map((p) => ({
       name: p.name,
-      lineItems: p.lineItems.map((li: any) => ({
+      lineItems: p.lineItems.map((li) => ({
         ...li,
         deliveredQuantity: li.deliveredQuantity ?? null,
         percentageBasis: li.percentageBasis ?? null,
