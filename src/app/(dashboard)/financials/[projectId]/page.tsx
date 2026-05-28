@@ -5,8 +5,11 @@ import { prisma } from "@/lib/prisma";
 import { currencySymbol } from "@/lib/currency";
 import { loadOneProjectMargin } from "@/lib/financials";
 import { isPassthroughRevenueLine } from "@/lib/margin";
+import { mapEstimateToBillingPhases } from "@/lib/estimate-billing";
+import { resolveLineTotal, plannedQty } from "@/lib/estimate-totals";
 import { CostLineEditor } from "@/components/financials/cost-line-editor";
 import { BdOwnerSelect } from "@/components/financials/bd-owner-select";
+import { PassthroughToggle } from "@/components/financials/passthrough-toggle";
 import { ArrowLeft } from "lucide-react";
 
 export default async function ProjectFinancialsPage({
@@ -43,17 +46,31 @@ export default async function ProjectFinancialsPage({
   });
   const fmt = (n: number) => `${sym}${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-  const revenueLines = project.estimates.flatMap((e) =>
-    e.phases.flatMap((ph) =>
-      ph.lineItems.map((li) => ({
-        id: li.id,
-        description: li.description,
-        module: li.serviceModuleType,
-        revenue: li.quantity * li.unitPrice,
-        passthrough: isPassthroughRevenueLine({ serviceModuleType: li.serviceModuleType, isPassthrough: li.isPassthrough }),
-      }))
-    )
-  );
+  // Build the per-line revenue breakdown with the SAME resolver used for the
+  // Net-revenue total (handles percentage-basis lines), restricted to the
+  // project's primary currency so the lines reconcile with margin.plannedRevenue.
+  const revenueLines = project.estimates
+    .filter((e) => e.currency === margin.currency)
+    .flatMap((e) => {
+      const phases = mapEstimateToBillingPhases(e);
+      const totalById = new Map<string, number>();
+      for (const ph of phases) {
+        for (const l of ph.lines) totalById.set(l.id, resolveLineTotal(l, phases, plannedQty));
+      }
+      return e.phases.flatMap((ph) =>
+        ph.lineItems.map((li) => ({
+          id: li.id,
+          description: li.description,
+          isIncentive: li.serviceModuleType === "INCENTIVES",
+          isPassthroughFlag: li.isPassthrough,
+          revenue: totalById.get(li.id) ?? li.quantity * li.unitPrice,
+          passthrough: isPassthroughRevenueLine({
+            serviceModuleType: li.serviceModuleType,
+            isPassthrough: li.isPassthrough,
+          }),
+        }))
+      );
+    });
 
   return (
     <div className="space-y-6">
@@ -83,9 +100,16 @@ export default async function ProjectFinancialsPage({
           <p className="font-mono text-[11px] font-bold text-ink-500 tracking-[0.06em] uppercase mb-3">{"// REVENUE · from approved estimate"}</p>
           <div className="bg-card-rd rounded-[14px] p-4" style={{ border: "1px solid var(--color-hairline)" }}>
             {revenueLines.map((rl) => (
-              <div key={rl.id} className={`flex justify-between py-2 text-[13px] ${rl.passthrough ? "text-ink-400" : "text-ink-900"}`} style={{ borderBottom: "1px solid var(--color-hairline)" }}>
-                <span>{rl.description}{rl.passthrough ? "  · passthrough" : ""}</span>
-                <span className="font-mono rd-tabular">{rl.passthrough ? "excl." : fmt(rl.revenue)}</span>
+              <div key={rl.id} className={`flex items-center justify-between gap-2 py-2 text-[13px] ${rl.passthrough ? "text-ink-400" : "text-ink-900"}`} style={{ borderBottom: "1px solid var(--color-hairline)" }}>
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="truncate">{rl.description}</span>
+                  {rl.isIncentive ? (
+                    <span className="text-[9px] font-mono text-ink-400 shrink-0">passthrough (incentive)</span>
+                  ) : (
+                    <PassthroughToggle projectId={project.id} lineItemId={rl.id} initial={rl.isPassthroughFlag} />
+                  )}
+                </span>
+                <span className="font-mono rd-tabular shrink-0">{rl.passthrough ? "excl." : fmt(rl.revenue)}</span>
               </div>
             ))}
             <div className="flex justify-between pt-2 font-bold text-[13px]">
