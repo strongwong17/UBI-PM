@@ -1140,7 +1140,7 @@ function SummaryCard({ label, main, sub, good, accent }: { label: string; main: 
 - [ ] **Step 2: Type-check**
 
 Run: `npx tsc --noEmit`
-Expected: no errors. (If `text-[color:var(...)]` arbitrary value errors, replace the `good` class with `text-emerald-700`.)
+Expected: no errors. (If an arbitrary `var()` color class errors, use `text-emerald-700` for the `good` class instead.)
 
 - [ ] **Step 3: Manual smoke (dev server)**
 

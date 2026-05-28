@@ -2,6 +2,11 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Don't scan docs for class names — markdown plans/specs contain illustrative
+   class tokens (e.g. arbitrary `text-[...]` examples) that would otherwise be
+   compiled into invalid CSS and break the build. */
+@source not "../../docs";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
