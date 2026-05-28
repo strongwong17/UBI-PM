@@ -20,6 +20,7 @@ model User {
 
   estimates              Estimate[]
   assignedProjects       Project[]          @relation("ProjectAssignee")
+  businessDevProjects    Project[]          @relation("ProjectBusinessDev")
   internalCompletions    ProjectCompletion[] @relation("CompletionCompletedBy")
   internalFeedbacks      ProjectFeedback[]  @relation("FeedbackInternalBy")
   activityLogs           ActivityLog[]
@@ -88,10 +89,13 @@ model Project {
   primaryContact   ClientContact? @relation("ProjectPrimaryContact", fields: [primaryContactId], references: [id])
   assignedToId     String?
   assignedTo       User?          @relation("ProjectAssignee", fields: [assignedToId], references: [id])
+  businessDevId    String?
+  businessDev      User?          @relation("ProjectBusinessDev", fields: [businessDevId], references: [id])
 
   inquiry       Inquiry?
   estimates     Estimate[]
   invoices      Invoice[]
+  costLineItems CostLineItem[]
   completion    ProjectCompletion?
   feedback      ProjectFeedback?
   attachments   Attachment[]
@@ -274,6 +278,7 @@ model EstimateLineItem {
   sortOrder         Int     @default(0)
   notes             String?
   serviceModuleType String?
+  isPassthrough     Boolean @default(false)
 
   deliveredQuantity Float?
 
@@ -460,4 +465,23 @@ model ActivityLog {
   projectId   String?
   project     Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
   createdAt   DateTime @default(now())
+}
+
+// ─── COST LINE ITEMS ────────────────────────────────────
+
+model CostLineItem {
+  id          String   @id @default(cuid())
+  description String
+  costType    String   @default("FLAT") // "HOURS" | "FLAT"
+  hours       Float?   // required when costType="HOURS" (line cost = hours * rate)
+  rate        Float?   // required when costType="HOURS" (cost per hour)
+  amount      Float?   // required when costType="FLAT" (direct line cost); ignored for HOURS
+  category    String?  // optional free-form tag (e.g. ServiceModuleType); no fixed value set
+  sortOrder   Int      @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
 }
