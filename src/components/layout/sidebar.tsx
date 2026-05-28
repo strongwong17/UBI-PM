@@ -15,6 +15,7 @@ const MAIN_NAV = [
   { href: "/projects", label: "Projects", icon: "▢", roles: ["ADMIN", "MANAGER", "VIEWER"] },
   { href: "/estimates", label: "Estimates", icon: "≡", roles: ["ADMIN", "MANAGER", "VIEWER"] },
   { href: "/invoices", label: "Invoices", icon: "$", roles: ["ADMIN", "MANAGER", "VIEWER"] },
+  { href: "/financials", label: "Financials", icon: "⊞", roles: ["ADMIN", "MANAGER"] },
   { href: "/clients", label: "Clients", icon: "⚇", roles: ["ADMIN", "MANAGER", "VIEWER"] },
   { href: "/contracts", label: "Contracts", icon: "§", roles: ["ADMIN", "MANAGER", "VIEWER"] },
   { href: "/activity", label: "Activity", icon: "◷", roles: ["ADMIN", "MANAGER"] },
