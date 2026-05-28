@@ -58,7 +58,7 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { status, title, executionPhase, primaryContactId, assignedToId, startDate, endDate, notes } = body;
+    const { status, title, executionPhase, primaryContactId, assignedToId, businessDevId, startDate, endDate, notes } = body;
 
     const existing = await prisma.project.findUnique({ where: { id } });
     if (!existing) {
@@ -79,6 +79,7 @@ export async function PATCH(
         ...(executionPhase !== undefined && { executionPhase }),
         ...(primaryContactId !== undefined && { primaryContactId }),
         ...(assignedToId !== undefined && { assignedToId }),
+        ...(businessDevId !== undefined && { businessDevId }),
         ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
         ...(autoStartDate && { startDate: autoStartDate }),
         ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
