@@ -58,6 +58,7 @@ export default async function EditEstimatePage({
               percentageRate: li.percentageRate,
               basisPhaseName: li.basisPhaseName,
               basisLineItemDesc: li.basisLineItemDesc,
+              isDiscount: li.isDiscount,
             })),
           })),
         }}

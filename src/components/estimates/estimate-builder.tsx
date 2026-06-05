@@ -51,6 +51,7 @@ interface LineItem {
   basisPhaseName: string;   // phase name when percentageBasis = "PHASE"
   basisLineItemKey: string; // line item _key when percentageBasis = "LINE_ITEM"
   basisLineItemDesc: string; // line item description (for save/display)
+  isDiscount: boolean;
 }
 
 interface Phase {
@@ -92,6 +93,7 @@ interface EstimateBuilderProps {
         percentageRate?: number | null;
         basisPhaseName?: string | null;
         basisLineItemDesc?: string | null;
+        isDiscount?: boolean;
       }[];
     }[];
   };
@@ -132,6 +134,7 @@ function newLineItem(): LineItem {
     basisPhaseName: "",
     basisLineItemKey: "",
     basisLineItemDesc: "",
+    isDiscount: false,
   };
 }
 
@@ -147,11 +150,12 @@ function toSharedPhases(allPhases: Phase[]): SharedBillingPhase[] {
     lines: p.lineItems.map((li) => ({
       id: li._key,
       quantity: li.quantity,
-      unitPrice: li.unitPrice,
+      unitPrice: li.isDiscount ? -Math.abs(li.unitPrice) : li.unitPrice,
       percentageBasis: li.percentageBasis || null,
-      percentageRate: li.percentageRate,
+      percentageRate: li.isDiscount ? -Math.abs(li.percentageRate) : li.percentageRate,
       basisPhaseName: li.basisPhaseName,
       basisLineItemId: li.basisLineItemKey || null,
+      isDiscount: li.isDiscount,
     })),
   }));
 }
@@ -162,11 +166,12 @@ function resolveItemTotal(li: LineItem, allPhases: Phase[]): number {
   const self = {
     id: li._key,
     quantity: li.quantity,
-    unitPrice: li.unitPrice,
+    unitPrice: li.isDiscount ? -Math.abs(li.unitPrice) : li.unitPrice,
     percentageBasis: li.percentageBasis || null,
-    percentageRate: li.percentageRate,
+    percentageRate: li.isDiscount ? -Math.abs(li.percentageRate) : li.percentageRate,
     basisPhaseName: li.basisPhaseName,
     basisLineItemId: li.basisLineItemKey || null,
+    isDiscount: li.isDiscount,
   };
   return resolveSharedLineTotal(self, shared, (l) => l.quantity);
 }
@@ -271,13 +276,16 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
           description: li.description,
           unit: li.unit,
           quantity: li.quantity,
-          unitPrice: li.unitPrice,
+          unitPrice: li.isDiscount ? Math.abs(li.unitPrice) : li.unitPrice,
           notes: li.notes || "",
           percentageBasis: (li.percentageBasis || "") as "" | "SUBTOTAL" | "PHASE" | "LINE_ITEM",
-          percentageRate: li.percentageRate ?? 15,
+          percentageRate: li.isDiscount
+            ? Math.abs(li.percentageRate ?? 0)
+            : (li.percentageRate ?? 15),
           basisPhaseName: li.basisPhaseName || "",
           basisLineItemKey: "",
           basisLineItemDesc: li.basisLineItemDesc || "",
+          isDiscount: li.isDiscount ?? false,
         })),
       }));
       // Second pass: resolve basisLineItemKey from basisLineItemDesc
@@ -313,6 +321,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
             basisPhaseName: "",
             basisLineItemKey: "",
             basisLineItemDesc: "",
+            isDiscount: false,
           },
           {
             _key: newKey(),
@@ -326,6 +335,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
             basisPhaseName: "",
             basisLineItemKey: "",
             basisLineItemDesc: "",
+            isDiscount: false,
           },
         ],
       },
@@ -353,6 +363,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
           basisPhaseName: "",
           basisLineItemKey: "",
           basisLineItemDesc: "",
+          isDiscount: false,
         })),
       }))
     );
@@ -537,6 +548,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
         sortOrder: i,
         lineItems: p.lineItems.map((li, j) => {
           const isPercentage = li.percentageBasis !== "";
+          // resolveItemTotal already negates discount magnitudes (Step 4), so
+          // resolvedTotal is negative for a percentage discount.
           const resolvedTotal = isPercentage ? resolveItemTotal(li, phases) : null;
           const basisLabel =
             li.percentageBasis === "SUBTOTAL"
@@ -544,20 +557,26 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
               : li.percentageBasis === "LINE_ITEM"
               ? li.basisLineItemDesc || "line item"
               : li.basisPhaseName || "unknown";
+          const ratePrefix = li.isDiscount ? `${li.percentageRate}% discount of ` : `${li.percentageRate}% of `;
 
           return {
             description: li.description,
-            // Store a readable unit string so view pages display it without extra logic
-            unit: isPercentage ? `${li.percentageRate}% of ${basisLabel}` : li.unit,
-            // Resolve to flat amount: quantity=1, unitPrice=computed total
+            unit: isPercentage ? `${ratePrefix}${basisLabel}` : li.unit,
             quantity: isPercentage ? 1 : li.quantity,
-            unitPrice: isPercentage ? (resolvedTotal ?? 0) : li.unitPrice,
+            unitPrice: isPercentage
+              ? (resolvedTotal ?? 0)
+              : li.isDiscount
+              ? -Math.abs(li.unitPrice)
+              : li.unitPrice,
             sortOrder: j,
             notes: li.notes || null,
             percentageBasis: li.percentageBasis || null,
-            percentageRate: isPercentage ? li.percentageRate : null,
+            percentageRate: isPercentage
+              ? (li.isDiscount ? -Math.abs(li.percentageRate) : li.percentageRate)
+              : null,
             basisPhaseName: li.percentageBasis === "PHASE" ? li.basisPhaseName : null,
             basisLineItemDesc: li.percentageBasis === "LINE_ITEM" ? li.basisLineItemDesc : null,
+            isDiscount: li.isDiscount,
           };
         }),
       })),
