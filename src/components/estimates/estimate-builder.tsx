@@ -465,6 +465,30 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
     );
   }
 
+  function addDiscountLine(phaseKey: string) {
+    setPhases((prev) =>
+      prev.map((p) =>
+        p._key === phaseKey
+          ? {
+              ...p,
+              lineItems: [
+                ...p.lineItems,
+                {
+                  ...newLineItem(),
+                  description: "Discount",
+                  unit: "discount",
+                  quantity: 1,
+                  unitPrice: 0,
+                  percentageRate: 10,
+                  isDiscount: true,
+                },
+              ],
+            }
+          : p
+      )
+    );
+  }
+
   // ── Drag & drop ────────────────────────────────────────────────────────────
 
   const sensors = useSensors(
@@ -889,6 +913,8 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                 {phase.lineItems.map((item) => {
                   const isPercent = item.percentageBasis !== "";
                   const computedTotal = resolveItemTotal(item, phases);
+                  const isDiscountRow = item.isDiscount;
+                  const isPercentDiscount = isDiscountRow && item.percentageBasis !== "";
 
                   return (
                     <SortableLineRow key={item._key} itemKey={item._key}>
@@ -913,40 +939,123 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                         </button>
 
                         {/* Description */}
-                        <Input
-                          value={item.description}
-                          onChange={(e) =>
-                            updateLineItem(phase._key, item._key, "description", e.target.value)
-                          }
-                          placeholder="Line item description"
-                          className="bg-transparent border-0 shadow-none focus-visible:ring-0 px-0 h-auto py-0 text-[13px] text-ink-900 font-medium placeholder:text-ink-300"
-                        />
-
-                        {/* Unit Select — "% of..." enables percentage mode */}
-                        <Select
-                          value={isPercent ? "% of..." : item.unit}
-                          onValueChange={(v) => {
-                            if (v === "% of...") {
-                              enablePercentageMode(phase._key, item._key);
-                            } else {
-                              disablePercentageMode(phase._key, item._key);
-                              updateLineItem(phase._key, item._key, "unit", v);
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Input
+                            value={item.description}
+                            onChange={(e) =>
+                              updateLineItem(phase._key, item._key, "description", e.target.value)
                             }
-                          }}
-                        >
-                          <SelectTrigger className="text-[12px] h-8 bg-transparent border-hairline">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="hours">hours</SelectItem>
-                            <SelectItem value="days">days</SelectItem>
-                            <SelectItem value="units">units</SelectItem>
-                            <SelectItem value="lump sum">lump sum</SelectItem>
-                            <SelectItem value="% of...">% of a line item</SelectItem>
-                          </SelectContent>
-                        </Select>
+                            placeholder="Line item description"
+                            className="bg-transparent border-0 shadow-none focus-visible:ring-0 px-0 h-auto py-0 text-[13px] text-ink-900 font-medium placeholder:text-ink-300 min-w-0"
+                          />
+                          {isDiscountRow && (
+                            <span
+                              className="font-mono text-[9px] font-bold tracking-[0.08em] uppercase px-1.5 py-0.5 rounded flex-shrink-0"
+                              style={{ background: "var(--color-warn-bg)", color: "var(--color-warn-fg)" }}
+                            >
+                              DISCOUNT
+                            </span>
+                          )}
+                        </div>
 
-                        {isPercent ? (
+                        {/* Unit Select — discount rows show Fixed/% toggle; normal rows use unit selector */}
+                        {isDiscountRow ? (
+                          <div className="flex gap-1">
+                            <button
+                              type="button"
+                              onClick={() => disablePercentageMode(phase._key, item._key)}
+                              className="flex-1 text-[10px] font-mono font-bold tracking-[0.04em] uppercase h-8 rounded px-1.5 border transition-colors"
+                              style={
+                                !isPercentDiscount
+                                  ? { background: "var(--color-warn-bg)", color: "var(--color-warn-fg)", borderColor: "var(--color-warn-fg)" }
+                                  : { background: "transparent", color: "var(--color-ink-400)", borderColor: "var(--color-hairline)" }
+                              }
+                              aria-label="Fixed amount discount"
+                            >
+                              Fixed
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => enablePercentageMode(phase._key, item._key)}
+                              className="flex-1 text-[10px] font-mono font-bold tracking-[0.04em] uppercase h-8 rounded px-1.5 border transition-colors"
+                              style={
+                                isPercentDiscount
+                                  ? { background: "var(--color-warn-bg)", color: "var(--color-warn-fg)", borderColor: "var(--color-warn-fg)" }
+                                  : { background: "transparent", color: "var(--color-ink-400)", borderColor: "var(--color-hairline)" }
+                              }
+                              aria-label="Percentage discount"
+                            >
+                              %
+                            </button>
+                          </div>
+                        ) : (
+                          /* Unit Select — "% of..." enables percentage mode */
+                          <Select
+                            value={isPercent ? "% of..." : item.unit}
+                            onValueChange={(v) => {
+                              if (v === "% of...") {
+                                enablePercentageMode(phase._key, item._key);
+                              } else {
+                                disablePercentageMode(phase._key, item._key);
+                                updateLineItem(phase._key, item._key, "unit", v);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="text-[12px] h-8 bg-transparent border-hairline">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="hours">hours</SelectItem>
+                              <SelectItem value="days">days</SelectItem>
+                              <SelectItem value="units">units</SelectItem>
+                              <SelectItem value="lump sum">lump sum</SelectItem>
+                              <SelectItem value="% of...">% of a line item</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+
+                        {isDiscountRow ? (
+                          isPercentDiscount ? (
+                            <>
+                              {/* Percentage discount: qty and unit-price dashes, negated total */}
+                              <span className="text-right text-[13px] text-ink-300 rd-tabular">—</span>
+                              <span className="text-right text-[13px] text-ink-300 rd-tabular">—</span>
+                              <span
+                                className="text-right text-[13px] font-medium rd-tabular"
+                                style={{ color: "var(--color-warn-fg)" }}
+                              >
+                                − {sym}{fmt(Math.abs(computedTotal))}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              {/* Fixed discount: qty dash, amount input, negated total */}
+                              <span className="text-right text-[13px] text-ink-300 rd-tabular">—</span>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={item.unitPrice}
+                                onChange={(e) =>
+                                  updateLineItem(
+                                    phase._key,
+                                    item._key,
+                                    "unitPrice",
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                                className="text-[13px] text-right rd-tabular bg-transparent border-0 shadow-none focus-visible:ring-0 px-0 h-auto py-0"
+                                style={{ color: "var(--color-warn-fg)" }}
+                              />
+                              <span
+                                className="text-right text-[13px] font-medium rd-tabular"
+                                style={{ color: "var(--color-warn-fg)" }}
+                              >
+                                − {sym}{fmt(Math.abs(item.quantity * item.unitPrice))}
+                              </span>
+                            </>
+                          )
+                        ) : isPercent ? (
                           <>
                             <span className="text-right text-[13px] text-ink-300 rd-tabular">—</span>
                             <span className="text-right text-[13px] text-ink-300 rd-tabular">—</span>
@@ -1112,14 +1221,24 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                   </SortableContext>
                 </DndContext>
 
-                {/* Add line item */}
-                <button
-                  type="button"
-                  onClick={() => addLineItem(phase._key)}
-                  className="px-5 py-3 w-full text-left font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 hover:text-accent-rd hover:bg-[#FCFAF6]"
-                >
-                  + Add line item
-                </button>
+                {/* Add line item / Add discount */}
+                <div className="flex" style={{ borderTop: "none" }}>
+                  <button
+                    type="button"
+                    onClick={() => addLineItem(phase._key)}
+                    className="flex-1 px-5 py-3 text-left font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400 hover:text-accent-rd hover:bg-[#FCFAF6]"
+                  >
+                    + Add line item
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addDiscountLine(phase._key)}
+                    className="px-5 py-3 font-mono text-[10px] font-bold tracking-[0.06em] uppercase hover:bg-[#FCFAF6]"
+                    style={{ color: "var(--color-warn-fg)" }}
+                  >
+                    + Discount
+                  </button>
+                </div>
               </>
             )}
           </div>
