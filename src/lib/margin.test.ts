@@ -20,6 +20,7 @@ type TestLine = {
   basisLineItemDesc: string | null;
   serviceModuleType: string | null;
   isPassthrough: boolean;
+  isDiscount: boolean;
 };
 
 function line(over: Partial<TestLine> = {}): TestLine {
@@ -35,6 +36,7 @@ function line(over: Partial<TestLine> = {}): TestLine {
     basisLineItemDesc: null,
     serviceModuleType: null,
     isPassthrough: false,
+    isDiscount: false,
     ...over,
   };
 }
@@ -125,5 +127,34 @@ describe("computeProjectMargin", () => {
       costLineItems: [],
     });
     expect(m.plannedRevenue).toBe(0);
+  });
+});
+
+describe("margin — discounts", () => {
+  function est(lines: TestLine[]): MarginEstimate {
+    return {
+      isApproved: true,
+      parentEstimateId: null,
+      currency: "USD",
+      phases: [{ name: "P1", lineItems: lines }],
+    } as unknown as MarginEstimate;
+  }
+
+  it("a fixed discount reduces net revenue", () => {
+    const e = est([
+      line({ id: "w", quantity: 1, unitPrice: 1000 }),
+      line({ id: "d", quantity: 1, unitPrice: -250, isDiscount: true }),
+    ]);
+    expect(estimateNetRevenue(e, (l) => l.quantity)).toBe(750);
+  });
+
+  it("a % fee is computed before the discount (basis-exclusion)", () => {
+    const e = est([
+      line({ id: "w", quantity: 1, unitPrice: 1000 }),
+      line({ id: "f", percentageBasis: "SUBTOTAL", percentageRate: 15 }),
+      line({ id: "d", quantity: 1, unitPrice: -200, isDiscount: true }),
+    ]);
+    // 1000 + 150 (fee on 1000) - 200 = 950
+    expect(estimateNetRevenue(e, (l) => l.quantity)).toBe(950);
   });
 });

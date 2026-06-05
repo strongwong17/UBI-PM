@@ -32,6 +32,7 @@ interface MarginEstimateLine {
   basisLineItemDesc: string | null;
   serviceModuleType: string | null;
   isPassthrough: boolean;
+  isDiscount: boolean;
 }
 
 export interface MarginEstimate extends EstimateForBilling {
