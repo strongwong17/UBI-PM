@@ -1047,6 +1047,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                                 className="text-[13px] text-right rd-tabular bg-transparent border-0 shadow-none focus-visible:ring-0 px-0 h-auto py-0"
                                 style={{ color: "var(--color-warn-fg)" }}
                               />
+                              {/* quantity is pinned to 1 for discount rows (no qty input is rendered), so this is the flat magnitude */}
                               <span
                                 className="text-right text-[13px] font-medium rd-tabular"
                                 style={{ color: "var(--color-warn-fg)" }}
@@ -1128,7 +1129,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                           style={{ borderBottom: "1px solid var(--color-hairline)" }}
                         >
                           <span className="font-mono text-[10px] font-bold tracking-[0.06em] uppercase text-ink-400">
-                            {"//"}
+                            {isDiscountRow ? "// DISCOUNT %" : "//"}
                           </span>
                           <div className="flex items-center gap-1.5">
                             <Input
@@ -1222,7 +1223,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                 </DndContext>
 
                 {/* Add line item / Add discount */}
-                <div className="flex" style={{ borderTop: "none" }}>
+                <div className="flex">
                   <button
                     type="button"
                     onClick={() => addLineItem(phase._key)}
@@ -1233,7 +1234,7 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                   <button
                     type="button"
                     onClick={() => addDiscountLine(phase._key)}
-                    className="px-5 py-3 font-mono text-[10px] font-bold tracking-[0.06em] uppercase hover:bg-[#FCFAF6]"
+                    className="px-5 py-3 font-mono text-[10px] font-bold tracking-[0.06em] uppercase hover:bg-[#FCFAF6] hover:text-accent-rd"
                     style={{ color: "var(--color-warn-fg)" }}
                   >
                     + Discount
