@@ -14,7 +14,11 @@ export interface BillingLine {
   basisPhaseName?: string | null;
   /** Normalized reference to another BillingLine.id (for LINE_ITEM basis). */
   basisLineItemId?: string | null;
-  /** Discount rows are stored negated and excluded from any percentage basis. */
+  /**
+   * Discount rows are stored negated and excluded from any percentage basis.
+   * A fixed discount (no percentageBasis) bills its full unitPrice once —
+   * quantity and the delivered/planned selector are ignored.
+   */
   isDiscount?: boolean;
 }
 

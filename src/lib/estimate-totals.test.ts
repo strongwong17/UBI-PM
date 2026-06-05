@@ -37,4 +37,17 @@ describe("resolveLineTotal — discounts", () => {
     const ph = phases([disc, pct]);
     expect(resolveLineTotal(pct, ph, plannedQty)).toBe(0);
   });
+
+  it("basis-exclusion applies to PHASE-basis fees too", () => {
+    const work = { id: "w", quantity: 1, unitPrice: 1000, percentageBasis: null };
+    const fee = { id: "f", quantity: 1, unitPrice: 0, percentageBasis: "PHASE", percentageRate: 15, basisPhaseName: "P1" };
+    const disc = { id: "d", quantity: 1, unitPrice: -200, percentageBasis: null, isDiscount: true };
+    const ph = phases([work, fee, disc], "P1");
+    expect(resolveLineTotal(fee, ph, plannedQty)).toBe(150);
+  });
+
+  it("fixed discount ignores quantity (bills its full unitPrice)", () => {
+    const disc = { id: "d", quantity: 3, unitPrice: -500, percentageBasis: null, isDiscount: true };
+    expect(resolveLineTotal(disc, phases([disc]), plannedQty)).toBe(-500);
+  });
 });
