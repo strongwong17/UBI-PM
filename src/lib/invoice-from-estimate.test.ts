@@ -26,6 +26,7 @@ describe("buildInvoiceFromEstimate — discounts", () => {
     const disc = inv.lineItems.find((l) => l.description === "Discount");
     expect(disc).toBeTruthy();
     expect(disc!.quantity).toBe(1);
+    expect(disc!.unitPrice).toBe(-150);
     expect(disc!.total).toBe(-150);
     // subtotal = 4*100 - 150 = 250
     expect(inv.subtotal).toBe(250);

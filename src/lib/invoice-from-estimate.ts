@@ -43,7 +43,7 @@ export interface BuiltInvoice {
 /**
  * Build invoice line items + totals from an estimate, billing measured lines at
  * their confirmed deliveredQuantity and emitting percentage lines at their
- * resolved value (off the delivered bases). Lines resolving to <= 0 are skipped.
+ * resolved value (off the delivered bases). Lines resolving to exactly 0 are skipped; negative discount lines are kept.
  */
 export function buildInvoiceFromEstimate(
   estimate: EstimateForInvoice,
