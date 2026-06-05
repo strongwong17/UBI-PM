@@ -14,6 +14,8 @@ export interface BillingLine {
   basisPhaseName?: string | null;
   /** Normalized reference to another BillingLine.id (for LINE_ITEM basis). */
   basisLineItemId?: string | null;
+  /** Discount rows are stored negated and excluded from any percentage basis. */
+  isDiscount?: boolean;
 }
 
 export interface BillingPhase {
@@ -37,6 +39,10 @@ export function resolveLineTotal(
   phases: BillingPhase[],
   getQty: QuantitySelector
 ): number {
+  // Fixed discount: bills in full at qty 1, independent of the quantity
+  // selector (a discount is not a deliverable). unitPrice is stored negated.
+  if (line.isDiscount && !line.percentageBasis) return line.unitPrice;
+
   if (!line.percentageBasis) return getQty(line) * line.unitPrice;
 
   const rate = (line.percentageRate || 0) / 100;
@@ -46,6 +52,7 @@ export function resolveLineTotal(
     for (const p of phases) {
       for (const item of p.lines) {
         if (item.id === line.id) continue;
+        if (item.isDiscount) continue; // basis-exclusion
         if (!item.percentageBasis) {
           basis += getQty(item) * item.unitPrice;
         } else if (item.percentageBasis !== "SUBTOTAL") {
@@ -64,6 +71,7 @@ export function resolveLineTotal(
     let basis = 0;
     for (const item of target.lines) {
       if (item.id === line.id) continue;
+      if (item.isDiscount) continue; // basis-exclusion
       if (!item.percentageBasis) {
         basis += getQty(item) * item.unitPrice;
       } else if (item.percentageBasis !== "SUBTOTAL") {
@@ -77,6 +85,7 @@ export function resolveLineTotal(
     for (const p of phases) {
       const target = p.lines.find((item) => item.id === line.basisLineItemId);
       if (target) {
+        if (target.isDiscount) return 0; // cannot base a % on a discount row
         const basis = !target.percentageBasis
           ? getQty(target) * target.unitPrice
           : resolveLineTotal(target, phases, getQty);
