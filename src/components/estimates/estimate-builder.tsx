@@ -1334,6 +1334,11 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
                 {sym}{fmt(total)}
               </span>
             </div>
+            {total < 0 && (
+              <p className="text-[11px]" style={{ color: "var(--color-warn-fg)" }}>
+                Heads up: discounts exceed the estimate total (net is negative).
+              </p>
+            )}
           </div>
         </div>
       </div>
