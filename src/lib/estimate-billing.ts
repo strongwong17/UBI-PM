@@ -11,6 +11,7 @@ interface EstimateLineLike {
   percentageRate: number | null;
   basisPhaseName: string | null;
   basisLineItemDesc: string | null;
+  isDiscount: boolean;
 }
 interface EstimatePhaseLike {
   name: string;
@@ -43,6 +44,7 @@ export function mapEstimateToBillingPhases(estimate: EstimateForBilling): Billin
         li.percentageBasis === "LINE_ITEM" && li.basisLineItemDesc
           ? idByDesc.get(li.basisLineItemDesc) ?? null
           : null,
+      isDiscount: li.isDiscount,
     })),
   }));
 }
