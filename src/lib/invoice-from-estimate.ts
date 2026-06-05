@@ -11,6 +11,7 @@ interface EstLine {
   percentageRate: number | null;
   basisPhaseName: string | null;
   basisLineItemDesc: string | null;
+  isDiscount: boolean;
 }
 interface EstPhase {
   name: string;
@@ -59,8 +60,8 @@ export function buildInvoiceFromEstimate(
       const src = srcPhase.lineItems[li];
       const bLine = bPhase.lines[li];
       const total = resolveLineTotal(bLine, phases, deliveredQty);
-      if (total <= 0) continue;
-      if (src.percentageBasis) {
+      if (total === 0) continue;
+      if (src.percentageBasis || src.isDiscount) {
         lineItems.push({
           description: src.description,
           quantity: 1,
