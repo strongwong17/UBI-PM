@@ -113,6 +113,7 @@ export async function PUT(
                           percentageRate?: number | null;
                           basisPhaseName?: string | null;
                           basisLineItemDesc?: string | null;
+                          isDiscount?: boolean;
                         }[];
                       },
                       index: number
@@ -134,6 +135,7 @@ export async function PUT(
                                 percentageRate: item.percentageRate ?? null,
                                 basisPhaseName: item.basisPhaseName || null,
                                 basisLineItemDesc: item.basisLineItemDesc || null,
+                                isDiscount: item.isDiscount ?? false,
                               })),
                             }
                           : undefined,
