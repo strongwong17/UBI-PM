@@ -17,6 +17,7 @@ const estimateInclude = {
           basisLineItemDesc: true,
           serviceModuleType: true,
           isPassthrough: true,
+          isDiscount: true,
         },
       },
     },
@@ -38,6 +39,7 @@ interface RawLine {
   basisLineItemDesc: string | null;
   serviceModuleType: string | null;
   isPassthrough: boolean;
+  isDiscount: boolean;
 }
 interface RawPhase {
   name: string;
@@ -66,6 +68,7 @@ function toMarginEstimate(est: RawEstimate): MarginEstimate {
         basisLineItemDesc: li.basisLineItemDesc ?? null,
         serviceModuleType: li.serviceModuleType ?? null,
         isPassthrough: li.isPassthrough ?? false,
+        isDiscount: li.isDiscount ?? false,
       })),
     })),
   };
