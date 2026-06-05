@@ -21,12 +21,19 @@ percentage.
 3. **Fixed and percentage** discounts are both supported.
 4. **Persisted marker:** add an `isDiscount` boolean column to
    `EstimateLineItem`.
-5. **Sign representation = Approach B.** Store **positive magnitudes**; derive
-   the negative contribution from `isDiscount` at compute time. Existing inputs
-   keep `min="0"` — the user never types a negative number.
+5. **Sign representation = Approach B-UX / negative storage.** The user always
+   types a **positive** magnitude and inputs keep `min="0"` (the Approach-B UX),
+   but the value is **persisted negated** (negative `unitPrice` for fixed,
+   negative `percentageRate` for percentage). This matches the codebase
+   convention that stored `unitPrice × quantity` = a line's displayed total, so
+   the ~8 sites that render `quantity × unitPrice` directly (estimate detail
+   page, estimates list, dashboard, Excel export, estimate PDF, etc.) show the
+   discount as negative **with no changes**. `resolveLineTotal` needs no sign
+   logic — negatives flow through naturally.
 6. **Basis-exclusion rule:** discount lines are never part of the basis of any
    percentage line. Fees and discounts both compute off the gross of real work
-   lines and never compound on each other.
+   lines and never compound on each other. This is the **only** required change
+   to the totals engine.
 
 ## Architecture
 
@@ -44,10 +51,13 @@ Migration (additive, non-destructive):
 ALTER TABLE "EstimateLineItem" ADD COLUMN "isDiscount" BOOLEAN NOT NULL DEFAULT false;
 ```
 
-A discount line stores **positive** magnitudes:
-- **Fixed:** `quantity = 1`, `unitPrice = <amount>`, `percentageBasis = null`.
+A discount line stores **negated** values (the builder negates the user's
+positive input on save):
+- **Fixed:** `quantity = 1`, `unitPrice = −<amount>`, `percentageBasis = null`.
 - **Percentage:** `percentageBasis ∈ {SUBTOTAL, PHASE, LINE_ITEM}`,
-  `percentageRate = <rate 0–100>` (positive).
+  `percentageRate = −<rate>` (negated), and — following the existing
+  flatten-on-save convention — `unitPrice = <resolved negative total>`,
+  `quantity = 1`.
 
 `InvoiceLineItem` is **not** changed (see Out of Scope).
 
@@ -60,17 +70,20 @@ route through `resolveLineTotal`.
 - `mapEstimateToBillingPhases` (in `estimate-billing.ts`) copies `isDiscount`
   from the Prisma line into the `BillingLine`. Its `EstimateLineLike` interface
   gains `isDiscount`.
-- `resolveLineTotal(line, phases, getQty)`:
-  - **Discount, fixed** (`isDiscount && !percentageBasis`): returns
-    `−(1 × unitPrice)`. Quantity is pinned to 1 and is **not** scaled by the
-    quantity selector — a discount is not a deliverable, so the delivered-qty
-    selector must not shrink it.
-  - **Discount, percentage** (`isDiscount && percentageBasis`): compute the
-    basis exactly as today, then return `−(rate% × basis)`.
-  - **Non-discount:** unchanged.
-- **Basis-exclusion:** in every basis-accumulation loop (SUBTOTAL, PHASE,
-  LINE_ITEM), skip any line where `isDiscount` is true. A LINE_ITEM percentage
-  that references a discount line resolves to 0 (treated as no valid target).
+- `resolveLineTotal(line, phases, getQty)` needs **no sign logic** — because the
+  stored values are already negated, a fixed discount's `getQty × unitPrice`
+  and a percentage discount's `rate% × basis` (with a negative rate) both come
+  out negative on their own.
+  - **One behavioral nuance for fixed discounts:** a fixed discount must bill in
+    full and must **not** be scaled by the quantity selector (a discount is not
+    a deliverable). Since fixed discounts are stored with `quantity = 1`, a
+    delivered-quantity selector would read `deliveredQuantity` (often null → 0)
+    and zero the discount out on invoices. Guard this: when `isDiscount` and not
+    a percentage line, resolve as `1 × unitPrice` regardless of the selector.
+- **Basis-exclusion (the only other engine change):** in every
+  basis-accumulation loop (SUBTOTAL, PHASE, LINE_ITEM), skip any line where
+  `isDiscount` is true. A LINE_ITEM percentage that references a discount line
+  resolves to 0 (treated as no valid target).
 
 `phaseTotal` and `estimateSubtotal` need no change — they sum
 `resolveLineTotal`, which now yields negatives for discounts.
@@ -93,7 +106,9 @@ route through `resolveLineTotal`.
 ### 4. Builder UI — `src/components/estimates/estimate-builder.tsx`
 
 - The builder line-item type and the add-line helpers gain `isDiscount`
-  (default false). The save payload carries `isDiscount`.
+  (default false). The builder stores the **positive** magnitude in its local
+  state (so inputs show positive numbers and round-trip from negative storage by
+  taking `Math.abs`).
 - Per phase: an **"Add discount"** button beside "Add line item." It inserts a
   row with `isDiscount: true`, `description: "Discount"`, `quantity: 1`.
 - Discount-row rendering (distinct styling + a `DISCOUNT` tag):
@@ -102,7 +117,16 @@ route through `resolveLineTotal`.
     `unitPrice`, `quantity 1`.
   - *Percentage:* reuses the existing basis selector (Subtotal / Phase /
     Line item) and a positive **rate** input (`min="0" max="100"`).
-  - The row's resolved total is displayed negated (e.g. `− $500`).
+  - The row's live total (`resolveItemTotal`) is shown negated (e.g. `− $500`);
+    the builder negates the stored magnitude before calling the resolver for its
+    own display.
+- **Save payload** carries `isDiscount` and **negates** on the way out: a fixed
+  discount writes `unitPrice = −amount`; a percentage discount writes
+  `percentageRate = −rate` and the flattened `unitPrice = resolvedTotal`
+  (already negative). The unit label uses the absolute rate (e.g.
+  `"10% discount of estimate subtotal"`).
+- **Hydration (edit mode):** `initialData` line items gain `isDiscount`; the
+  builder reads negative storage back to positive local state via `Math.abs`.
 - A soft inline warning if the estimate total resolves below 0 (allowed, not
   blocked).
 
@@ -114,10 +138,13 @@ false).
 
 ### 6. PDF — `src/lib/pdf/estimate-pdf.tsx`
 
-Render discount lines with their negative total (formatted `− $500`) so the
-per-line list visibly nets down to the subtotal. The **invoice PDF needs no
-change** — it already prints each line's `total`, which is now negative for
-discount lines.
+**No change required.** The estimate PDF already renders each line as
+`quantity × unitPrice`; with discounts stored negated, those rows print as
+negative and the subtotal nets down automatically. Likewise the ~8 other naive
+display sites (estimate detail page, estimates list, dashboard, Excel export,
+RMB-duplicate routes) need no change. The invoice PDF also prints each line's
+`total`, now negative for discounts. (Distinct *styling* of discount rows in
+PDFs is optional and out of scope.)
 
 ### 7. Margin — `src/lib/margin.ts`
 
