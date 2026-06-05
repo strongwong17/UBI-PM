@@ -571,6 +571,9 @@ export function EstimateBuilder({ defaultProjectId, initialData, mode }: Estimat
             sortOrder: j,
             notes: li.notes || null,
             percentageBasis: li.percentageBasis || null,
+            // Stored negated for discounts by convention (mirrors unitPrice), so
+            // the persisted rate round-trips. The resolver derives a discount's
+            // sign from its (negated) resolved total, not from this rate's sign.
             percentageRate: isPercentage
               ? (li.isDiscount ? -Math.abs(li.percentageRate) : li.percentageRate)
               : null,
