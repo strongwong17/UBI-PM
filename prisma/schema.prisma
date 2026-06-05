@@ -279,6 +279,7 @@ model EstimateLineItem {
   notes             String?
   serviceModuleType String?
   isPassthrough     Boolean @default(false)
+  isDiscount        Boolean @default(false)
 
   deliveredQuantity Float?
 
